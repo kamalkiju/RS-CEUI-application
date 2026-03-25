@@ -1,0 +1,2302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CEUI – Document Editor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sidebar-bg:       #1b3a5c;
+      --sidebar-hover:    #163251;
+      --sidebar-active:   #0f2840;
+      --sidebar-text:     #a8c4df;
+      --sidebar-text-act: #ffffff;
+      --accent:           #1976d2;
+      --accent-light:     #e3f0fb;
+      --accent-dark:      #1256a3;
+      --success:          #27ae60;
+      --success-light:    #eafaf1;
+      --warning:          #e67e22;
+      --danger:           #e74c3c;
+      --text-primary:     #1a2b3c;
+      --text-secondary:   #5c7185;
+      --text-muted:       #94a3b8;
+      --border:           #dce6f0;
+      --bg-page:          #f0f4f8;
+      --bg-card:          #ffffff;
+      --radius:           8px;
+      --radius-lg:        12px;
+      --shadow:           0 1px 4px rgba(0,0,0,.08);
+      --shadow-md:        0 4px 16px rgba(0,0,0,.10);
+      --transition:       .2s ease;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      display: flex;
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ─── SIDEBAR ─────────────────────────────── */
+    .sidebar {
+      width: 220px;
+      min-height: 100vh;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+      transition: width var(--transition), transform var(--transition);
+    }
+    .sidebar.collapsed { width: 64px; }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .sidebar-logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: .5px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .sidebar.collapsed .sidebar-logo { display: none; }
+
+    .hamburger {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--sidebar-text);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .hamburger span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: currentColor;
+      border-radius: 2px;
+      transition: var(--transition);
+    }
+    .hamburger:hover { color: #fff; }
+
+    .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; overflow-x: hidden; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 18px;
+      cursor: pointer;
+      color: var(--sidebar-text);
+      border-left: 3px solid transparent;
+      transition: var(--transition);
+      white-space: nowrap;
+      user-select: none;
+      text-decoration: none;
+    }
+    .nav-item:hover { background: var(--sidebar-hover); color: #fff; }
+    .nav-item.active {
+      background: var(--sidebar-active);
+      color: var(--sidebar-text-act);
+      border-left-color: #4a9fd4;
+    }
+    .nav-item svg { flex-shrink: 0; width: 18px; height: 18px; }
+    .nav-label { font-size: 13.5px; font-weight: 500; }
+    .sidebar.collapsed .nav-label { display: none; }
+    .nav-arrow {
+      margin-left: auto;
+      width: 14px;
+      height: 14px;
+      transition: transform var(--transition);
+    }
+    .nav-item.open .nav-arrow { transform: rotate(90deg); }
+    .sidebar.collapsed .nav-arrow { display: none; }
+
+    .nav-sub {
+      background: rgba(0,0,0,.15);
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height .25s ease;
+    }
+    .nav-sub.open { max-height: 200px; }
+    .sidebar.collapsed .nav-sub { display: none; }
+    .nav-sub .nav-item { padding-left: 48px; font-size: 13px; }
+
+    /* ─── MAIN ────────────────────────────────── */
+    .main {
+      margin-left: 220px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      transition: margin-left var(--transition);
+      min-width: 0;
+    }
+    .sidebar.collapsed ~ .main { margin-left: 64px; }
+
+    /* ─── TOP BAR (doc controls) ──────────────── */
+    .topbar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow);
+    }
+    .back-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+      transition: var(--transition);
+    }
+    .back-btn:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
+    .doc-title-group { display: flex; flex-direction: column; }
+    .doc-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: .3px;
+    }
+    .badge-new { background: var(--success-light); color: var(--success); border: 1px solid #b7e5cc; }
+    .badge-req { background: var(--accent-light); color: var(--accent); border: 1px solid #b3d5f5; }
+    .doc-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .topbar-spacer { flex: 1; }
+
+    .progress-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      min-width: 120px;
+    }
+    .progress-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .progress-label strong { color: var(--accent); font-size: 13px; }
+    .progress-bar-wrap {
+      width: 120px;
+      height: 5px;
+      background: var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #4ab3f4);
+      border-radius: 10px;
+      transition: width .4s ease;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .btn-outline {
+      background: none;
+      border: 1.5px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(25,118,210,.30);
+    }
+    .btn-primary:hover { background: linear-gradient(135deg, #2186e7, var(--accent)); transform: translateY(-1px); }
+
+    /* ─── STEP WIZARD ─────────────────────────── */
+    .step-wizard {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: stretch;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .step-wizard::-webkit-scrollbar { display: none; }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 20px 0;
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+      min-width: 120px;
+      transition: var(--transition);
+    }
+    .step::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 2px;
+      background: transparent;
+      transition: background var(--transition);
+    }
+    .step.active::after { background: var(--accent); }
+    .step.done::after { background: var(--success); }
+
+    .step-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .step-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .step.active .step-num { background: var(--accent); color: #fff; }
+    .step.done .step-num { background: var(--success); color: #fff; }
+
+    .step-name { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+    .step.active .step-name { color: var(--accent); }
+    .step.done .step-name { color: var(--success); }
+    .step-count { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+    .step.active .step-count { color: var(--accent); }
+
+    /* ─── CONTENT ─────────────────────────────── */
+    .content {
+      padding: 28px 24px;
+      flex: 1;
+    }
+
+    .section-heading { font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+    .section-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; }
+
+    /* ─── ACCORDION CARDS ─────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 20px;
+      cursor: pointer;
+      user-select: none;
+      transition: background var(--transition);
+    }
+    .card-header:hover { background: #f7fafd; }
+    .card-title { font-size: 14.5px; font-weight: 700; color: var(--text-primary); }
+    .card-header .spacer { flex: 1; }
+    .chevron {
+      width: 18px; height: 18px;
+      color: var(--text-muted);
+      transition: transform var(--transition);
+      flex-shrink: 0;
+    }
+    .card.open .chevron { transform: rotate(180deg); }
+
+    .card-body {
+      padding: 0 20px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .3s ease, padding .3s ease;
+    }
+    .card.open .card-body { max-height: 1200px; padding: 4px 20px 22px; }
+
+    /* ─── FORM GRID ───────────────────────────── */
+    .form-grid {
+      display: grid;
+      gap: 16px;
+    }
+    .col-1 { grid-template-columns: 1fr; }
+    .col-2 { grid-template-columns: 1fr 1fr; }
+    .col-4 { grid-template-columns: repeat(4, 1fr); }
+    @media (max-width: 768px) {
+      .col-2, .col-4 { grid-template-columns: 1fr; }
+    }
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .col-4 { grid-template-columns: 1fr 1fr; }
+    }
+
+    .form-row { display: grid; gap: 16px; grid-template-columns: 1fr; margin-bottom: 4px; }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .field label .req { color: var(--danger); }
+    .field label .info-icon { color: var(--text-muted); cursor: help; }
+    .field input, .field select, .field textarea {
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      color: var(--text-primary);
+      background: var(--bg-card);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      outline: none;
+      font-family: inherit;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(25,118,210,.12);
+    }
+    .field textarea { resize: vertical; min-height: 80px; }
+    .field select { cursor: pointer; }
+
+    /* span helpers */
+    .col-span-2 { grid-column: span 2; }
+    .col-span-3 { grid-column: span 3; }
+    @media (max-width: 768px) {
+      .col-span-2, .col-span-3 { grid-column: span 1; }
+    }
+
+    /* ─── DIVIDER ─────────────────────────────── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+    /* ─── RESPONSIVE ──────────────────────────── */
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); width: 220px !important; }
+      .sidebar.mobile-open { transform: translateX(0); }
+      .main { margin-left: 0 !important; }
+      .overlay { display: block; }
+    }
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.35);
+      z-index: 90;
+    }
+    .overlay.active { display: block; }
+
+    @media (max-width: 600px) {
+      .topbar { gap: 8px; padding: 10px 14px; }
+      .doc-title { font-size: 15px; }
+      .progress-info { display: none; }
+      .btn { padding: 8px 12px; font-size: 12px; }
+      .content { padding: 18px 14px; }
+      .step { min-width: 90px; padding: 10px 10px 0; }
+    }
+
+    /* ─── APP HEADER ──────────────────────────── */
+    .app-header {
+      background: var(--sidebar-bg);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 60;
+      box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    }
+
+    .app-header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .app-header-logo-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, var(--accent), #4ab3f4);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .app-header-logo-text {
+      font-size: 18px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: .8px;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 22px;
+      background: rgba(255,255,255,.18);
+      flex-shrink: 0;
+    }
+
+    .header-page-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: rgba(255,255,255,.75);
+      white-space: nowrap;
+    }
+
+    .header-spacer { flex: 1; }
+
+    .header-notif-btn {
+      position: relative;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 50%;
+      width: 36px; height: 36px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.8);
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+    .header-notif-btn:hover { background: rgba(255,255,255,.16); color: #fff; }
+    .header-notif-dot {
+      position: absolute;
+      top: 4px; right: 4px;
+      width: 8px; height: 8px;
+      background: var(--danger);
+      border-radius: 50%;
+      border: 2px solid var(--sidebar-bg);
+    }
+
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 30px;
+      padding: 5px 14px 5px 6px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .header-user:hover { background: rgba(255,255,255,.14); }
+
+    .header-avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #4ab3f4);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .header-user-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .header-user-role {
+      font-size: 11px;
+      color: rgba(255,255,255,.6);
+      white-space: nowrap;
+    }
+
+    .header-logout-btn {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      padding: 7px 13px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: rgba(255,255,255,.75);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .header-logout-btn:hover { background: rgba(231,76,60,.25); border-color: rgba(231,76,60,.5); color: #fff; }
+
+    @media (max-width: 600px) {
+      .header-page-title { display: none; }
+      .header-divider { display: none; }
+      .header-user-role { display: none; }
+      .header-logout-btn span { display: none; }
+      .header-logout-btn { padding: 7px 9px; }
+    }
+
+    /* ─── KNOWLEDGE DOCUMENTS LIST ───────────── */
+    .kd-main {
+      flex: 1;
+      padding: 32px 28px;
+      overflow-y: auto;
+    }
+
+    .kd-page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .kd-page-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .kd-page-sub { font-size: 13.5px; color: var(--text-muted); }
+
+    .kd-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: 0 20px;
+      flex-wrap: wrap;
+    }
+
+    .kd-tabs { display: flex; align-items: stretch; gap: 0; }
+    .kd-tab {
+      padding: 14px 18px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: var(--transition);
+    }
+    .kd-tab:hover { color: var(--accent); }
+    .kd-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .kd-search-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-page);
+      border: 1.5px solid var(--border);
+      border-radius: 30px;
+      padding: 7px 14px;
+      color: var(--text-muted);
+      my-margin: 8px 0;
+    }
+    .kd-search {
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 13px;
+      color: var(--text-primary);
+      width: 200px;
+      font-family: inherit;
+    }
+    .kd-search::placeholder { color: var(--text-muted); }
+
+    .kd-table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .kd-table { width: 100%; border-collapse: collapse; }
+    .kd-table thead th {
+      padding: 12px 18px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      background: #f0f6ff;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .kd-table tbody td {
+      padding: 14px 18px;
+      font-size: 13.5px;
+      color: var(--text-primary);
+      border-bottom: 1px solid #f0f4f8;
+      vertical-align: middle;
+    }
+    .kd-table tbody tr:last-child td { border-bottom: none; }
+    .kd-table tbody tr:hover td { background: #f7fbff; }
+
+    .kd-doc-link {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .kd-doc-link:hover { text-decoration: underline; }
+    .kd-doc-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Status badges */
+    .kd-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .kd-status.rejected  { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .kd-status.draft     { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .kd-status.pending   { background: #fef9e7; color: #b45309; border: 1px solid #fde68a; }
+    .kd-status.approved  { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+    .kd-actions { display: flex; gap: 6px; align-items: center; }
+    .kd-action-btn {
+      width: 30px; height: 30px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+      transition: var(--transition);
+    }
+    .kd-action-btn:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+    .kd-empty {
+      padding: 48px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13.5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .kd-main { padding: 20px 14px; }
+      .kd-tabs { overflow-x: auto; }
+      .kd-table thead th:nth-child(2),
+      .kd-table tbody td:nth-child(2) { display: none; }
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+    /* ════════════════════════════════════════════
+       KNOWLEDGE AREA — EXTENDED COMPONENTS
+    ════════════════════════════════════════════ */
+
+    /* Grid helpers */
+    .col-3 { grid-template-columns: repeat(3,1fr); }
+    .col-5 { grid-template-columns: repeat(5,1fr); }
+    @media(max-width:1024px){ .col-4{grid-template-columns:1fr 1fr;} .col-3{grid-template-columns:1fr 1fr;} .col-5{grid-template-columns:1fr 1fr;} }
+    @media(max-width:640px){ .col-4,.col-3,.col-5{grid-template-columns:1fr;} }
+
+    /* Sub-section label */
+    .sub-label {
+      font-size:11.5px; font-weight:700; color:var(--text-secondary);
+      text-transform:uppercase; letter-spacing:.5px;
+      margin:18px 0 10px; border-bottom:1px solid var(--border); padding-bottom:7px;
+    }
+
+    /* ── Dynamic table ──────────────────────── */
+    .dyn-table-wrap { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:10px; }
+    .dyn-table { width:100%; border-collapse:collapse; }
+    .dyn-table thead th {
+      padding:9px 12px; text-align:left; font-size:11px; font-weight:700;
+      color:var(--text-secondary); text-transform:uppercase; letter-spacing:.4px;
+      background:#f8fafc; border-bottom:1px solid var(--border); white-space:nowrap;
+    }
+    .dyn-table tbody td { padding:7px 8px; border-bottom:1px solid #f0f4f8; vertical-align:middle; }
+    .dyn-table tbody tr:last-child td { border-bottom:none; }
+    .dyn-table tbody tr:hover td { background:#f8fafc; }
+    .cell-inp {
+      width:100%; padding:6px 9px; border:1.5px solid transparent; border-radius:6px;
+      font-size:13px; color:var(--text-primary); background:transparent;
+      outline:none; font-family:inherit; transition:border-color .15s,background .15s;
+    }
+    .cell-inp:hover { border-color:var(--border); background:#fff; }
+    .cell-inp:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(25,118,210,.10); }
+    select.cell-inp { cursor:pointer; appearance:none; -webkit-appearance:none; }
+
+    /* ── Add row button ─────────────────────── */
+    .add-row-btn {
+      display:inline-flex; align-items:center; gap:6px; padding:7px 14px;
+      border:1.5px dashed var(--accent); border-radius:var(--radius);
+      background:var(--accent-light); color:var(--accent);
+      font-size:12.5px; font-weight:600; cursor:pointer; transition:var(--transition);
+    }
+    .add-row-btn:hover { background:#d0e8f9; border-style:solid; }
+
+    /* ── Delete / icon buttons ──────────────── */
+    .btn-icon {
+      width:28px; height:28px; border-radius:6px; border:1px solid var(--border);
+      background:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:var(--transition); flex-shrink:0;
+    }
+    .btn-icon-del { color:var(--danger); }
+    .btn-icon-del:hover { background:#fef2f2; border-color:var(--danger); }
+
+    /* ── Toggle switch ──────────────────────── */
+    .toggle-wrap { display:flex; align-items:center; gap:10px; }
+    .toggle-switch { position:relative; width:40px; height:22px; flex-shrink:0; }
+    .toggle-switch input { opacity:0; width:0; height:0; }
+    .toggle-slider {
+      position:absolute; inset:0; background:#cbd5e1; border-radius:11px;
+      cursor:pointer; transition:.25s;
+    }
+    .toggle-slider::before {
+      content:''; position:absolute; width:16px; height:16px; border-radius:50%;
+      background:#fff; bottom:3px; left:3px; transition:.25s;
+      box-shadow:0 1px 3px rgba(0,0,0,.2);
+    }
+    .toggle-switch input:checked + .toggle-slider { background:var(--accent); }
+    .toggle-switch input:checked + .toggle-slider::before { transform:translateX(18px); }
+    .toggle-label { font-size:13px; font-weight:500; color:var(--text-primary); }
+
+    /* ── Radio pill group ───────────────────── */
+    .radio-group { display:flex; gap:6px; flex-wrap:wrap; }
+    .radio-pill {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:6px 14px; border-radius:20px; border:1.5px solid var(--border);
+      font-size:12.5px; font-weight:600; cursor:pointer; background:#fff;
+      color:var(--text-secondary); transition:var(--transition); user-select:none;
+    }
+    .radio-pill input[type=radio] { display:none; }
+    .radio-pill:has(input:checked) { background:var(--accent-light); border-color:var(--accent); color:var(--accent); }
+    .radio-pill.yes-pill:has(input:checked) { background:#eafaf1; border-color:#a9dfbf; color:var(--success); }
+    .radio-pill.no-pill:has(input:checked)  { background:#fef2f2; border-color:#fecaca; color:var(--danger); }
+    .radio-pill:hover { border-color:#b0bec5; }
+
+    /* ── Location card ──────────────────────── */
+    .location-card {
+      border:1px solid var(--border); border-radius:var(--radius);
+      padding:14px 16px; margin-bottom:10px; background:#fafcff; position:relative;
+    }
+    .location-card-header { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+    .location-num {
+      width:22px; height:22px; border-radius:50%; background:var(--accent);
+      color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+    }
+    .location-title { font-size:13px; font-weight:600; color:var(--text-primary); flex:1; }
+
+    /* ── Owner responsibility table ─────────── */
+    .owner-table { width:100%; border-collapse:collapse; }
+    .owner-table th, .owner-table td { padding:10px 14px; text-align:left; font-size:13px; }
+    .owner-table thead th {
+      background:#f8fafc; border-bottom:1px solid var(--border); font-size:11.5px;
+      font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--text-secondary);
+    }
+    .owner-table tbody td { border-bottom:1px solid #f0f4f8; }
+    .owner-table tbody tr:last-child td { border-bottom:none; }
+    .owner-table tbody tr:hover td { background:#f8fafc; }
+    .owner-label { font-weight:500; color:var(--text-primary); }
+
+    /* ── Toggle yes/no with description ────── */
+    .option-row {
+      display:flex; align-items:flex-start; gap:14px;
+      padding:12px 14px; border:1px solid var(--border); border-radius:var(--radius);
+      margin-bottom:8px; background:#fafcff; flex-wrap:wrap;
+    }
+    .option-row-left { display:flex; align-items:center; gap:10px; min-width:200px; }
+    .option-row-label { font-size:13.5px; font-weight:500; color:var(--text-primary); }
+    .option-row-desc { flex:1; min-width:200px; }
+    .option-row-desc input {
+      width:100%; padding:7px 11px; border:1.5px solid var(--border); border-radius:var(--radius);
+      font-size:13px; color:var(--text-primary); outline:none; font-family:inherit;
+      transition:border-color .2s,box-shadow .2s;
+    }
+    .option-row-desc input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(25,118,210,.10); }
+
+    /* ═══════════════════════════════════════════════
+       STEP 2 — SERVICE CATEGORIES
+    ═══════════════════════════════════════════════ */
+    .sc-page { padding: 28px 28px 60px; }
+
+    /* Page header */
+    .sc-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+    .sc-title { font-size:22px; font-weight:800; color:var(--text-primary); }
+    .sc-subtitle { font-size:13px; color:var(--text-muted); margin-top:4px; }
+    .sc-refresh-btn {
+      display:inline-flex; align-items:center; gap:6px; padding:9px 16px;
+      border-radius:var(--radius); border:1.5px solid var(--border); background:#fff;
+      color:var(--text-secondary); font-size:13px; font-weight:600; cursor:pointer;
+      white-space:nowrap; transition:var(--transition); font-family:inherit; flex-shrink:0;
+    }
+    .sc-refresh-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-light); }
+
+    /* Info banner */
+    .sc-info-banner {
+      background:#fffbeb; border:1px solid #fde68a; border-radius:var(--radius);
+      padding:12px 16px; display:flex; align-items:center;
+      justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap;
+    }
+    .sc-info-text { font-size:13px; color:#92400e; display:flex; align-items:center; gap:8px; flex:1; }
+    .sc-add-cat-btn {
+      display:inline-flex; align-items:center; gap:6px; padding:9px 16px;
+      border-radius:var(--radius); border:none;
+      background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+      color:#fff; font-size:13px; font-weight:600; cursor:pointer;
+      transition:var(--transition); font-family:inherit; white-space:nowrap;
+      box-shadow:0 2px 6px rgba(25,118,210,.25); flex-shrink:0;
+    }
+    .sc-add-cat-btn:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(25,118,210,.35); }
+
+    /* Controls bar */
+    .sc-controls-bar { display:flex; align-items:center; justify-content:flex-end; margin-bottom:10px; gap:6px; }
+    .sc-ctrl-btn { background:none; border:none; cursor:pointer; font-size:12.5px; font-weight:600; color:var(--text-secondary); transition:color var(--transition); padding:4px 6px; }
+    .sc-ctrl-btn:hover { color:var(--accent); }
+
+    /* Accordion shell */
+    .sc-accordion {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:var(--radius-lg); margin-bottom:10px;
+      overflow:hidden; box-shadow:var(--shadow); transition:box-shadow var(--transition);
+    }
+    .sc-accordion.sc-open { box-shadow:var(--shadow-md); }
+    .sc-acc-header {
+      display:flex; align-items:center; gap:12px; padding:15px 20px;
+      cursor:pointer; user-select:none; background:#fff; transition:background var(--transition);
+    }
+    .sc-acc-header:hover { background:#f8fafc; }
+    .sc-acc-name { font-size:14px; font-weight:700; color:var(--text-primary); flex:1; }
+    .sc-badge-active  { background:#eafaf1; color:#1a7a44; border:1px solid #a9dfbf; border-radius:20px; font-size:11.5px; font-weight:700; padding:3px 10px; white-space:nowrap; }
+    .sc-badge-inactive{ background:#fef2f2; color:#c0392b; border:1px solid #fca5a5; border-radius:20px; font-size:11.5px; font-weight:700; padding:3px 10px; white-space:nowrap; }
+    .sc-chevron { width:18px; height:18px; flex-shrink:0; transition:transform .25s ease; color:var(--text-muted); }
+    .sc-chevron.open { transform:rotate(180deg); }
+    .sc-acc-body { max-height:0; overflow:hidden; transition:max-height .38s ease; }
+    .sc-acc-body.open { max-height:5000px; }
+    .sc-acc-inner {
+      padding:16px 20px 20px; background:#f8fafc;
+      border-top:1px solid var(--border); display:flex; flex-direction:column; gap:14px;
+    }
+
+    /* Section card inside accordion */
+    .sc-section-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+    .sc-section-label { font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; padding-bottom:7px; border-bottom:1px solid var(--border); }
+    .sc-field { margin-bottom:14px; }
+    .sc-field:last-child { margin-bottom:0; }
+    .sc-label { font-size:12.5px; font-weight:700; color:var(--text-primary); margin-bottom:6px; display:flex; align-items:center; gap:4px; }
+    .sc-form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media(max-width:640px){ .sc-form-grid-2{grid-template-columns:1fr;} }
+
+    /* Mock rich text editor */
+    .rte-wrap { border:1.5px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+    .rte-toolbar { display:flex; align-items:center; gap:2px; padding:5px 8px; background:#f8fafc; border-bottom:1px solid var(--border); }
+    .rte-btn {
+      width:26px; height:26px; border:none; background:none; border-radius:5px;
+      cursor:pointer; color:var(--text-secondary);
+      display:flex; align-items:center; justify-content:center; transition:var(--transition);
+      font-size:12px; font-family:Georgia,serif; font-weight:700; flex-shrink:0;
+    }
+    .rte-btn:hover { background:var(--accent-light); color:var(--accent); }
+    .rte-sep { width:1px; height:16px; background:var(--border); margin:0 3px; flex-shrink:0; }
+    .rte-area {
+      width:100%; min-height:70px; padding:9px 11px;
+      border:none; outline:none; font-size:13px; font-family:inherit;
+      color:var(--text-primary); background:#fff; line-height:1.55;
+    }
+    .rte-area:empty::before { content:attr(data-placeholder); color:var(--text-muted); pointer-events:none; }
+
+    /* Service day pills */
+    .day-grid { display:flex; flex-wrap:wrap; gap:7px; }
+    .day-pill {
+      display:inline-flex; align-items:center; gap:5px; padding:6px 13px;
+      border:1.5px solid var(--border); border-radius:20px; font-size:12.5px;
+      font-weight:500; cursor:pointer; user-select:none; transition:var(--transition);
+      background:#fff; color:var(--text-secondary);
+    }
+    .day-pill:has(input:checked) { background:var(--accent-light); border-color:var(--accent); color:var(--accent); font-weight:600; }
+    .day-pill input { display:none; }
+    .day-pill-note {
+      display:inline-flex; align-items:center; gap:5px; padding:6px 13px;
+      border:1.5px solid var(--border); border-radius:20px; font-size:12.5px;
+      font-weight:500; cursor:pointer; user-select:none; transition:var(--transition);
+      background:#fff; color:var(--text-secondary);
+    }
+    .day-pill-note:has(input:checked) { background:#fffbeb; border-color:#f59e0b; color:#92400e; font-weight:600; }
+    .day-pill-note input { display:none; }
+
+    /* Serviced By select */
+    .sc-select {
+      width:100%; padding:9px 13px; border:1.5px solid var(--border);
+      border-radius:var(--radius); font-size:13px; color:var(--text-primary);
+      background:#fff; outline:none; font-family:inherit; transition:border-color .2s,box-shadow .2s;
+      appearance:none; -webkit-appearance:none; cursor:pointer;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 12px center; padding-right:34px;
+    }
+    .sc-select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(25,118,210,.10); }
+    .sc-select.sc-err { border-color:var(--danger); box-shadow:0 0 0 3px rgba(231,76,60,.10); }
+    .sc-err-msg { font-size:11.5px; color:var(--danger); margin-top:4px; display:none; }
+    .sc-err-msg.visible { display:block; }
+
+    /* Revenue table */
+    .rev-table-wrap { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:10px; }
+    .rev-table { width:100%; border-collapse:collapse; }
+    .rev-table thead th { padding:8px 12px; text-align:left; font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.4px; background:#f8fafc; border-bottom:1px solid var(--border); }
+    .rev-table tbody td { padding:5px 7px; border-bottom:1px solid #f0f4f8; vertical-align:middle; }
+    .rev-table tbody tr:last-child td { border-bottom:none; }
+    .rev-cell-inp { width:100%; padding:5px 8px; border:1.5px solid transparent; border-radius:5px; font-size:12.5px; color:var(--text-primary); background:transparent; outline:none; font-family:inherit; transition:border-color .15s; }
+    .rev-cell-inp:focus { border-color:var(--accent); background:#fff; }
+
+    /* Service levels empty */
+    .sl-empty { text-align:center; padding:24px 16px; color:var(--text-muted); font-size:13px; background:#f8fafc; border:1.5px dashed var(--border); border-radius:var(--radius); display:flex; flex-direction:column; align-items:center; gap:8px; }
+
+    /* Add row button (sc variant) */
+    .sc-add-row-btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border:1.5px dashed var(--accent); border-radius:var(--radius); background:var(--accent-light); color:var(--accent); font-size:12.5px; font-weight:600; cursor:pointer; transition:var(--transition); font-family:inherit; }
+    .sc-add-row-btn:hover { background:#d0e8f9; border-style:solid; }
+    .sc-del-btn { width:26px; height:26px; border-radius:5px; border:1px solid var(--border); background:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--danger); transition:var(--transition); flex-shrink:0; }
+    .sc-del-btn:hover { background:#fef2f2; border-color:var(--danger); }
+    .sc-add-sl-btn { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:var(--radius); border:none; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:#fff; font-size:13px; font-weight:600; cursor:pointer; transition:var(--transition); font-family:inherit; white-space:nowrap; box-shadow:0 2px 6px rgba(25,118,210,.25); margin-top:10px; }
+    .sc-add-sl-btn:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(25,118,210,.35); }
+
+    /* ═══════════════════════════════════════════════
+       STEP 3 — OFFERINGS
+    ═══════════════════════════════════════════════ */
+    .off-page { padding: 28px 28px 60px; }
+    .off-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+    .off-title { font-size:22px; font-weight:800; color:var(--text-primary); }
+    .off-subtitle { font-size:13px; color:var(--text-muted); margin-top:4px; }
+    .off-refresh-btn { display:inline-flex; align-items:center; gap:7px; padding:9px 16px; border-radius:var(--radius); border:1.5px solid var(--accent); background:#fff; color:var(--accent); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; transition:var(--transition); font-family:inherit; flex-shrink:0; }
+    .off-refresh-btn:hover { background:var(--accent-light); }
+
+    /* Info banner */
+    .off-info-banner { background:#eff6ff; border-left:4px solid var(--accent); border-radius:0 var(--radius) var(--radius) 0; padding:14px 18px; margin-bottom:24px; font-size:13px; color:var(--text-primary); line-height:1.65; }
+    .off-info-banner p { margin-top:8px; }
+    .off-info-banner p:first-child { margin-top:0; }
+    .off-info-banner em { color:var(--text-secondary); font-style:italic; }
+
+    /* Configured offerings */
+    .off-section-title { font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:12px; }
+    .off-card {
+      border:1px solid var(--border); border-radius:var(--radius);
+      padding:13px 16px; margin-bottom:8px; background:#fff;
+      box-shadow:var(--shadow); position:relative;
+    }
+    .off-card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .off-card-name { font-size:13.5px; font-weight:700; color:var(--text-primary); }
+    .off-card-asset { font-size:13px; color:var(--text-secondary); margin-left:10px; font-weight:400; }
+    .off-close-btn { width:28px; height:28px; border-radius:50%; border:1px solid var(--border); background:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-muted); transition:var(--transition); flex-shrink:0; }
+    .off-close-btn:hover { background:#fef2f2; border-color:var(--danger); color:var(--danger); }
+    .off-card-detail { display:flex; flex-wrap:wrap; gap:20px; font-size:13px; color:var(--text-secondary); padding-top:8px; border-top:1px solid var(--border); }
+    .off-card-detail span b { color:var(--text-primary); font-weight:600; }
+
+    /* Add Offering button */
+    .off-add-btn { display:inline-flex; align-items:center; gap:7px; padding:9px 18px; border-radius:var(--radius); border:1.5px solid var(--accent); background:#fff; color:var(--accent); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; transition:var(--transition); font-family:inherit; margin-top:10px; }
+    .off-add-btn:hover { background:var(--accent-light); }
+
+    /* ═══ ADD OFFERING — 4-STEP WIZARD MODAL ══════════ */
+    .off-wiz-backdrop { position:fixed; inset:0; background:rgba(15,30,50,.5); backdrop-filter:blur(3px); z-index:300; display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity .25s; }
+    .off-wiz-backdrop.open { opacity:1; pointer-events:all; }
+    .off-wiz-modal { background:#fff; border-radius:var(--radius-lg); box-shadow:0 24px 64px rgba(0,0,0,.22); width:100%; max-width:620px; max-height:90vh; display:flex; flex-direction:column; transform:translateY(18px) scale(.97); opacity:0; transition:transform .25s,opacity .25s; }
+    .off-wiz-backdrop.open .off-wiz-modal { transform:translateY(0) scale(1); opacity:1; }
+
+    /* Modal top bar */
+    .off-wiz-topbar { display:flex; align-items:center; justify-content:space-between; padding:16px 22px 14px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .off-wiz-topbar-title { font-size:15px; font-weight:800; color:var(--text-primary); }
+    .off-wiz-x { width:28px; height:28px; border-radius:50%; border:1px solid var(--border); background:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-muted); transition:var(--transition); flex-shrink:0; }
+    .off-wiz-x:hover { background:#fef2f2; color:var(--danger); border-color:var(--danger); }
+
+    /* Step progress bar */
+    .off-wiz-progress { display:flex; align-items:flex-start; justify-content:center; padding:14px 22px 12px; background:#f8fafc; border-bottom:1px solid var(--border); flex-shrink:0; gap:0; }
+    .off-wiz-step-wrap { display:flex; align-items:center; flex:1; }
+    .off-wiz-step-item { display:flex; flex-direction:column; align-items:center; gap:5px; flex-shrink:0; }
+    .off-wiz-num { width:28px; height:28px; border-radius:50%; border:2px solid var(--border); background:#fff; font-size:11.5px; font-weight:700; color:var(--text-muted); display:flex; align-items:center; justify-content:center; transition:var(--transition); }
+    .off-wiz-step-item.wiz-active .off-wiz-num { border-color:var(--accent); background:var(--accent); color:#fff; }
+    .off-wiz-step-item.wiz-done .off-wiz-num { border-color:var(--success); background:var(--success); color:#fff; }
+    .off-wiz-step-lbl { font-size:10.5px; font-weight:600; color:var(--text-muted); white-space:nowrap; }
+    .off-wiz-step-item.wiz-active .off-wiz-step-lbl { color:var(--accent); font-weight:700; }
+    .off-wiz-step-item.wiz-done .off-wiz-step-lbl { color:var(--success); }
+    .off-wiz-line { flex:1; height:2px; background:var(--border); margin:0 6px; margin-bottom:18px; border-radius:1px; transition:background .3s; }
+    .off-wiz-line.done { background:var(--success); }
+
+    /* Body & steps */
+    .off-wiz-body { flex:1; overflow-y:auto; padding:20px 24px 8px; }
+    .off-wiz-step-content { display:none; }
+    .off-wiz-step-content.active { display:block; }
+    .off-wiz-step-heading { font-size:13.5px; font-weight:700; color:var(--accent); margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+
+    /* Form helpers inside wizard */
+    .wiz-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .wiz-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+    .wiz-grid-4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; }
+    @media(max-width:560px){ .wiz-grid-2,.wiz-grid-3,.wiz-grid-4{ grid-template-columns:1fr 1fr; } }
+    @media(max-width:380px){ .wiz-grid-2,.wiz-grid-3,.wiz-grid-4{ grid-template-columns:1fr; } }
+    .wiz-field { margin-bottom:14px; }
+    .wiz-field:last-child { margin-bottom:0; }
+    .wiz-label { font-size:12px; font-weight:700; color:var(--text-secondary); margin-bottom:5px; display:flex; align-items:center; gap:5px; }
+    .wiz-req { color:var(--danger); }
+    .wiz-info { width:14px; height:14px; border-radius:50%; border:1.5px solid var(--text-muted); display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; color:var(--text-muted); cursor:help; flex-shrink:0; }
+    .wiz-select { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:var(--radius); font-size:12.5px; color:var(--text-primary); background:#fff; outline:none; font-family:inherit; appearance:none; -webkit-appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:30px; transition:border-color .2s,box-shadow .2s; }
+    .wiz-select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(25,118,210,.10); }
+    .wiz-input { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:var(--radius); font-size:12.5px; color:var(--text-primary); background:#fff; outline:none; font-family:inherit; transition:border-color .2s,box-shadow .2s; }
+    .wiz-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(25,118,210,.10); }
+    .wiz-input-prefix { position:relative; }
+    .wiz-input-prefix span { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:12.5px; color:var(--text-muted); pointer-events:none; }
+    .wiz-input-prefix .wiz-input { padding-left:22px; }
+    .wiz-textarea { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:var(--radius); font-size:12.5px; color:var(--text-primary); background:#fff; outline:none; font-family:inherit; resize:vertical; min-height:70px; transition:border-color .2s,box-shadow .2s; line-height:1.5; }
+    .wiz-textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(25,118,210,.10); }
+    .wiz-hint { font-size:11px; color:var(--text-muted); margin-top:4px; line-height:1.4; font-style:italic; }
+
+    /* Radio group */
+    .wiz-radio-group { display:flex; gap:16px; flex-wrap:wrap; }
+    .wiz-radio { display:inline-flex; align-items:center; gap:7px; cursor:pointer; font-size:13px; color:var(--text-primary); }
+    .wiz-radio input[type=radio] { width:15px; height:15px; accent-color:var(--accent); cursor:pointer; }
+
+    /* Service types checkboxes */
+    .wiz-check-list { display:flex; flex-direction:column; gap:10px; }
+    .wiz-check-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1.5px solid var(--border); border-radius:var(--radius); cursor:pointer; transition:var(--transition); background:#fff; }
+    .wiz-check-item:hover { background:var(--accent-light); border-color:var(--accent); }
+    .wiz-check-item:has(input:checked) { background:var(--accent-light); border-color:var(--accent); }
+    .wiz-check-item input[type=checkbox] { width:15px; height:15px; accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
+    .wiz-check-item-label { font-size:13px; font-weight:500; color:var(--text-primary); }
+    .wiz-check-item:has(input:checked) .wiz-check-item-label { font-weight:600; color:var(--accent); }
+
+    /* Divider */
+    .wiz-divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
+
+    /* Footer */
+    .off-wiz-footer { display:flex; align-items:center; justify-content:space-between; padding:14px 22px; border-top:1px solid var(--border); flex-shrink:0; gap:10px; }
+    .off-wiz-footer-right { display:flex; gap:10px; }
+  </style>
+</head>
+<body>
+
+<!-- Overlay for mobile sidebar -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ─── SIDEBAR ─────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+    <span class="sidebar-logo">CEUI</span>
+  </div>
+
+  <nav class="sidebar-nav">
+    <!-- Knowledge Documents -->
+    <a class="nav-item active" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+      <span class="nav-label">Knowledge Documents</span>
+    </a>
+
+  </nav>
+</aside>
+
+<!-- ─── MAIN ──────────────────────────────────────── -->
+<div class="main" id="main">
+
+  <!-- APP HEADER -->
+  <header class="app-header">
+    <!-- Mobile hamburger -->
+    <button class="back-btn" id="mobile-menu-btn" style="display:none;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:#fff" onclick="openSidebar()" aria-label="Open menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+
+    <div class="header-spacer"></div>
+
+    <button class="header-notif-btn" aria-label="Notifications">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      <span class="header-notif-dot"></span>
+    </button>
+
+    <div class="header-user">
+      <div class="header-avatar" id="user-avatar">JS</div>
+      <div>
+        <div class="header-user-name" id="user-name">John Smith</div>
+        <div class="header-user-role" id="user-role-label">POC</div>
+      </div>
+    </div>
+
+    <button class="header-logout-btn" onclick="logout()" title="Sign out">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      <span>Logout</span>
+    </button>
+  </header>
+
+  <!-- SUB TOPBAR -->
+  <div class="topbar">
+    <button class="back-btn" onclick="window.location.href='index.html'" aria-label="Back">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="doc-title-group">
+      <div class="doc-title">Document new <span class="badge badge-new">New</span></div>
+      <span class="doc-subtitle">Knowledge Area</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="progress-info">
+      <div class="progress-label"><span id="prog-label">0/5 sections</span><strong id="prog-pct">0%</strong></div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+    <button class="btn btn-outline" onclick="saveDraft()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Save Draft
+    </button>
+    <button class="btn btn-primary" onclick="submitApproval()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      Submit for Approval
+    </button>
+  </div>
+
+  <!-- STEP WIZARD -->
+  <div class="step-wizard">
+    <div class="step active" onclick="goStep(1)"><div class="step-header"><div class="step-num">1</div><div class="step-name">Knowledge Area</div></div><div class="step-count">0/9</div></div>
+    <div class="step" onclick="goStep(2)"><div class="step-header"><div class="step-num">2</div><div class="step-name">Service Categories</div></div><div class="step-count">0/1</div></div>
+    <div class="step" onclick="goStep(3)"><div class="step-header"><div class="step-num">3</div><div class="step-name">Offerings</div></div><div class="step-count">0/1</div></div>
+    <div class="step" onclick="goStep(4)"><div class="step-header"><div class="step-num">4</div><div class="step-name">Extra Pick Up</div></div><div class="step-count">0/1</div></div>
+    <div class="step" onclick="goStep(5)"><div class="step-header"><div class="step-num">5</div><div class="step-name">Fees</div></div><div class="step-count">0/1</div></div>
+  </div>
+
+  <!-- CONTENT -->
+  <main class="content" id="step-1-content">
+    <h2 class="section-heading">Residential Services Knowledge Area</h2>
+    <p class="section-subtitle">Complete all required fields and expand sections to view more details</p>
+
+    <!-- ① Basic Information -->
+    <div class="card open" id="s1">
+      <div class="card-header" onclick="toggleCard('s1')"><span class="card-title">Basic Information</span><span class="badge badge-req">Required</span><div class="spacer"></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></div>
+      <div class="card-body">
+        <div class="form-grid col-1" style="margin-bottom:14px"><div class="field"><label>Document Title <span class="req">*</span></label><input type="text" placeholder="e.g. DIV 993 MUNI – City of Shelbyville, KY"/></div></div>
+        <div class="form-grid col-4">
+          <div class="field"><label>Contract Activation Date <span class="req">*</span></label><input type="date"/></div>
+          <div class="field"><label>Contract Expiration Date</label><input type="date"/></div>
+          <div class="field"><label>Document Review Date</label><input type="date"/></div>
+          <div class="field"><label>Review Notes</label><input type="text" placeholder="e.g. Annual review scheduled"/></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② Contract Information -->
+    <div class="card open" id="s2">
+      <div class="card-header" onclick="toggleCard('s2')"><span class="card-title">Contract Information</span><div class="spacer"></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></div>
+      <div class="card-body">
+        <div class="form-grid col-2">
+          <div class="field"><label>Contract Title</label><input type="text" placeholder="Enter contract title"/></div>
+          <div class="field"><label>Contact Phone Number</label><input type="tel" placeholder="(000) 000-0000"/></div>
+          <div class="field"><label>Contact Email</label><input type="email" placeholder="contact@example.com"/></div>
+          <div class="field"><label>Website</label><input type="url" placeholder="https://"/></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ Location & Servicing Division -->
+    <div class="card open" id="s3">
+      <div class="card-header" onclick="toggleCard('s3')">
+        <span class="card-title">Location &amp; Servicing Division</span>
+        <span class="badge badge-req" id="loc-badge">2 locations</span>
+        <div class="spacer"></div>
+        <button class="add-row-btn" style="margin-right:10px;padding:5px 12px;font-size:12px" onclick="event.stopPropagation();addLocation()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Location
+        </button>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+      </div>
+      <div class="card-body">
+        <div id="locations-container">
+          <div class="location-card">
+            <div class="location-card-header">
+              <div class="location-num">1</div><span class="location-title">Location 1</span>
+              <div class="toggle-wrap"><label class="toggle-switch"><input type="checkbox" checked/><span class="toggle-slider"></span></label><span class="toggle-label" style="font-size:12px;color:var(--text-muted)">Primary</span></div>
+              <button class="btn-icon btn-icon-del" style="margin-left:8px" onclick="removeLocation(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+            </div>
+            <div class="form-grid col-3">
+              <div class="field"><label>City <span class="req">*</span></label><input type="text" placeholder="City name"/></div>
+              <div class="field"><label>County</label><input type="text" placeholder="County name"/></div>
+              <div class="field"><label>State <span class="req">*</span></label><select><option value="">— Select —</option><option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option selected>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option></select></div>
+            </div>
+          </div>
+          <div class="location-card">
+            <div class="location-card-header">
+              <div class="location-num">2</div><span class="location-title">Location 2</span>
+              <div class="toggle-wrap"><label class="toggle-switch"><input type="checkbox"/><span class="toggle-slider"></span></label><span class="toggle-label" style="font-size:12px;color:var(--text-muted)">Primary</span></div>
+              <button class="btn-icon btn-icon-del" style="margin-left:8px" onclick="removeLocation(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+            </div>
+            <div class="form-grid col-3">
+              <div class="field"><label>City <span class="req">*</span></label><input type="text" placeholder="City name"/></div>
+              <div class="field"><label>County</label><input type="text" placeholder="County name"/></div>
+              <div class="field"><label>State <span class="req">*</span></label><select><option value="">— Select —</option><option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option selected>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option></select></div>
+            </div>
+          </div>
+        </div>
+        <div class="sub-label">Servicing Division</div>
+        <div class="form-grid col-3">
+          <div class="field"><label>Servicing Division City</label><input type="text" placeholder="City"/></div>
+          <div class="field"><label>Servicing Division State</label><select><option value="">— Select —</option><option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option selected>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option></select></div>
+          <div class="field"><label>Account Class</label><select><option value="">— Select —</option><option>Municipal</option><option>Residential</option><option>Commercial</option><option>Industrial</option><option>HOA</option></select></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ Service Details & Contract Numbers -->
+    <div class="card open" id="s4">
+      <div class="card-header" onclick="toggleCard('s4')"><span class="card-title">Service Details &amp; Contract Numbers</span><span class="badge badge-req" id="contract-badge">2 contracts</span><div class="spacer"></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></div>
+      <div class="card-body">
+        <div class="sub-label">Contract Entries</div>
+        <div class="dyn-table-wrap">
+          <table class="dyn-table">
+            <thead><tr><th>Contract #</th><th>Group #</th><th>Description</th><th style="width:48px"></th></tr></thead>
+            <tbody id="contracts-tbody">
+              <tr><td><input type="text" class="cell-inp" placeholder="CNT-001"/></td><td><input type="text" class="cell-inp" placeholder="GRP-A"/></td><td><input type="text" class="cell-inp" placeholder="Description"/></td><td><button class="btn-icon btn-icon-del" onclick="delRow(this)" title="Delete"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button></td></tr>
+              <tr><td><input type="text" class="cell-inp" placeholder="CNT-002"/></td><td><input type="text" class="cell-inp" placeholder="GRP-B"/></td><td><input type="text" class="cell-inp" placeholder="Description"/></td><td><button class="btn-icon btn-icon-del" onclick="delRow(this)" title="Delete"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addContractRow()" style="margin-bottom:20px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Contract</button>
+        <div class="sub-label">Service Configuration</div>
+        <div class="form-grid col-3" style="margin-bottom:16px">
+          <div class="field" style="grid-column:span 3"><label>Service Interrupt Eligible</label><div class="radio-group"><label class="radio-pill"><input type="radio" name="svc-interrupt" value="yes"/> Yes</label><label class="radio-pill"><input type="radio" name="svc-interrupt" value="no" checked/> No</label><label class="radio-pill"><input type="radio" name="svc-interrupt" value="letter"/> Letter Only</label></div></div>
+          <div class="field" style="grid-column:span 3"><label>Liable?</label><div class="radio-group"><label class="radio-pill yes-pill"><input type="radio" name="liable" value="yes"/> Yes</label><label class="radio-pill no-pill"><input type="radio" name="liable" value="no" checked/> No</label></div></div>
+          <div class="field"><label>Collection Start</label><input type="time" value="06:00"/></div>
+          <div class="field"><label>Collection End</label><input type="time" value="14:00"/></div>
+          <div class="field"><label>Time Zone</label><select><option>Eastern (ET)</option><option selected>Central (CT)</option><option>Mountain (MT)</option><option>Pacific (PT)</option></select></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ Payment & Billing Terms -->
+    <div class="card open" id="s5">
+      <div class="card-header" onclick="toggleCard('s5')"><span class="card-title">Payment &amp; Billing Terms</span><div class="spacer"></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></div>
+      <div class="card-body">
+        <div class="form-grid col-1" style="margin-bottom:14px"><div class="field"><label>Payment Terms</label><textarea rows="2" placeholder="Describe payment terms…"></textarea></div></div>
+        <div class="form-grid col-3" style="margin-bottom:18px">
+          <div class="field"><label>Months in Advance</label><select><option>0</option><option>1</option><option selected>2</option><option>3</option><option>6</option><option>12</option></select></div>
+          <div class="field"><label>Price Increase Month</label><select><option>January</option><option>February</option><option>March</option><option>April</option><option selected>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div>
+          <div class="field"><label>Summary Routed Account #</label><input type="text" placeholder="ACC-00993"/></div>
+          <div class="field"><label>Prepayment Initial ($)</label><input type="number" placeholder="0.00" min="0" step="0.01"/></div>
+          <div class="field"><label>Prepayment Additional ($)</label><input type="number" placeholder="0.00" min="0" step="0.01"/></div>
+        </div>
+        <div class="sub-label">Invoice Groups</div>
+        <div class="dyn-table-wrap">
+          <table class="dyn-table">
+            <thead><tr><th>Group #</th><th>Description</th><th style="width:48px"></th></tr></thead>
+            <tbody id="invoices-tbody">
+              <tr><td><input type="text" class="cell-inp" placeholder="INV-GRP-1"/></td><td><input type="text" class="cell-inp" placeholder="Invoice group description"/></td><td><button class="btn-icon btn-icon-del" onclick="delRow(this)" title="Delete"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addInvoiceRow()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Invoice Group</button>
+      </div>
+    </div>
+
+    <!-- ⑥ InfoPro Codes & References -->
+    <div class="card open" id="s6">
+      <div class="card-header" onclick="toggleCard('s6')"><span class="card-title">InfoPro Codes &amp; References</span><div class="spacer"></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></div>
+      <div class="card-body">
+        <div class="sub-label">Territory Code</div>
+        <div class="form-grid col-2" style="margin-bottom:16px"><div class="field"><label>Code</label><input type="text" placeholder="TER-KY-09"/></div><div class="field"><label>Description</label><input type="text" placeholder="Territory description"/></div></div>
+        <div class="sub-label">Acquisition Code</div>
+        <div class="form-grid col-2" style="margin-bottom:16px"><div class="field"><label>Code</label><input type="text" placeholder="ACQ-MUN-03"/></div><div class="field"><label>Description</label><input type="text" placeholder="Acquisition description"/></div></div>
+        <div class="form-grid col-1"><div class="field"><label>Former Company Cart Colors</label><input type="text" placeholder="e.g. Blue lid – recycling, Grey – solid waste"/></div></div>
+      </div>
+    </div>
+
+    <!-- ⑦ Service Owner Responsibilities -->
+    <div class="card open" id="s7">
+      <div class="card-header" onclick="toggleCard('s7')"><span class="card-title">Service Owner Responsibilities</span><div class="spacer"></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></div>
+      <div class="card-body">
+        <div style="overflow-x:auto">
+          <table class="owner-table">
+            <thead><tr><th style="min-width:200px">Service Item</th><th>Republic Services</th><th>Muni / HQA</th></tr></thead>
+            <tbody>
+              <tr><td class="owner-label">Setup</td><td><label class="radio-pill"><input type="radio" name="own-setup" value="republic" checked/> Republic Services</label></td><td><label class="radio-pill"><input type="radio" name="own-setup" value="muni"/> Muni / HQA</label></td></tr>
+              <tr><td class="owner-label">Cancellation</td><td><label class="radio-pill"><input type="radio" name="own-cancel" value="republic"/> Republic Services</label></td><td><label class="radio-pill"><input type="radio" name="own-cancel" value="muni" checked/> Muni / HQA</label></td></tr>
+              <tr><td class="owner-label">Missed Pickups</td><td><label class="radio-pill"><input type="radio" name="own-missed" value="republic" checked/> Republic Services</label></td><td><label class="radio-pill"><input type="radio" name="own-missed" value="muni"/> Muni / HQA</label></td></tr>
+              <tr><td class="owner-label">Transfer of Service</td><td><label class="radio-pill"><input type="radio" name="own-transfer" value="republic"/> Republic Services</label></td><td><label class="radio-pill"><input type="radio" name="own-transfer" value="muni" checked/> Muni / HQA</label></td></tr>
+              <tr><td class="owner-label">Reinstatement</td><td><label class="radio-pill"><input type="radio" name="own-reinstate" value="republic" checked/> Republic Services</label></td><td><label class="radio-pill"><input type="radio" name="own-reinstate" value="muni"/> Muni / HQA</label></td></tr>
+              <tr><td class="owner-label">Service Change</td><td><label class="radio-pill"><input type="radio" name="own-change" value="republic"/> Republic Services</label></td><td><label class="radio-pill"><input type="radio" name="own-change" value="muni" checked/> Muni / HQA</label></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑧ Setup, Cancellation & Process Notes -->
+    <div class="card open" id="s8">
+      <div class="card-header" onclick="toggleCard('s8')"><span class="card-title">Setup, Cancellation &amp; Process Notes</span><div class="spacer"></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></div>
+      <div class="card-body">
+        <div class="form-grid col-2">
+          <div class="field"><label>Setup Notes</label><textarea rows="3" placeholder="Describe the setup process…"></textarea></div>
+          <div class="field"><label>Cancellation Notes</label><textarea rows="3" placeholder="Describe the cancellation process…"></textarea></div>
+          <div class="field"><label>Save Rate Guidance</label><textarea rows="3" placeholder="Describe save rate eligibility…"></textarea></div>
+          <div class="field"><label>Business Center Information</label><input type="text" placeholder="e.g. Louisville BC – (502) 555-0100"/></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑨ Additional Services & Options -->
+    <div class="card open" id="s9">
+      <div class="card-header" onclick="toggleCard('s9')"><span class="card-title">Additional Services &amp; Options</span><div class="spacer"></div><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></div>
+      <div class="card-body">
+        <div class="sub-label">Service Options</div>
+        <div class="option-row"><div class="option-row-left"><label class="toggle-switch"><input type="checkbox"/><span class="toggle-slider"></span></label><span class="option-row-label">Walk-in Payment</span></div><div class="option-row-desc"><input type="text" placeholder="Optional description…"/></div></div>
+        <div class="option-row"><div class="option-row-left"><label class="toggle-switch"><input type="checkbox" checked/><span class="toggle-slider"></span></label><span class="option-row-label">Container Pick Up / Return</span></div><div class="option-row-desc"><input type="text" placeholder="Optional description…"/></div></div>
+        <div class="option-row"><div class="option-row-left"><label class="toggle-switch"><input type="checkbox"/><span class="toggle-slider"></span></label><span class="option-row-label">Leave Container Onsite</span></div><div class="option-row-desc"><input type="text" placeholder="Optional description…"/></div></div>
+        <div class="option-row" style="margin-bottom:18px"><div class="option-row-left"><label class="toggle-switch"><input type="checkbox" checked/><span class="toggle-slider"></span></label><span class="option-row-label">CSA Sign at Division</span></div><div class="option-row-desc"><input type="text" placeholder="Optional description…"/></div></div>
+        <div class="sub-label">Notes</div>
+        <div class="form-grid col-2">
+          <div class="field"><label>Promotions</label><textarea rows="3" placeholder="Describe active promotions…"></textarea></div>
+          <div class="field"><label>Service Area Notes</label><textarea rows="3" placeholder="Describe service area boundaries…"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action row -->
+    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px;flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="prevStep()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Previous
+      </button>
+      <button class="btn btn-primary" onclick="saveAndNext()">
+        Save &amp; Next
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </main>
+
+  <!-- ═══ STEP 2: SERVICE CATEGORIES ═══════════════════════ -->
+  <div id="step-2-content" class="sc-page" style="display:none">
+
+    <!-- Header -->
+    <div class="sc-header">
+      <div>
+        <div class="sc-title">Service Categories</div>
+        <div class="sc-subtitle">Configure service categories and their associated service levels</div>
+      </div>
+      <button class="sc-refresh-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        + Refresh Service Category
+      </button>
+    </div>
+
+    <!-- Info banner -->
+    <div class="sc-info-banner">
+      <div class="sc-info-text">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Add new or standard Service Categories (e.g., Christmas Tree, Organics, HHW, etc.)
+      </div>
+      <button class="sc-add-cat-btn" onclick="addServiceCategory()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        + Add Service Category
+      </button>
+    </div>
+
+    <!-- Collapse / Expand controls -->
+    <div class="sc-controls-bar">
+      <button class="sc-ctrl-btn" onclick="expandAllSC()">Expand All</button>
+      <span style="color:var(--border);font-size:14px">|</span>
+      <button class="sc-ctrl-btn" onclick="collapseAllSC()">Collapse All</button>
+    </div>
+
+    <!-- Accordion list (populated by JS) -->
+    <div id="sc-acc-container"></div>
+
+    <!-- Action row -->
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:28px;flex-wrap:wrap">
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline" onclick="goStep(1)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Previous
+        </button>
+        <button class="btn btn-outline" onclick="saveDraft()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Draft
+        </button>
+      </div>
+      <button class="btn btn-primary" onclick="saveAndNext()">
+        Save &amp; Next
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+  </div><!-- /#step-2-content -->
+
+  <!-- ═══ STEP 3: OFFERINGS ════════════════════════════ -->
+  <div id="step-3-content" class="off-page" style="display:none">
+
+    <!-- Header -->
+    <div class="off-header">
+      <div>
+        <div class="off-title">Offerings</div>
+        <div class="off-subtitle">Configure services available to the customer</div>
+      </div>
+      <button class="off-refresh-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Refresh Assets
+      </button>
+    </div>
+
+    <!-- Info banner -->
+    <div class="off-info-banner">
+      <p><strong>Offering:</strong> the combination of Asset, Service, and Waste. Offerings is the level that most customer and Service Area Interaction occurs. Offerings are what is assigned at the Service Area.</p>
+      <p>Offerings for Solid Waste, Recycle, and Yard Waste are assigned to a Service Area in the RSAUI and are available for selection in the CEUI.</p>
+      <p>When changes are made to Offerings in the RSAUI (such as adding or removing Assets), click the <strong>Refresh Assets</strong> button to retrieve the latest available updates. RSAUI Offering status changes will be updated in the CEUI.</p>
+      <p><em>For Service Categories not configured in the RSAUI, Offerings should only be added if the customer needs to call in to schedule service (e.g., Bulk, Christmas Tree).</em></p>
+    </div>
+
+    <!-- Configured Offerings -->
+    <div class="off-section-title">Configured Offerings</div>
+    <div id="off-cards-container">
+      <!-- Default offering card -->
+      <div class="off-card" data-off-id="1">
+        <div class="off-card-head">
+          <div>
+            <span class="off-card-name">Solid Waste</span>
+            <span class="off-card-asset">95 Gallon Automated Cart</span>
+          </div>
+          <button class="off-close-btn" onclick="removeOffering(this)" title="Remove">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="off-card-detail">
+          <span>Offerings: <b>95 Gallon Automated Cart</b></span>
+          <span>Quantity: <b>1</b></span>
+          <span>Rate: <b>$30/qtr.</b></span>
+          <span>Type: <b>Primary</b></span>
+        </div>
+      </div>
+    </div>
+
+    <button class="off-add-btn" onclick="openAddOffering()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Offering
+    </button>
+
+    <!-- Action row -->
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:32px;flex-wrap:wrap">
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline" onclick="goStep(2)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Previous
+        </button>
+      </div>
+      <button class="btn btn-primary" onclick="saveAndNext()">
+        Save &amp; Next
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+  </div><!-- /#step-3-content -->
+
+  <!-- ═══ ADD OFFERING — 4-STEP WIZARD MODAL ══════════════ -->
+  <div class="off-wiz-backdrop" id="off-wiz-modal" onclick="offWizBackdropClick(event)">
+    <div class="off-wiz-modal" role="dialog" aria-label="Add Offering">
+
+      <!-- Top bar -->
+      <div class="off-wiz-topbar">
+        <span class="off-wiz-topbar-title">Add Offering</span>
+        <button class="off-wiz-x" onclick="closeAddOffering()" title="Close">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Step progress -->
+      <div class="off-wiz-progress">
+        <div class="off-wiz-step-wrap">
+          <div class="off-wiz-step-item wiz-active" id="offws-1">
+            <div class="off-wiz-num">1</div>
+            <div class="off-wiz-step-lbl">Rate Details</div>
+          </div>
+          <div class="off-wiz-line" id="offwl-1"></div>
+          <div class="off-wiz-step-item" id="offws-2">
+            <div class="off-wiz-num">2</div>
+            <div class="off-wiz-step-lbl">Offerings</div>
+          </div>
+          <div class="off-wiz-line" id="offwl-2"></div>
+          <div class="off-wiz-step-item" id="offws-3">
+            <div class="off-wiz-num">3</div>
+            <div class="off-wiz-step-lbl">Service Types</div>
+          </div>
+          <div class="off-wiz-line" id="offwl-3"></div>
+          <div class="off-wiz-step-item" id="offws-4">
+            <div class="off-wiz-num">4</div>
+            <div class="off-wiz-step-lbl">Service Owner</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="off-wiz-body">
+
+        <!-- ── Step 1: Rate Details ───────────────── -->
+        <div class="off-wiz-step-content active" id="offsc-1">
+          <div class="off-wiz-step-heading">Rate Details</div>
+
+          <div class="wiz-grid-3" style="margin-bottom:14px">
+            <div class="wiz-field">
+              <div class="wiz-label">Summary Billed?</div>
+              <select class="wiz-select" id="w-summary-billed">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+            <div class="wiz-field">
+              <div class="wiz-label">Service Category <span class="wiz-req">*</span></div>
+              <select class="wiz-select" id="w-svc-cat">
+                <option value="">Select...</option>
+                <option>Solid Waste</option><option>Recycling</option>
+                <option>Yard Waste</option><option>Organics</option>
+                <option>Bulk Items</option><option>Appliances</option>
+                <option>Electronics Recycling</option>
+              </select>
+            </div>
+            <div class="wiz-field">
+              <div class="wiz-label">Service Level <span class="wiz-req">*</span></div>
+              <select class="wiz-select" id="w-svc-level">
+                <option value="">Select...</option>
+                <option>Residential</option><option>Commercial</option>
+                <option>Industrial</option><option>Municipal</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="wiz-field" style="margin-bottom:14px">
+            <div class="wiz-label">Primary or Additional Container</div>
+            <select class="wiz-select" id="w-container-type">
+              <option value="">Select...</option>
+              <option>Primary</option><option>Additional</option>
+            </select>
+          </div>
+
+          <hr class="wiz-divider"/>
+
+          <div class="wiz-grid-2" style="margin-bottom:14px">
+            <div class="wiz-field">
+              <div class="wiz-label">Charge Frequency <span class="wiz-req">*</span></div>
+              <select class="wiz-select" id="w-charge-freq">
+                <option value="">Select...</option>
+                <option>Monthly</option><option>Quarterly</option>
+                <option>Annual</option><option>Weekly</option>
+              </select>
+            </div>
+            <div class="wiz-field">
+              <div class="wiz-label">Charge Type <span class="wiz-req">*</span></div>
+              <select class="wiz-select" id="w-charge-type">
+                <option value="">Select...</option>
+                <option>Fixed</option><option>Variable</option>
+                <option>Per Unit</option><option>Per Lift</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="wiz-grid-3" style="margin-bottom:14px">
+            <div class="wiz-field">
+              <div class="wiz-label">Face <span class="wiz-req">*</span></div>
+              <div class="wiz-input-prefix"><span>$</span><input type="number" class="wiz-input" id="w-face" value="0.00" step="0.01" min="0"/></div>
+            </div>
+            <div class="wiz-field">
+              <div class="wiz-label">Average <span class="wiz-req">*</span></div>
+              <div class="wiz-input-prefix"><span>$</span><input type="number" class="wiz-input" id="w-average" value="0.00" step="0.01" min="0"/></div>
+            </div>
+            <div class="wiz-field">
+              <div class="wiz-label">Target <span class="wiz-req">*</span></div>
+              <div class="wiz-input-prefix"><span>$</span><input type="number" class="wiz-input" id="w-target" value="0.00" step="0.01" min="0"/></div>
+            </div>
+          </div>
+
+          <div class="wiz-field" style="margin-bottom:14px">
+            <div class="wiz-label">Charge Method</div>
+            <select class="wiz-select" id="w-charge-method">
+              <option value="">Select...</option>
+              <option>Auto Pay</option><option>Invoice</option><option>Direct Bill</option>
+            </select>
+          </div>
+
+          <hr class="wiz-divider"/>
+
+          <div class="wiz-field" style="margin-bottom:14px">
+            <div class="wiz-label">Rate Notes <span class="wiz-info" title="Notes SHOULD include Service Types, Target/face rates, payment details, CRR instructions, preparation instructions, promotions, billing information, etc.">i</span></div>
+            <textarea class="wiz-textarea" id="w-rate-notes" placeholder="Example: Rate includes 1 Solid Waste cart and up to 3 Recycle carts.&#10;&#10;Notes SHOULD include Service Types, Target/face rates, payment details, CRR instructions, preparation instructions, promotions, billing information, etc."></textarea>
+          </div>
+
+          <div class="wiz-grid-2" style="margin-bottom:14px">
+            <div class="wiz-field">
+              <div class="wiz-label">Base Rate <span class="wiz-req">*</span> <span class="wiz-info" title="The base rate charged to the customer">i</span></div>
+              <div class="wiz-input-prefix"><span>$</span><input type="number" class="wiz-input" id="w-base-rate" value="13.00" step="0.01" min="0"/></div>
+            </div>
+            <div class="wiz-field">
+              <div class="wiz-label">Contract # / Contract Group # <span class="wiz-req">*</span> <span class="wiz-info" title="Select a Contract # or Contract Group # combination created in the Knowledge Area tab.">i</span></div>
+              <select class="wiz-select" id="w-contract">
+                <option value="">Please Select...</option>
+                <option>CNT-001 / Group A</option><option>CNT-002 / Group B</option>
+                <option>CNT-003 / Group C</option>
+              </select>
+              <div class="wiz-hint">Please select a Contract # or Contract Group # combination, that creates in the Knowledge Area tab.</div>
+            </div>
+          </div>
+
+          <div class="wiz-field">
+            <div class="wiz-label">Service Setup By <span class="wiz-req">*</span></div>
+            <div class="wiz-radio-group">
+              <label class="wiz-radio"><input type="radio" name="w-setup-by" value="Republic Services" checked/> Republic Services</label>
+              <label class="wiz-radio"><input type="radio" name="w-setup-by" value="Muni/HOA"/> Muni/HOA</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Step 2: Offerings ─────────────────── -->
+        <div class="off-wiz-step-content" id="offsc-2">
+          <div class="off-wiz-step-heading">Offering Details</div>
+
+          <div class="wiz-field" style="margin-bottom:14px">
+            <div class="wiz-label">Secondary Charges</div>
+            <select class="wiz-select" id="w-secondary-charge">
+              <option value="">Add Secondary Charge</option>
+              <option>Fuel Surcharge</option><option>Environmental Fee</option>
+              <option>Admin Fee</option><option>Late Payment Fee</option>
+            </select>
+          </div>
+
+          <div class="wiz-grid-2" style="margin-bottom:14px">
+            <div class="wiz-field">
+              <div class="wiz-label">Asset <span class="wiz-req">*</span></div>
+              <select class="wiz-select" id="w-asset">
+                <option value="">Select...</option>
+                <option>95 Gallon Automated Cart</option>
+                <option>65 Gallon Automated Cart</option>
+                <option>35 Gallon Automated Cart</option>
+                <option>96 Gallon Recycle Cart</option>
+                <option>64 Gallon Recycle Cart</option>
+                <option>32 Gallon Yard Waste Cart</option>
+                <option>96 Gallon Yard Waste Cart</option>
+                <option>On-Call Pickup</option>
+              </select>
+            </div>
+            <div class="wiz-field">
+              <div class="wiz-label">Max Quantity per Service Area <span class="wiz-req">*</span> <span class="wiz-info" title="Primary: 1  Additional: 2 or MM for unlimited">i</span></div>
+              <input type="text" class="wiz-input" id="w-max-qty" value="1" placeholder="1"/>
+              <div class="wiz-hint">Primary: 1  Additional: 2 or MM for unlimited</div>
+            </div>
+          </div>
+
+          <div class="wiz-grid-2" style="margin-bottom:14px">
+            <div class="wiz-field">
+              <div class="wiz-label">Service Frequency <span class="wiz-req">*</span></div>
+              <select class="wiz-select" id="w-svc-freq">
+                <option value="">Select...</option>
+                <option>Weekly</option><option>Bi-Weekly</option>
+                <option>Monthly</option><option>On Demand</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="wiz-field" style="margin-bottom:14px">
+            <div class="wiz-label">Service Day Notes</div>
+            <textarea class="wiz-textarea" id="w-svc-day-notes" placeholder="Enter service day notes..."></textarea>
+          </div>
+
+          <hr class="wiz-divider"/>
+
+          <div class="wiz-grid-4" style="margin-bottom:8px">
+            <div class="wiz-field">
+              <div class="wiz-label">Charge Code <span class="wiz-req">*</span></div>
+              <input type="text" class="wiz-input" id="w-charge-code" value="REV" placeholder="REV"/>
+            </div>
+            <div class="wiz-field">
+              <div class="wiz-label">Stop Type <span class="wiz-req">*</span></div>
+              <select class="wiz-select" id="w-stop-type">
+                <option value="">Select...</option>
+                <option>Residential</option><option>Commercial</option>
+                <option>Roll-Off</option>
+              </select>
+            </div>
+            <div class="wiz-field">
+              <div class="wiz-label">Rate Type <span class="wiz-req">*</span></div>
+              <select class="wiz-select" id="w-rate-type">
+                <option value="">Select...</option>
+                <option>Standard</option><option>Discounted</option>
+                <option>Negotiated</option>
+              </select>
+            </div>
+            <div class="wiz-field">
+              <div class="wiz-label">District Code <span class="wiz-req">*</span></div>
+              <input type="text" class="wiz-input" id="w-district-code" value="00" placeholder="00"/>
+            </div>
+          </div>
+
+          <div class="wiz-field">
+            <div class="wiz-label">Containerized Color <span class="wiz-req">*</span></div>
+            <input type="text" class="wiz-input" id="w-container-color" value="All Blue" placeholder="All Blue"/>
+          </div>
+        </div>
+
+        <!-- ── Step 3: Service Types ─────────────── -->
+        <div class="off-wiz-step-content" id="offsc-3">
+          <div class="off-wiz-step-heading">Service Types</div>
+          <div class="wiz-label" style="margin-bottom:12px">Select Available Service Types <span class="wiz-req">*</span></div>
+          <div class="wiz-check-list">
+            <label class="wiz-check-item"><input type="checkbox" id="wst-regular" checked/><span class="wiz-check-item-label">Regular Service</span></label>
+            <label class="wiz-check-item"><input type="checkbox" id="wst-extra"/><span class="wiz-check-item-label">Extra Pickup</span></label>
+            <label class="wiz-check-item"><input type="checkbox" id="wst-missed"/><span class="wiz-check-item-label">Missed Pickup</span></label>
+            <label class="wiz-check-item"><input type="checkbox" id="wst-contamination"/><span class="wiz-check-item-label">Contamination</span></label>
+            <label class="wiz-check-item"><input type="checkbox" id="wst-damage"/><span class="wiz-check-item-label">Damage to Cart</span></label>
+            <label class="wiz-check-item"><input type="checkbox" id="wst-special"/><span class="wiz-check-item-label">Special Instructions</span></label>
+          </div>
+        </div>
+
+        <!-- ── Step 4: Service Owner ──────────────── -->
+        <div class="off-wiz-step-content" id="offsc-4">
+          <div class="off-wiz-step-heading">Service Owner Exception</div>
+          <div class="wiz-field">
+            <div class="wiz-label" style="font-size:13.5px;font-weight:600;color:var(--text-primary);margin-bottom:14px">Does this offering have a Service Owner Exception?</div>
+            <div class="wiz-radio-group">
+              <label class="wiz-radio"><input type="radio" name="w-svc-owner-exc" value="Yes"/> Yes</label>
+              <label class="wiz-radio"><input type="radio" name="w-svc-owner-exc" value="No" checked/> No</label>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.off-wiz-body -->
+
+      <!-- Footer -->
+      <div class="off-wiz-footer">
+        <button class="btn btn-outline" id="off-wiz-back-btn" onclick="offWizPrev()" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <div style="flex:1"></div>
+        <div class="off-wiz-footer-right">
+          <button class="btn btn-outline" onclick="closeAddOffering()">Cancel</button>
+          <button class="btn btn-primary" id="off-wiz-next-btn" onclick="offWizNext()">
+            Next
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── Sidebar toggle ────────────────────────────
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+
+  // ─── Session / Auth guard ──────────────────────
+  (function() {
+    const raw = sessionStorage.getItem('ceui_user');
+    if (raw) {
+      const user = JSON.parse(raw);
+      if (user.role !== 'POC') { window.location.href = 'login.html'; return; }
+      const initials = user.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+      document.getElementById('user-avatar').textContent = initials;
+      document.getElementById('user-name').textContent = user.name;
+      document.getElementById('user-role-label').textContent = user.role;
+    }
+    // Allow direct access without login for demo purposes
+  })();
+
+  function logout() {
+    sessionStorage.removeItem('ceui_user');
+    window.location.href = 'login.html';
+  }
+
+  function toggleSidebar() {
+    const isMobile = window.innerWidth <= 900;
+    if (isMobile) {
+      openSidebar();
+    } else {
+      sidebar.classList.toggle('collapsed');
+    }
+  }
+
+  function openSidebar() {
+    sidebar.classList.add('mobile-open');
+    overlay.classList.add('active');
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+  }
+
+  // Show mobile hamburger on small screens
+  function handleResize() {
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    const desktopBack = document.getElementById('back-btn-desktop');
+    if (window.innerWidth <= 900) {
+      if (mobileBtn) mobileBtn.style.display = 'flex';
+      if (desktopBack) desktopBack.style.display = 'none';
+    } else {
+      if (mobileBtn) mobileBtn.style.display = 'none';
+      if (desktopBack) desktopBack.style.display = 'flex';
+      sidebar.classList.remove('mobile-open');
+      overlay.classList.remove('active');
+    }
+  }
+  window.addEventListener('resize', handleResize);
+  handleResize();
+
+  
+  // ─── Step & form functions ─────────────────────
+  let currentStep = 1;
+  function goStep(n) {
+    const steps = document.querySelectorAll('.step');
+    currentStep = n;
+    steps.forEach((s,i) => { s.classList.remove('active','done'); if(i+1===n) s.classList.add('active'); else if(i+1<n) s.classList.add('done'); });
+    const pct = Math.round(((n-1)/5)*100);
+    document.getElementById('prog-fill').style.width = pct+'%';
+    document.getElementById('prog-pct').textContent = pct+'%';
+    document.getElementById('prog-label').textContent = (n-1)+'/5 sections';
+    // Show / hide step content panels
+    const s1 = document.getElementById('step-1-content');
+    const s2 = document.getElementById('step-2-content');
+    const s3 = document.getElementById('step-3-content');
+    if (s1) s1.style.display = n === 1 ? 'block' : 'none';
+    if (s2) s2.style.display = n === 2 ? 'block' : 'none';
+    if (s3) s3.style.display = n === 3 ? 'block' : 'none';
+    // Scroll to top of content
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function saveAndNext(){ nextStep(); }
+  function nextStep(){ if(currentStep<5) goStep(currentStep+1); }
+  function prevStep(){ if(currentStep>1) goStep(currentStep-1); }
+  function saveDraft(){
+    const btn=document.querySelector('.btn-outline');
+    const orig=btn.innerHTML; btn.innerHTML='✓ Saved!'; btn.style.color='var(--success)'; btn.style.borderColor='var(--success)';
+    setTimeout(()=>{btn.innerHTML=orig;btn.style.color='';btn.style.borderColor='';},2000);
+  }
+  function submitApproval(){ alert('Document submitted for approval!'); }
+  function toggleCard(id){ document.getElementById(id).classList.toggle('open'); }
+
+  // ─── Location helpers ──────────────────────────
+  function addLocation(){
+    const c=document.getElementById('locations-container');
+    const n=c.querySelectorAll('.location-card').length+1;
+    const opts='<option value="">— Select —</option><option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option selected>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option>';
+    const del='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>';
+    const card=document.createElement('div'); card.className='location-card';
+    card.innerHTML='<div class="location-card-header"><div class="location-num">'+n+'</div><span class="location-title">Location '+n+'</span><div class="toggle-wrap"><label class="toggle-switch"><input type="checkbox"/><span class="toggle-slider"></span></label><span class="toggle-label" style="font-size:12px;color:var(--text-muted)">Primary</span></div><button class="btn-icon btn-icon-del" style="margin-left:8px" onclick="removeLocation(this)">'+del+'</button></div><div class="form-grid col-3"><div class="field"><label>City <span class="req">*</span></label><input type="text" placeholder="City name"/></div><div class="field"><label>County</label><input type="text" placeholder="County name"/></div><div class="field"><label>State <span class="req">*</span></label><select>'+opts+'</select></div></div>';
+    c.appendChild(card); updateLocationBadge();
+  }
+  function removeLocation(btn){
+    const c=document.getElementById('locations-container');
+    if(c.querySelectorAll('.location-card').length<=1){alert('At least one location required.');return;}
+    btn.closest('.location-card').remove();
+    c.querySelectorAll('.location-card').forEach((card,i)=>{card.querySelector('.location-num').textContent=i+1;card.querySelector('.location-title').textContent='Location '+(i+1);});
+    updateLocationBadge();
+  }
+  function updateLocationBadge(){const n=document.getElementById('locations-container').querySelectorAll('.location-card').length;document.getElementById('loc-badge').textContent=n+' location'+(n!==1?'s':'');}
+
+  // ─── Contract / invoice row helpers ───────────
+  const _di='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>';
+  function addContractRow(){const tb=document.getElementById('contracts-tbody');const n=tb.rows.length+1;const tr=document.createElement('tr');tr.innerHTML='<td><input type="text" class="cell-inp" placeholder="CNT-00'+n+'"/></td><td><input type="text" class="cell-inp" placeholder="Group #"/></td><td><input type="text" class="cell-inp" placeholder="Description"/></td><td><button class="btn-icon btn-icon-del" onclick="delRow(this,\'contracts-tbody\',\'contract-badge\')">'+_di+'</button></td>';tb.appendChild(tr);updateContractBadge();}
+  function addInvoiceRow(){const tb=document.getElementById('invoices-tbody');const tr=document.createElement('tr');tr.innerHTML='<td><input type="text" class="cell-inp" placeholder="Group #"/></td><td><input type="text" class="cell-inp" placeholder="Description"/></td><td><button class="btn-icon btn-icon-del" onclick="delRow(this,\'invoices-tbody\',null)">'+_di+'</button></td>';tb.appendChild(tr);}
+  function delRow(btn,tbodyId,badgeId){const tb=document.getElementById(tbodyId);if(tb.rows.length<=1){alert('At least one row required.');return;}btn.closest('tr').remove();if(badgeId==='contract-badge')updateContractBadge();}
+  function updateContractBadge(){const n=document.getElementById('contracts-tbody').rows.length;document.getElementById('contract-badge').textContent=n+' contract'+(n!==1?'s':'');}
+
+  // ═══════════════════════════════════════════════
+  //  SERVICE CATEGORIES — Step 2
+  // ═══════════════════════════════════════════════
+  const CATEGORIES = [
+    { id:'c1', name:'Solid Waste',            status:'active'   },
+    { id:'c2', name:'Recycling',              status:'active'   },
+    { id:'c3', name:'Yard Waste',             status:'active'   },
+    { id:'c4', name:'Organics',               status:'inactive' },
+    { id:'c5', name:'Bulk Items',             status:'active'   },
+    { id:'c6', name:'Appliances',             status:'active'   },
+    { id:'c7', name:'Electronics Recycling',  status:'inactive' },
+  ];
+
+  const _delSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+
+  function rteHTML(id) {
+    return `<div class="rte-wrap">
+      <div class="rte-toolbar">
+        <button class="rte-btn" onmousedown="event.preventDefault();document.execCommand('bold')" title="Bold"><b>B</b></button>
+        <button class="rte-btn" onmousedown="event.preventDefault();document.execCommand('italic')" title="Italic"><i style="font-style:italic">I</i></button>
+        <button class="rte-btn" onmousedown="event.preventDefault();document.execCommand('underline')" title="Underline"><u>U</u></button>
+        <span class="rte-sep"></span>
+        <button class="rte-btn" onmousedown="event.preventDefault();document.execCommand('insertUnorderedList')" title="Bullet list" style="font-size:14px;font-family:inherit">&#8226;</button>
+        <button class="rte-btn" onmousedown="event.preventDefault();document.execCommand('insertOrderedList')" title="Numbered list" style="font-size:11px;font-family:inherit">1.</button>
+        <span class="rte-sep"></span>
+        <button class="rte-btn" onmousedown="event.preventDefault();document.execCommand('removeFormat')" title="Clear formatting" style="font-size:11px;font-family:inherit">Tx</button>
+      </div>
+      <div class="rte-area" id="${id}" contenteditable="true" data-placeholder="Type here..."></div>
+    </div>`;
+  }
+
+  function scAccordionHTML(cat) {
+    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    const badge = cat.status === 'active'
+      ? `<span class="sc-badge-active">Active</span>`
+      : `<span class="sc-badge-inactive">Inactive</span>`;
+    return `
+    <div class="sc-accordion" id="sc-acc-${cat.id}">
+      <div class="sc-acc-header" onclick="toggleSCAccordion('${cat.id}')">
+        <span class="sc-acc-name">${cat.name}</span>
+        ${badge}
+        <svg class="sc-chevron" id="sc-chev-${cat.id}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="sc-acc-body" id="sc-body-${cat.id}">
+        <div class="sc-acc-inner">
+
+          <!-- Notes row -->
+          <div class="sc-form-grid-2">
+            <div class="sc-field">
+              <div class="sc-label">Category Notes</div>
+              ${rteHTML(cat.id+'-cat-notes')}
+            </div>
+            <div class="sc-field">
+              <div class="sc-label">Acceptable / Unacceptable Notes</div>
+              ${rteHTML(cat.id+'-acc-notes')}
+            </div>
+          </div>
+
+          <!-- Service Day -->
+          <div class="sc-section-card">
+            <div class="sc-section-label">Service Day</div>
+            <div class="day-grid">
+              ${days.map(d=>`<label class="day-pill"><input type="checkbox"/>${d}</label>`).join('')}
+              <label class="day-pill-note"><input type="checkbox"/>Refer to Notes</label>
+              <label class="day-pill-note"><input type="checkbox"/>Verify Day Using Maps</label>
+            </div>
+          </div>
+
+          <!-- Service Day Notes -->
+          <div class="sc-field">
+            <div class="sc-label">Service Day Notes</div>
+            ${rteHTML(cat.id+'-day-notes')}
+          </div>
+
+          <!-- Serviced By -->
+          <div class="sc-field">
+            <div class="sc-label">Serviced By <span style="color:var(--danger)">*</span></div>
+            <select class="sc-select" id="${cat.id}-serviced-by" onchange="validateServicedBy('${cat.id}')">
+              <option value="">Select</option>
+              <option>Republic Services</option>
+              <option>Third Party</option>
+              <option>Municipality</option>
+              <option>Property Owner</option>
+              <option>Sub-contractor</option>
+            </select>
+            <div class="sc-err-msg" id="${cat.id}-err">Serviced By is required.</div>
+          </div>
+
+          <!-- CSR Instructions -->
+          <div class="sc-field">
+            <div class="sc-label">CSR Instructions</div>
+            ${rteHTML(cat.id+'-csr')}
+          </div>
+
+          <!-- Revenue Distribution Codes -->
+          <div class="sc-section-card">
+            <div class="sc-section-label">Revenue Distribution Codes</div>
+            <div class="rev-table-wrap">
+              <table class="rev-table">
+                <thead><tr><th>Rev Code</th><th>Rev Code Description</th><th style="width:36px"></th></tr></thead>
+                <tbody id="${cat.id}-rev-tbody">
+                  <tr>
+                    <td><input class="rev-cell-inp" placeholder="e.g. 4010"/></td>
+                    <td><input class="rev-cell-inp" placeholder="Revenue description"/></td>
+                    <td><button class="sc-del-btn" onclick="delRevRow(this,'${cat.id}-rev-tbody')" title="Remove">${_delSvg}</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button class="sc-add-row-btn" onclick="addRevRow('${cat.id}')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              + Add Revenue Distribution Code
+            </button>
+          </div>
+
+          <!-- Service Levels -->
+          <div class="sc-section-card">
+            <div class="sc-section-label">Service Levels</div>
+            <div class="sl-empty" id="${cat.id}-sl-empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="12" y2="15"/></svg>
+              No service levels added. Click 'Add Service Level' to begin configuration.
+            </div>
+            <div id="${cat.id}-sl-list"></div>
+            <button class="sc-add-sl-btn" onclick="addServiceLevel('${cat.id}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              + Add Service Level
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function renderSCAccordions() {
+    const container = document.getElementById('sc-acc-container');
+    if (!container) return;
+    container.innerHTML = CATEGORIES.map(cat => scAccordionHTML(cat)).join('');
+    // Open first accordion by default
+    toggleSCAccordion('c1');
+  }
+
+  function toggleSCAccordion(id) {
+    const body = document.getElementById('sc-body-' + id);
+    const chev = document.getElementById('sc-chev-' + id);
+    const acc  = document.getElementById('sc-acc-'  + id);
+    const isOpen = body.classList.contains('open');
+    // Close all
+    document.querySelectorAll('.sc-acc-body').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.sc-chevron').forEach(c => c.classList.remove('open'));
+    document.querySelectorAll('.sc-accordion').forEach(a => a.classList.remove('sc-open'));
+    // Open clicked if it was closed
+    if (!isOpen) {
+      body.classList.add('open');
+      chev.classList.add('open');
+      acc.classList.add('sc-open');
+    }
+  }
+
+  function expandAllSC() {
+    document.querySelectorAll('.sc-acc-body').forEach(b => b.classList.add('open'));
+    document.querySelectorAll('.sc-chevron').forEach(c => c.classList.add('open'));
+    document.querySelectorAll('.sc-accordion').forEach(a => a.classList.add('sc-open'));
+  }
+
+  function collapseAllSC() {
+    document.querySelectorAll('.sc-acc-body').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.sc-chevron').forEach(c => c.classList.remove('open'));
+    document.querySelectorAll('.sc-accordion').forEach(a => a.classList.remove('sc-open'));
+  }
+
+  function validateServicedBy(id) {
+    const sel = document.getElementById(id + '-serviced-by');
+    const err = document.getElementById(id + '-err');
+    if (!sel.value) { sel.classList.add('sc-err'); err.classList.add('visible'); }
+    else            { sel.classList.remove('sc-err'); err.classList.remove('visible'); }
+  }
+
+  function addRevRow(catId) {
+    const tbody = document.getElementById(catId + '-rev-tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input class="rev-cell-inp" placeholder="e.g. 4010"/></td><td><input class="rev-cell-inp" placeholder="Revenue description"/></td><td><button class="sc-del-btn" onclick="delRevRow(this,'${catId}-rev-tbody')" title="Remove">${_delSvg}</button></td>`;
+    tbody.appendChild(tr);
+  }
+
+  function delRevRow(btn, tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    if (tbody.rows.length <= 1) { alert('At least one revenue code row is required.'); return; }
+    btn.closest('tr').remove();
+  }
+
+  const scLevelCounts = {};
+  function addServiceLevel(catId) {
+    const empty = document.getElementById(catId + '-sl-empty');
+    const list  = document.getElementById(catId + '-sl-list');
+    if (!scLevelCounts[catId]) scLevelCounts[catId] = 0;
+    scLevelCounts[catId]++;
+    const n = scLevelCounts[catId];
+    if (empty) empty.style.display = 'none';
+    const card = document.createElement('div');
+    card.style.cssText = 'border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;background:#fafcff;';
+    card.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="font-size:13px;font-weight:700;color:var(--text-primary)">Service Level ${n}</span><button class="sc-del-btn" onclick="this.closest('[data-sl]').remove();checkSLEmpty('${catId}')" title="Remove">${_delSvg}</button></div><div class="sc-form-grid-2"><div class="sc-field"><div class="sc-label">Level Name <span style="color:var(--danger)">*</span></div><input style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;outline:none;" placeholder="e.g. Weekly Pickup"/></div><div class="sc-field"><div class="sc-label">Frequency</div><select class="sc-select"><option value="">Select</option><option>Weekly</option><option>Bi-Weekly</option><option>Monthly</option><option>On Demand</option></select></div></div>`;
+    card.setAttribute('data-sl', n);
+    list.appendChild(card);
+    // Re-wire delete
+    card.querySelector('.sc-del-btn').onclick = function() {
+      card.remove();
+      checkSLEmpty(catId);
+    };
+  }
+
+  function checkSLEmpty(catId) {
+    const list  = document.getElementById(catId + '-sl-list');
+    const empty = document.getElementById(catId + '-sl-empty');
+    if (empty) empty.style.display = list.children.length === 0 ? 'flex' : 'none';
+  }
+
+  function addServiceCategory() {
+    const name = prompt('Enter new service category name:');
+    if (!name || !name.trim()) return;
+    const newId = 'c' + (CATEGORIES.length + 1);
+    CATEGORIES.push({ id: newId, name: name.trim(), status: 'active' });
+    renderSCAccordions();
+    // Open the newly added one
+    setTimeout(() => toggleSCAccordion(newId), 50);
+  }
+
+  // Render on load
+  renderSCAccordions();
+
+  // ═══════════════════════════════════════════════
+  //  OFFERINGS — Step 3
+  // ═══════════════════════════════════════════════
+  let offIdCounter = 2;
+
+  function removeOffering(btn) {
+    btn.closest('.off-card').remove();
+  }
+
+  // ─── 4-step wizard ─────────────────────────────
+  let offWizCurrentStep = 1;
+
+  function openAddOffering() {
+    offWizCurrentStep = 1;
+    offWizRenderStep(1);
+    document.getElementById('off-wiz-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAddOffering() {
+    document.getElementById('off-wiz-modal').classList.remove('open');
+    document.body.style.overflow = '';
+    offWizCurrentStep = 1;
+  }
+
+  function offWizBackdropClick(e) {
+    if (e.target === document.getElementById('off-wiz-modal')) closeAddOffering();
+  }
+
+  function offWizRenderStep(n) {
+    // Step content
+    document.querySelectorAll('.off-wiz-step-content').forEach((el, i) => {
+      el.classList.toggle('active', i + 1 === n);
+    });
+    // Step circles
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById('offws-' + i);
+      el.classList.remove('wiz-active', 'wiz-done');
+      if (i === n) el.classList.add('wiz-active');
+      else if (i < n) {
+        el.classList.add('wiz-done');
+        el.querySelector('.off-wiz-num').innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+      } else {
+        el.querySelector('.off-wiz-num').textContent = i;
+      }
+    }
+    // Connector lines
+    for (let i = 1; i <= 3; i++) {
+      document.getElementById('offwl-' + i).classList.toggle('done', i < n);
+    }
+    // Back button
+    document.getElementById('off-wiz-back-btn').style.display = n > 1 ? 'inline-flex' : 'none';
+    // Next/Save button
+    const nextBtn = document.getElementById('off-wiz-next-btn');
+    if (n === 4) {
+      nextBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Offering`;
+    } else {
+      nextBtn.innerHTML = `Next <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+    }
+  }
+
+  function offWizNext() {
+    if (offWizCurrentStep < 4) {
+      offWizCurrentStep++;
+      offWizRenderStep(offWizCurrentStep);
+      document.querySelector('.off-wiz-body').scrollTop = 0;
+    } else {
+      offWizSave();
+    }
+  }
+
+  function offWizPrev() {
+    if (offWizCurrentStep > 1) {
+      offWizCurrentStep--;
+      offWizRenderStep(offWizCurrentStep);
+      document.querySelector('.off-wiz-body').scrollTop = 0;
+    }
+  }
+
+  function offWizSave() {
+    const cat      = document.getElementById('w-svc-cat').value   || 'Service Category';
+    const asset    = document.getElementById('w-asset').value     || 'Asset';
+    const qty      = document.getElementById('w-max-qty').value   || '1';
+    const baseRate = document.getElementById('w-base-rate').value || '0.00';
+    const freq     = document.getElementById('w-charge-freq').value || '';
+    const contType = document.getElementById('w-container-type').value || 'Primary';
+
+    const container = document.getElementById('off-cards-container');
+    const id = offIdCounter++;
+    const card = document.createElement('div');
+    card.className = 'off-card';
+    card.setAttribute('data-off-id', id);
+    card.innerHTML = `
+      <div class="off-card-head">
+        <div>
+          <span class="off-card-name">${cat}</span>
+          <span class="off-card-asset">${asset}</span>
+        </div>
+        <button class="off-close-btn" onclick="removeOffering(this)" title="Remove">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="off-card-detail">
+        <span>Offerings: <b>${asset}</b></span>
+        <span>Quantity: <b>${qty}</b></span>
+        <span>Rate: <b>$${parseFloat(baseRate).toFixed(2)}${freq ? '/'+freq.toLowerCase().replace('ly','') : ''}</b></span>
+        <span>Type: <b>${contType || 'Primary'}</b></span>
+      </div>`;
+    container.appendChild(card);
+    closeAddOffering();
+  }
+
+  // Close wizard modal on Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('off-wiz-modal').classList.contains('open')) closeAddOffering();
+    }
+  });
+</script>
+</body>
+</html>

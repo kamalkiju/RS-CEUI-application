@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CEUI – Create New Document</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sidebar-bg:       #1b3a5c;
+      --sidebar-hover:    #163251;
+      --sidebar-active:   #0f2840;
+      --sidebar-text:     #a8c4df;
+      --sidebar-text-act: #ffffff;
+      --accent:           #1976d2;
+      --accent-light:     #e3f0fb;
+      --accent-dark:      #1256a3;
+      --success:          #27ae60;
+      --success-light:    #eafaf1;
+      --warning:          #e67e22;
+      --danger:           #e74c3c;
+      --text-primary:     #1a2b3c;
+      --text-secondary:   #5c7185;
+      --text-muted:       #94a3b8;
+      --border:           #dce6f0;
+      --bg-page:          #f0f4f8;
+      --bg-card:          #ffffff;
+      --radius:           8px;
+      --radius-lg:        12px;
+      --shadow:           0 1px 4px rgba(0,0,0,.08);
+      --shadow-md:        0 4px 16px rgba(0,0,0,.10);
+      --transition:       .2s ease;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      display: flex;
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ─── SIDEBAR ─────────────────────────────── */
+    .sidebar {
+      width: 220px;
+      min-height: 100vh;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+      transition: width var(--transition), transform var(--transition);
+    }
+    .sidebar.collapsed { width: 64px; }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .sidebar-logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: .5px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .sidebar.collapsed .sidebar-logo { display: none; }
+
+    .hamburger {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--sidebar-text);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .hamburger span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: currentColor;
+      border-radius: 2px;
+      transition: var(--transition);
+    }
+    .hamburger:hover { color: #fff; }
+
+    .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; overflow-x: hidden; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 18px;
+      cursor: pointer;
+      color: var(--sidebar-text);
+      border-left: 3px solid transparent;
+      transition: var(--transition);
+      white-space: nowrap;
+      user-select: none;
+      text-decoration: none;
+    }
+    .nav-item:hover { background: var(--sidebar-hover); color: #fff; }
+    .nav-item.active {
+      background: var(--sidebar-active);
+      color: var(--sidebar-text-act);
+      border-left-color: #4a9fd4;
+    }
+    .nav-item svg { flex-shrink: 0; width: 18px; height: 18px; }
+    .nav-label { font-size: 13.5px; font-weight: 500; }
+    .sidebar.collapsed .nav-label { display: none; }
+
+    /* ─── MAIN ────────────────────────────────── */
+    .main {
+      margin-left: 220px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      transition: margin-left var(--transition);
+      min-width: 0;
+    }
+    .sidebar.collapsed ~ .main { margin-left: 64px; }
+
+    /* ─── APP HEADER ──────────────────────────── */
+    .app-header {
+      background: var(--sidebar-bg);
+      height: 54px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 90;
+      box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    }
+    .header-spacer { flex: 1; }
+    .header-notif-btn {
+      position: relative;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,.08);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.75);
+      transition: var(--transition);
+    }
+    .header-notif-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+    .header-notif-dot {
+      position: absolute;
+      top: 7px; right: 7px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #f97316;
+      border: 2px solid var(--sidebar-bg);
+    }
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 5px 10px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.07);
+      cursor: pointer;
+    }
+    .header-avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #4ab3f4);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .header-user-name { font-size: 13px; font-weight: 600; color: #fff; }
+    .header-user-role { font-size: 11px; color: rgba(255,255,255,.55); }
+    .header-logout-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 13px;
+      border-radius: 7px;
+      border: 1px solid rgba(231,76,60,.35);
+      background: rgba(231,76,60,.12);
+      color: rgba(255,180,170,1);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .header-logout-btn:hover { background: rgba(231,76,60,.25); border-color: rgba(231,76,60,.5); color: #fff; }
+
+    .back-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.08);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.8);
+      flex-shrink: 0;
+      transition: var(--transition);
+    }
+    .back-btn:hover { background: rgba(255,255,255,.18); color: #fff; }
+
+    /* Overlay for mobile sidebar */
+    .overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 99;
+    }
+    .overlay.active { display: block; }
+
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); width: 220px !important; }
+      .sidebar.mobile-open { transform: translateX(0); }
+      .main { margin-left: 0 !important; }
+      #mobile-menu-btn { display: flex !important; }
+      .header-logout-btn span { display: none; }
+      .header-logout-btn { padding: 7px 9px; }
+    }
+
+    /* ─── PAGE CONTENT ────────────────────────── */
+    .page-content {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 48px 24px;
+      min-height: calc(100vh - 54px);
+    }
+
+    .create-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      width: 100%;
+      max-width: 580px;
+      overflow: hidden;
+    }
+
+    /* Card header */
+    .create-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 32px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+    .create-card-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .create-card-breadcrumb a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .create-card-breadcrumb a:hover { text-decoration: underline; }
+    .create-card-breadcrumb svg { flex-shrink: 0; }
+    .create-card-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+    .create-card-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+    .step-badge {
+      background: var(--accent-light);
+      color: var(--accent);
+      border: 1px solid #b3d5f5;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 4px 12px;
+      white-space: nowrap;
+    }
+
+    /* Card body */
+    .create-card-body {
+      padding: 28px 32px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .form-field { display: flex; flex-direction: column; gap: 7px; }
+    .form-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .req { color: var(--danger); font-size: 13px; }
+
+    .form-select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      color: var(--text-muted);
+      background: #fff;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      cursor: pointer;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      font-family: inherit;
+    }
+    .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(25,118,210,.10); }
+    .form-select.filled { color: var(--text-primary); }
+
+    .chip-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .form-input {
+      flex: 1;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      color: var(--text-primary);
+      outline: none;
+      font-family: inherit;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .form-input::placeholder { color: var(--text-muted); }
+    .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(25,118,210,.10); }
+
+    .area-add-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 10px 18px;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      background: #fff;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: var(--transition);
+      flex-shrink: 0;
+      font-family: inherit;
+    }
+    .area-add-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .area-add-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── Service area table ───────────────────── */
+    .area-table-wrap {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .area-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .area-table tbody td {
+      padding: 11px 14px;
+      font-size: 13px;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .area-table tbody tr:last-child td { border-bottom: none; }
+    .area-table tbody tr:hover td { background: #f8fafc; }
+    .area-table .col-name { font-weight: 500; }
+    .area-table .col-id   { color: var(--text-secondary); font-size: 12.5px; white-space: nowrap; }
+    .area-table .col-type { color: var(--text-secondary); font-size: 12.5px; }
+    .area-table .col-remove {
+      text-align: right;
+      white-space: nowrap;
+    }
+    .area-remove-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 2px 0;
+      transition: color var(--transition);
+      font-family: inherit;
+    }
+    .area-remove-btn:hover { color: var(--danger); }
+
+    .form-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 8px 0 0;
+    }
+
+    /* Card footer */
+    .create-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 32px 28px;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 11px 22px;
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .btn-cancel {
+      background: none;
+      border: 1.5px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .btn-cancel:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .btn-continue {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(25,118,210,.30);
+      flex: 1;
+      justify-content: center;
+    }
+    .btn-continue:hover:not(:disabled) { background: linear-gradient(135deg, #2186e7, var(--accent)); transform: translateY(-1px); box-shadow: 0 5px 16px rgba(25,118,210,.38); }
+    .btn-continue:disabled { background: #b0c8e8; box-shadow: none; cursor: not-allowed; transform: none; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- Overlay for mobile sidebar -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ─── SIDEBAR ─────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+    <span class="sidebar-logo">CEUI</span>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a class="nav-item active" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+      <span class="nav-label">Knowledge Documents</span>
+    </a>
+  </nav>
+</aside>
+
+<!-- ─── MAIN ──────────────────────────────────────── -->
+<div class="main" id="main">
+
+  <!-- APP HEADER -->
+  <header class="app-header">
+    <button class="back-btn" id="mobile-menu-btn" style="display:none" onclick="openSidebar()" aria-label="Open menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+
+    <div class="header-spacer"></div>
+
+    <button class="header-notif-btn" aria-label="Notifications">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      <span class="header-notif-dot"></span>
+    </button>
+
+    <div class="header-user">
+      <div class="header-avatar" id="user-avatar">JS</div>
+      <div>
+        <div class="header-user-name" id="user-name">John Smith</div>
+        <div class="header-user-role" id="user-role-label">POC</div>
+      </div>
+    </div>
+
+    <button class="header-logout-btn" onclick="logout()" title="Sign out">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      <span>Sign out</span>
+    </button>
+  </header>
+
+  <!-- PAGE BODY -->
+  <div class="page-content">
+    <div class="create-card">
+
+      <!-- Card Header -->
+      <div class="create-card-head">
+        <div>
+          <div class="create-card-breadcrumb">
+            <a href="index.html">Knowledge Documents</a>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Create New</span>
+          </div>
+          <div class="create-card-title">Create New Document</div>
+          <div class="create-card-subtitle">Fill in the details below to get started</div>
+        </div>
+        <span class="step-badge">Step 1 of 2</span>
+      </div>
+
+      <!-- Card Body -->
+      <div class="create-card-body">
+
+        <!-- 1. Line of Business -->
+        <div class="form-field">
+          <label class="form-label" for="lob-select">
+            Line of Business <span class="req">*</span>
+          </label>
+          <select class="form-select" id="lob-select" onchange="validate()">
+            <option value="">Select Line of Business</option>
+            <option value="residential">Residential</option>
+            <option value="commercial">Commercial</option>
+            <option value="industrial">Industrial</option>
+            <option value="municipal">Municipal</option>
+            <option value="hoa">HOA / Community</option>
+            <option value="special">Special Waste</option>
+          </select>
+        </div>
+
+        <!-- 2. Market Type -->
+        <div class="form-field">
+          <label class="form-label" for="market-select">
+            Market Type <span class="req">*</span>
+          </label>
+          <select class="form-select" id="market-select" onchange="validate()">
+            <option value="">Select Market Type</option>
+            <option value="muni">Muni</option>
+            <option value="open">Open</option>
+            <option value="franchise">Franchise</option>
+            <option value="exclusive">Exclusive</option>
+            <option value="non-exclusive">Non-Exclusive</option>
+          </select>
+        </div>
+
+        <!-- 3. Service Area / Polygon ID -->
+        <div class="form-field">
+          <label class="form-label" for="area-select">
+            Service Area / Polygon ID <span class="req">*</span>
+          </label>
+          <div class="chip-input-row">
+            <select class="form-select" id="area-select" onchange="validate()" style="flex:1">
+              <option value="">Select...</option>
+              <option value="0">Open Market - Tucson, AZ - Area 1 | 1616124 | Resi Trash</option>
+              <option value="1">Open Market - Tucson, AZ - Area 1 | 1616130 | Resi Recycling</option>
+              <option value="2">Open Market - Phoenix, AZ - Area 2 | 1616201 | Resi Trash</option>
+              <option value="3">Open Market - Phoenix, AZ - Area 2 | 1616205 | Resi Recycling</option>
+              <option value="4">Franchise - Scottsdale, AZ - Area 1 | 1616310 | Commercial Trash</option>
+              <option value="5">Muni - Tempe, AZ - Area 3 | 1616418 | Resi Trash</option>
+              <option value="6">Muni - Tempe, AZ - Area 3 | 1616420 | Yard Waste</option>
+              <option value="7">Exclusive - Mesa, AZ - Area 4 | 1616533 | Commercial Recycling</option>
+            </select>
+            <button class="area-add-btn" id="add-area-btn" onclick="addArea()" disabled>Add</button>
+          </div>
+          <div id="area-table-container"></div>
+        </div>
+
+        <hr class="form-divider" />
+      </div>
+
+      <!-- Card Footer -->
+      <div class="create-card-footer">
+        <button class="btn btn-cancel" onclick="cancel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Cancel
+        </button>
+        <button class="btn btn-continue" id="continue-btn" onclick="continueToDoc()" disabled>
+          Continue
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /.main -->
+
+<script>
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+
+  // ─── Session / Auth guard ──────────────────────
+  (function() {
+    const raw = sessionStorage.getItem('ceui_user');
+    if (raw) {
+      const user = JSON.parse(raw);
+      if (user.role !== 'POC') { window.location.href = 'login.html'; return; }
+      const initials = user.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+      document.getElementById('user-avatar').textContent = initials;
+      document.getElementById('user-name').textContent = user.name;
+      document.getElementById('user-role-label').textContent = user.role;
+    }
+  })();
+
+  function logout() {
+    sessionStorage.removeItem('ceui_user');
+    window.location.href = 'login.html';
+  }
+
+  function toggleSidebar() {
+    if (window.innerWidth <= 900) {
+      openSidebar();
+    } else {
+      sidebar.classList.toggle('collapsed');
+    }
+  }
+  function openSidebar() {
+    sidebar.classList.add('mobile-open');
+    overlay.classList.add('active');
+  }
+  function closeSidebar() {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+  }
+  function handleResize() {
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    if (window.innerWidth <= 900) {
+      if (mobileBtn) mobileBtn.style.display = 'flex';
+    } else {
+      if (mobileBtn) mobileBtn.style.display = 'none';
+      sidebar.classList.remove('mobile-open');
+      overlay.classList.remove('active');
+    }
+  }
+  window.addEventListener('resize', handleResize);
+  handleResize();
+
+  // ─── Service Area / Polygon ID table ──────────
+  const AREA_DATA = [
+    { name: 'Open Market - Tucson, AZ - Area 1',   id: '1616124', type: 'Resi Trash'           },
+    { name: 'Open Market - Tucson, AZ - Area 1',   id: '1616130', type: 'Resi Recycling'        },
+    { name: 'Open Market - Phoenix, AZ - Area 2',  id: '1616201', type: 'Resi Trash'            },
+    { name: 'Open Market - Phoenix, AZ - Area 2',  id: '1616205', type: 'Resi Recycling'        },
+    { name: 'Franchise - Scottsdale, AZ - Area 1', id: '1616310', type: 'Commercial Trash'      },
+    { name: 'Muni - Tempe, AZ - Area 3',           id: '1616418', type: 'Resi Trash'            },
+    { name: 'Muni - Tempe, AZ - Area 3',           id: '1616420', type: 'Yard Waste'            },
+    { name: 'Exclusive - Mesa, AZ - Area 4',       id: '1616533', type: 'Commercial Recycling'  },
+  ];
+
+  const addedAreas = [];
+
+  function addArea() {
+    const sel = document.getElementById('area-select');
+    const idx = parseInt(sel.value, 10);
+    if (isNaN(idx)) return;
+    const item = AREA_DATA[idx];
+    if (!item) return;
+    // Prevent duplicate
+    if (addedAreas.find(a => a.id === item.id)) {
+      sel.value = '';
+      document.getElementById('add-area-btn').disabled = true;
+      validate();
+      return;
+    }
+    addedAreas.push({ ...item });
+    sel.value = '';
+    document.getElementById('add-area-btn').disabled = true;
+    renderAreaTable();
+    validate();
+  }
+
+  function removeArea(idx) {
+    addedAreas.splice(idx, 1);
+    renderAreaTable();
+    validate();
+  }
+
+  function renderAreaTable() {
+    const container = document.getElementById('area-table-container');
+    if (addedAreas.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    container.innerHTML = `
+      <div class="area-table-wrap">
+        <table class="area-table">
+          <tbody>
+            ${addedAreas.map((a, i) => `
+              <tr>
+                <td class="col-name">${a.name}</td>
+                <td class="col-id">${a.id}</td>
+                <td class="col-type">${a.type}</td>
+                <td class="col-remove">
+                  <button class="area-remove-btn" onclick="removeArea(${i})">Remove</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function validate() {
+    const lob    = document.getElementById('lob-select').value;
+    const market = document.getElementById('market-select').value;
+    const areaVal = document.getElementById('area-select').value;
+
+    document.getElementById('add-area-btn').disabled = areaVal === '';
+
+    const allFilled = lob && market && addedAreas.length > 0;
+    document.getElementById('continue-btn').disabled = !allFilled;
+
+    ['lob-select', 'market-select'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.toggle('filled', !!el.value);
+    });
+  }
+
+  function cancel() {
+    window.location.href = 'index.html';
+  }
+
+  function continueToDoc() {
+    window.location.href = 'document.html';
+  }
+</script>
+</body>
+</html>

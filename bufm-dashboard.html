@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CEUI – BUFM Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --sidebar-bg:    #1b3a5c;
+      --sidebar-hover: #163251;
+      --sidebar-active:#0f2840;
+      --sidebar-text:  #a8c4df;
+      --accent:        #e67e22;
+      --accent-dark:   #ca6c14;
+      --accent-light:  #fef3e7;
+      --success:       #27ae60;
+      --danger:        #e74c3c;
+      --border:        #dce6f0;
+      --text:          #1a2b3c;
+      --text-muted:    #5c7185;
+      --bg-page:       #f0f4f8;
+      --bg-card:       #ffffff;
+      --radius:        8px;
+      --radius-lg:     12px;
+      --shadow:        0 1px 4px rgba(0,0,0,.08);
+      --transition:    .2s ease;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-page);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 220px;
+      min-height: 100vh;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top:0;left:0;bottom:0;
+      z-index: 100;
+      transition: width var(--transition), transform var(--transition);
+    }
+    .sidebar.collapsed { width: 64px; }
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .sidebar-logo { font-size: 20px; font-weight: 800; color: #fff; white-space: nowrap; }
+    .sidebar.collapsed .sidebar-logo { display: none; }
+    .hamburger { background:none;border:none;cursor:pointer;padding:4px;color:var(--sidebar-text);flex-shrink:0;display:flex;flex-direction:column;gap:5px; }
+    .hamburger span { display:block;width:20px;height:2px;background:currentColor;border-radius:2px;transition:var(--transition); }
+    .hamburger:hover { color:#fff; }
+    .sidebar-nav { flex:1;padding:12px 0;overflow-y:auto;overflow-x:hidden; }
+    .nav-item { display:flex;align-items:center;gap:12px;padding:11px 18px;cursor:pointer;color:var(--sidebar-text);border-left:3px solid transparent;transition:var(--transition);white-space:nowrap;text-decoration:none; }
+    .nav-item:hover { background:var(--sidebar-hover);color:#fff; }
+    .nav-item.active { background:var(--sidebar-active);color:#fff;border-left-color:#e67e22; }
+    .nav-item svg { flex-shrink:0;width:18px;height:18px; }
+    .nav-label { font-size:13.5px;font-weight:500; }
+    .sidebar.collapsed .nav-label { display:none; }
+    .nav-item--parent { justify-content:flex-start; }
+    .nav-item-chevron { margin-left:auto;font-size:9px;opacity:.85;flex-shrink:0; }
+    .sidebar.collapsed .nav-item-chevron { display:none; }
+    .nav-submenu { padding-left:40px;display:none; }
+    .nav-submenu.open { display:block; }
+    .nav-subitem {
+      padding:10px 18px 10px 0; cursor:pointer; color:var(--sidebar-text);
+      font-size:13px;font-weight:500; transition:color var(--transition);
+    }
+    .nav-subitem:hover { color:#fff; }
+    .nav-subitem.active { color:#fff;font-weight:600; }
+    .sidebar.collapsed .nav-submenu { display:none !important; }
+
+    /* MAIN */
+    .main { margin-left:220px;flex:1;display:flex;flex-direction:column;transition:margin-left var(--transition); }
+    .sidebar.collapsed ~ .main { margin-left:64px; }
+
+    /* TOPBAR */
+    .topbar {
+      background:var(--bg-card);border-bottom:1px solid var(--border);
+      padding:14px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+      position:sticky;top:0;z-index:50;box-shadow:var(--shadow);
+    }
+    .page-title { font-size:20px;font-weight:800;color:var(--text); }
+    .role-chip {
+      font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px;
+      background:#fef3e7;color:#ca6c14;border:1px solid #f5cba7;letter-spacing:.3px;
+    }
+    .spacer { flex:1; }
+    .avatar {
+      width:34px;height:34px;border-radius:50%;
+      background:linear-gradient(135deg,#e67e22,#f39c12);
+      color:#fff;display:flex;align-items:center;justify-content:center;
+      font-size:13px;font-weight:700;
+    }
+    .user-pill { display:flex;align-items:center;gap:8px;cursor:pointer; }
+    .user-name { font-size:13px;font-weight:600;color:var(--text); }
+    .user-role { font-size:11px;color:var(--text-muted); }
+    .logout-btn {
+      background:none;border:1.5px solid var(--border);border-radius:var(--radius);
+      padding:7px 13px;font-size:12.5px;font-weight:600;color:var(--text-muted);cursor:pointer;
+      display:flex;align-items:center;gap:5px;transition:var(--transition);
+    }
+    .logout-btn:hover { border-color:var(--danger);color:var(--danger);background:#fef2f2; }
+    .notif-btn { position:relative;background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;transition:var(--transition); }
+    .notif-btn:hover { color:var(--accent); }
+    .notif-dot { position:absolute;top:2px;right:2px;width:8px;height:8px;background:var(--danger);border-radius:50%;border:2px solid var(--bg-card); }
+
+    /* CONTENT */
+    .content { padding:28px 24px;flex:1; }
+    .page-heading { font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px; }
+    .page-sub { font-size:13px;color:var(--text-muted);margin-bottom:28px; }
+
+    /* STAT CARDS */
+    .stats-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px; }
+    @media(max-width:900px){.stats-grid{grid-template-columns:1fr 1fr;}}
+    @media(max-width:500px){.stats-grid{grid-template-columns:1fr;}}
+    .stat-card {
+      background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
+      padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px;
+    }
+    .stat-label { font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px; }
+    .stat-value { font-size:32px;font-weight:800;color:var(--text); }
+    .stat-trend { font-size:12px;display:flex;align-items:center;gap:4px; }
+    .trend-up { color:var(--success); }
+    .trend-down { color:var(--danger); }
+    .stat-icon-wrap {
+      width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:4px;
+    }
+
+    /* TABLE CARD */
+    .card { background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden; }
+    .card-header { display:flex;align-items:center;gap:10px;padding:18px 20px;border-bottom:1px solid var(--border); }
+    .card-title { font-size:15px;font-weight:700;color:var(--text); }
+    .badge { font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px; }
+    .badge-orange { background:#fef3e7;color:#ca6c14;border:1px solid #f5cba7; }
+
+    table { width:100%;border-collapse:collapse; }
+    thead th { padding:10px 16px;text-align:left;font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;background:#f8fafc;border-bottom:1px solid var(--border); }
+    tbody td { padding:13px 16px;font-size:13.5px;color:var(--text);border-bottom:1px solid #f0f4f8; }
+    tbody tr:last-child td { border-bottom:none; }
+    tbody tr:hover td { background:#f8fafc; }
+
+    .status-pill { font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-block; }
+    .status-active { background:#eafaf1;color:#1e8449;border:1px solid #a9dfbf; }
+    .status-pending { background:#fef9e7;color:#b7770d;border:1px solid #f9e79f; }
+    .status-review { background:#eaf4fb;color:#1a5276;border:1px solid #aed6f1; }
+
+    @media(max-width:900px){
+      .sidebar{transform:translateX(-100%);width:220px!important;}
+      .sidebar.mobile-open{transform:translateX(0);}
+      .main{margin-left:0!important;}
+    }
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:90;}
+    .overlay.active{display:block;}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
+    <span class="sidebar-logo">CEUI</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-item active" href="/bufm">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span class="nav-label">Dashboard</span>
+    </a>
+    <a class="nav-item" href="/bufm/reports">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span class="nav-label">Reports</span>
+    </a>
+    <a class="nav-item" href="/bufm/users">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="nav-label">Users</span>
+    </a>
+    <a class="nav-item" href="/bufm/settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="nav-label">Settings</span>
+    </a>
+  </nav>
+</aside>
+
+<div class="main" id="main">
+  <header class="topbar">
+    <span class="page-title">BUFM Dashboard</span>
+    <span class="role-chip">BUFM</span>
+    <div class="spacer"></div>
+    <button class="notif-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notif-dot"></span></button>
+    <div class="user-pill">
+      <div class="avatar" id="user-avatar">BU</div>
+      <div>
+        <div class="user-name" id="user-name">BUFM User</div>
+        <div class="user-role">Business Unit Field Manager</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Logout
+    </button>
+  </header>
+
+  <main class="content">
+    <h2 class="page-heading">Field Operations Overview</h2>
+    <p class="page-sub">Monitor your field teams, service routes and operational metrics — Sunday, Mar 22, 2026</p>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon-wrap" style="background:#fef3e7">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e67e22" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="stat-label">Active Field Teams</div>
+        <div class="stat-value">24</div>
+        <div class="stat-trend trend-up">▲ 3 from last week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap" style="background:#eafaf1">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="stat-label">Routes Completed</div>
+        <div class="stat-value">187</div>
+        <div class="stat-trend trend-up">▲ 12% vs last month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap" style="background:#fef9e7">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f39c12" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="stat-label">Pending Pickups</div>
+        <div class="stat-value">41</div>
+        <div class="stat-trend trend-down">▼ 5 overdue</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap" style="background:#eaf4fb">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1976d2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="stat-label">Open Reports</div>
+        <div class="stat-value">9</div>
+        <div class="stat-trend" style="color:var(--text-muted)">2 due today</div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Active Service Routes</span>
+        <span class="badge badge-orange">Today</span>
+        <div style="flex:1"></div>
+        <button style="background:none;border:1.5px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--text-muted)">Export</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Route ID</th>
+              <th>Team</th>
+              <th>Zone</th>
+              <th>Pickups</th>
+              <th>Progress</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>#RT-4421</td><td>Team Alpha</td><td>North District</td><td>34 / 34</td><td><div style="background:#dce6f0;border-radius:10px;height:6px;width:120px"><div style="background:#27ae60;height:100%;width:100%;border-radius:10px"></div></div></td><td><span class="status-pill status-active">Completed</span></td></tr>
+            <tr><td>#RT-4422</td><td>Team Bravo</td><td>South District</td><td>28 / 40</td><td><div style="background:#dce6f0;border-radius:10px;height:6px;width:120px"><div style="background:#e67e22;height:100%;width:70%;border-radius:10px"></div></div></td><td><span class="status-pill status-pending">In Progress</span></td></tr>
+            <tr><td>#RT-4423</td><td>Team Charlie</td><td>East Side</td><td>15 / 38</td><td><div style="background:#dce6f0;border-radius:10px;height:6px;width:120px"><div style="background:#e67e22;height:100%;width:40%;border-radius:10px"></div></div></td><td><span class="status-pill status-pending">In Progress</span></td></tr>
+            <tr><td>#RT-4424</td><td>Team Delta</td><td>West End</td><td>0 / 29</td><td><div style="background:#dce6f0;border-radius:10px;height:6px;width:120px"><div style="background:#dce6f0;height:100%;width:5%;border-radius:10px"></div></div></td><td><span class="status-pill status-review">Scheduled</span></td></tr>
+            <tr><td>#RT-4425</td><td>Team Echo</td><td>Central</td><td>41 / 41</td><td><div style="background:#dce6f0;border-radius:10px;height:6px;width:120px"><div style="background:#27ae60;height:100%;width:100%;border-radius:10px"></div></div></td><td><span class="status-pill status-active">Completed</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+
+  (function() {
+    const raw = sessionStorage.getItem('ceui_user');
+    if (raw) {
+      const user = JSON.parse(raw);
+      if (user.role !== 'BUFM') { window.location.href = 'login.html'; return; }
+      const initials = user.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      document.getElementById('user-avatar').textContent = initials;
+      document.getElementById('user-name').textContent = user.name;
+    }
+  })();
+
+  function logout() { sessionStorage.removeItem('ceui_user'); window.location.href = 'login.html'; }
+  function toggleSidebar() {
+    if (window.innerWidth <= 900) { sidebar.classList.add('mobile-open'); overlay.classList.add('active'); }
+    else sidebar.classList.toggle('collapsed');
+  }
+  function closeSidebar() { sidebar.classList.remove('mobile-open'); overlay.classList.remove('active'); }
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 900) { sidebar.classList.remove('mobile-open'); overlay.classList.remove('active'); }
+  });
+</script>
+</body>
+</html>
