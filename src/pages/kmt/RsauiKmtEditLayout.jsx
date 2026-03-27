@@ -153,23 +153,6 @@ export default function RsauiKmtEditLayout() {
         </div>
 
         <div className="rsa-ui-flow__shell">
-          <div className="rsa-ui-flow__shell-section rsa-ui-flow__shell-section--stepper">
-            <div className="rsa-poc-stepper" aria-label="Progress">
-              {STEPS.map((s, i) => (
-                <span
-                  key={s.path}
-                  className={`rsa-poc-stepper__step${i < stepIdx ? ' rsa-poc-stepper__step--done' : ''}${i === stepIdx ? ' rsa-poc-stepper__step--current' : ''}`}
-                >
-                  {i < stepIdx ? '✓ ' : ''}
-                  {s.label}
-                  {i < STEPS.length - 1 ? <span className="rsa-poc-stepper__arrow"> → </span> : null}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="rsa-ui-flow__shell-divider" aria-hidden />
-
           <nav className="rsa-ui-flow__shell-section rsa-ui-tabs rsa-ui-tabs--in-shell" aria-label="KMT edit steps">
             {STEPS.map(t => (
               <NavLink key={t.path} to={`${KMT_BASE}/${t.path}${tabSuffix}`} className={tabClass}>
