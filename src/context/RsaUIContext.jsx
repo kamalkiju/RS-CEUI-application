@@ -13,6 +13,72 @@ export const RSA_STATUS = {
 
 const TODAY = () => new Date().toISOString().slice(0, 10)
 
+/** Demo data: 3 primary + 3 additional offerings per Solid Waste / Recycle / Yard Waste. */
+function demoProductTabs(seedId) {
+  const active = TODAY()
+  const exp = new Date(Date.now() + 86400000 * 30).toISOString().slice(0, 10)
+  const mkPrimary = (catKey, i) => {
+    const names = {
+      solidWaste: ['95 Ga Cart Solid Waste Service', '65 Gal Cart Solid Waste', 'Bulk Pickup Solid'],
+      recycle: ['65 Gal Recycle Cart', 'Office Recycle Bin', 'Glass Recycle Addon'],
+      yardWaste: ['96 Gal Yard Waste Tote', 'Paper Yard Bag Service', 'Seasonal Yard Clean-up'],
+    }
+    return {
+      id: `${seedId}-${catKey}-p${i}`,
+      name: names[catKey][i - 1],
+      choice: `C${i}`,
+      isPrimary: i === 1,
+      quantity: 1,
+      status: 'P',
+      activeDate: active,
+      expiryDate: exp,
+      serviceTypes: ['Residential'],
+      frequencies: ['Weekly'],
+      channels: ['Curbside'],
+      changeType: 'new',
+    }
+  }
+  const mkAdd = (catKey, i) => ({
+    id: `${seedId}-${catKey}-a${i}`,
+    name: `${catKey === 'solidWaste' ? 'Solid' : catKey === 'recycle' ? 'Recycle' : 'Yard'} add-on ${i} — extra pickup`,
+    choice: '—',
+    isPrimary: false,
+    quantity: i,
+    status: 'P',
+    activeDate: active,
+    expiryDate: exp,
+    serviceTypes: ['Residential'],
+    frequencies: ['On-call'],
+    channels: ['Curbside'],
+    changeType: 'new',
+  })
+  const block = (label, key, mandatory) => ({
+    id: key,
+    label,
+    mandatory,
+    primaryOfferings: [1, 2, 3].map(i => mkPrimary(key, i)),
+    additionalOfferings: [1, 2, 3].map(i => mkAdd(key, i)),
+  })
+  return {
+    solidWaste: block('Solid Waste', 'solidWaste', true),
+    recycle: block('Recycle', 'recycle', false),
+    yardWaste: block('Yard Waste', 'yardWaste', true),
+  }
+}
+
+function withDemoProductTabsIfEmpty(sub) {
+  const pt = sub.productTabs
+  if (pt && typeof pt === 'object') {
+    const has = Object.values(pt).some(
+      t =>
+        t &&
+        ((t.primaryOfferings || []).length > 0 || (t.additionalOfferings || []).length > 0),
+    )
+    if (has) return sub
+  }
+  return { ...sub, productTabs: demoProductTabs(sub.id) }
+}
+
 let rsaCounter = 6001
 function nextRsaId() {
   return `RSA-${rsaCounter++}`
@@ -49,10 +115,96 @@ const INITIAL_PUBLISHED = [
   { name: 'Published RSAUI – Demo Metro North', id: '1699001', type: 'Resi Trash', rsaSubmissionId: 'RSA-SEED-1', approved: true, source: 'RSAUI' },
 ]
 
+const DRAFT_SEED_ROWS = Array.from({ length: 10 }, (_, i) => ({
+  id: `RSA-${5601 + i}`,
+  status: RSA_STATUS.Draft,
+  pocName: 'John Doe',
+  serviceArea: {
+    name: `Draft Service Area ${i + 1}`,
+    division: `Division ${String.fromCharCode(65 + (i % 5))}`,
+    polygonId: `POL-${5601 + i}`,
+    serviceType: i % 2 === 0 ? 'Resi Trash' : 'Resi Recycling',
+    notes: '',
+  },
+  pricing: { model: 'Per cart', baseRate: '22.00', surcharges: 'ERF' },
+  product: { name: 'Cart 95 gal', sku: 'CRT-95', description: 'Standard' },
+  requestMeta: {
+    requestorName: 'John Doe',
+    requestorEmail: 'john.doe@republicservices.com',
+    onBehalfOf: '',
+    reasonForRequest: 'New Service Area',
+    comments: i % 4 === 0 ? 'POC sample notes' : '',
+    approvalComments: '',
+    assignedBUFM: 'Jane Wilson',
+  },
+  requestType: 'Create Service Area',
+  version: 'v1.0',
+  progress: [0, 30, 55, 25][i % 4],
+  bufmUnclaimed: false,
+  assignedBufmReviewer: 'Jane Wilson',
+  bufmPriority: 'Medium',
+  bufmDueAt: TODAY(),
+  bufmSlaHoursRemaining: 14,
+  bufmSlaExceeded: false,
+  kmtEscalationLevel: 0,
+  kmtEscalationReason: '',
+  offeringExpiryLabel: '',
+  rejection_comment_BUFM: '',
+  rejection_comment_KMT: '',
+  updated: TODAY(),
+}))
+
+/** KMT RSAUI document review — review queue (Pending KMT / publish). */
+const KMT_QUEUE_SEED_ROWS = Array.from({ length: 10 }, (_, i) => ({
+  id: `RSA-${5520 + i}`,
+  status: RSA_STATUS.Pending_KMT,
+  pocName: i % 3 === 0 ? 'Alex Morgan' : i % 3 === 1 ? 'Sam Rivera' : 'Jordan Lee',
+  serviceArea: {
+    name: `KMT publish queue — pilot ${i + 1}`,
+    division: `D-KMT-${310 + i}`,
+    polygonId: String(1620500 + i),
+    serviceType: i % 2 === 0 ? 'Resi Trash' : 'Resi Recycling',
+    notes: 'Awaiting KMT publish',
+  },
+  pricing: { model: 'Per cart', baseRate: String(20.5 + i * 0.25), surcharges: 'ERF' },
+  product: { name: 'Cart 95 gal', sku: 'CRT-95', description: 'Standard' },
+  requestType: 'Create Service Area',
+  version: 'v1.0',
+  bufmUnclaimed: false,
+  assignedBufmReviewer: 'Jane Wilson',
+  bufmPriority: i % 4 === 0 ? 'High' : 'Medium',
+  bufmDueAt: TODAY(),
+  bufmSlaHoursRemaining: 8,
+  bufmSlaExceeded: false,
+  kmtEscalationLevel: 0,
+  kmtEscalationReason: '',
+  offeringExpiryLabel: '',
+  rejection_comment_BUFM: '',
+  rejection_comment_KMT: '',
+  updated: TODAY(),
+}))
+
 const INITIAL_SUBMISSIONS = [
+  ...DRAFT_SEED_ROWS,
+  ...KMT_QUEUE_SEED_ROWS,
+  {
+    id: 'RSA-5988',
+    status: RSA_STATUS.Pending_BUFM,
+    bufmUnclaimed: true,
+    assignedBufmReviewer: '',
+    pocName: 'Pat Kim',
+    serviceArea: { name: 'Greenfield Estate', division: 'Division B', polygonId: 'POL-1880', serviceType: 'Residential', notes: 'Released to pool' },
+    pricing: { model: 'Per cart', baseRate: '22.00', surcharges: 'ERF' },
+    product: { name: 'Cart 95 gal', sku: 'CRT-95', description: 'Standard' },
+    rejection_comment_BUFM: '',
+    rejection_comment_KMT: '',
+    updated: TODAY(),
+  },
   {
     id: 'RSA-5999',
     status: RSA_STATUS.Pending_BUFM,
+    bufmUnclaimed: false,
+    assignedBufmReviewer: 'Jane Wilson',
     pocName: 'Alex Morgan',
     serviceArea: { name: 'Muni – Gainesville pilot', division: 'D-412', polygonId: '1616999', serviceType: 'Resi Trash', notes: 'Awaiting BUFM' },
     pricing: { model: 'Per cart', baseRate: '22.50', surcharges: 'ERF' },
@@ -87,7 +239,15 @@ const INITIAL_SUBMISSIONS = [
     id: 'RSA-5995',
     status: RSA_STATUS.Published,
     pocName: 'Chris Park',
-    serviceArea: { name: 'North District rollout', division: 'D-100', polygonId: '1616995', serviceType: 'Resi Trash', notes: 'Live' },
+    offeringExpiryLabel: '96G Rollcart — Residential',
+    serviceArea: {
+      name: 'North Old Zone',
+      division: 'Division A',
+      polygonId: 'POL-9001',
+      serviceType: 'Residential',
+      notes: 'Live',
+      expiryDate: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+    },
     pricing: { model: 'Per cart', baseRate: '21.00', surcharges: 'ERF' },
     product: { name: 'Cart 95 gal', sku: 'CRT-95', description: 'Standard' },
     rejection_comment_BUFM: '',
@@ -159,7 +319,7 @@ const INITIAL_SUBMISSIONS = [
       updated: TODAY(),
     }
   }),
-]
+].map(withDemoProductTabsIfEmpty)
 
 const RsaUIContext = createContext(null)
 
@@ -181,6 +341,10 @@ export function RsaUIProvider({ children }) {
     name: '',
     division: '',
     polygonId: '',
+    lawsonId: '',
+    type: '',
+    status: '',
+    expiryDate: '',
     serviceType: '',
     notes: '',
     region: '',
@@ -226,6 +390,57 @@ export function RsaUIProvider({ children }) {
     alternateSku: '',
   })
 
+  const emptyProductTabs = () => ({
+    solidWaste: {
+      id: 'solidWaste',
+      label: 'Solid Waste',
+      mandatory: true,
+      primaryOfferings: [],
+      additionalOfferings: [],
+    },
+    recycle: {
+      id: 'recycle',
+      label: 'Recycle',
+      mandatory: false,
+      primaryOfferings: [],
+      additionalOfferings: [],
+    },
+    yardWaste: {
+      id: 'yardWaste',
+      label: 'Yard Waste',
+      mandatory: true,
+      primaryOfferings: [],
+      additionalOfferings: [],
+    },
+  })
+
+  const emptyRequestMeta = () => ({
+    requestorName: '',
+    requestorEmail: '',
+    onBehalfOf: '',
+    reasonForRequest: '',
+    comments: '',
+    approvalComments: '',
+    assignedBUFM: '',
+  })
+
+  const mergeProductTabs = (prev, patch) => {
+    if (!patch) return prev
+    const defaults = emptyProductTabs()
+    const base = { ...defaults, ...(prev && typeof prev === 'object' ? prev : {}) }
+    for (const key of Object.keys(patch)) {
+      const p = patch[key]
+      const existing = base[key] || { label: key, mandatory: false, primaryOfferings: [], additionalOfferings: [] }
+      base[key] = {
+        ...existing,
+        ...p,
+        primaryOfferings: p.primaryOfferings !== undefined ? p.primaryOfferings : existing.primaryOfferings,
+        additionalOfferings: p.additionalOfferings !== undefined ? p.additionalOfferings : existing.additionalOfferings,
+      }
+    }
+    return base
+  }
+
   const createDraft = useCallback(() => {
     const id = nextRsaId()
     const row = {
@@ -234,6 +449,20 @@ export function RsaUIProvider({ children }) {
       serviceArea: emptyServiceArea(),
       pricing: emptyPricing(),
       product: emptyProduct(),
+      productTabs: emptyProductTabs(),
+      requestMeta: emptyRequestMeta(),
+      progress: 0,
+      version: 'v1.0',
+      requestType: 'Create Service Area',
+      bufmUnclaimed: false,
+      assignedBufmReviewer: 'Jane Wilson',
+      bufmPriority: 'Medium',
+      bufmDueAt: TODAY(),
+      bufmSlaHoursRemaining: 14,
+      bufmSlaExceeded: false,
+      kmtEscalationLevel: 0,
+      kmtEscalationReason: '',
+      offeringExpiryLabel: '',
       rejection_comment_BUFM: '',
       rejection_comment_KMT: '',
       updated: TODAY(),
@@ -255,6 +484,11 @@ export function RsaUIProvider({ children }) {
       serviceArea: { ...emptyServiceArea(), ...src.serviceArea },
       pricing: { ...emptyPricing(), ...src.pricing },
       product: { ...emptyProduct(), ...src.product },
+      productTabs: src.productTabs ? mergeProductTabs(emptyProductTabs(), src.productTabs) : emptyProductTabs(),
+      requestMeta: { ...emptyRequestMeta(), ...(src.requestMeta || {}) },
+      bufmUnclaimed: false,
+      kmtEscalationLevel: 0,
+      kmtEscalationReason: '',
       updated: TODAY(),
     }
     setSubmissions(prev => [copy, ...prev])
@@ -336,15 +570,82 @@ export function RsaUIProvider({ children }) {
     setSubmissions(prev =>
       prev.map(s => {
         if (s.id !== id) return s
+        const nextTabs =
+          patch.replaceProductTabs && patch.productTabs
+            ? patch.productTabs
+            : patch.productTabs
+              ? mergeProductTabs(s.productTabs || emptyProductTabs(), patch.productTabs)
+              : s.productTabs
+        const nextReq = patch.requestMeta ? { ...(s.requestMeta || emptyRequestMeta()), ...patch.requestMeta } : s.requestMeta
+        const { replaceProductTabs: _rp, ...restPatch } = patch
         return {
           ...s,
-          ...patch,
+          ...restPatch,
           serviceArea: patch.serviceArea ? { ...s.serviceArea, ...patch.serviceArea } : s.serviceArea,
           pricing: patch.pricing ? { ...s.pricing, ...patch.pricing } : s.pricing,
           product: patch.product ? { ...s.product, ...patch.product } : s.product,
+          productTabs: nextTabs,
+          requestMeta: nextReq,
           updated: TODAY(),
         }
       })
+    )
+  }, [])
+
+  const releaseBufmToUnclaimed = useCallback((id, { releaseNote } = {}) => {
+    setSubmissions(prev =>
+      prev.map(s =>
+        s.id === id && s.status === RSA_STATUS.Pending_BUFM
+          ? {
+              ...s,
+              bufmUnclaimed: true,
+              assignedBufmReviewer: '',
+              bufmReleaseNote: releaseNote || '',
+              updated: TODAY(),
+            }
+          : s,
+      ),
+    )
+  }, [])
+
+  const claimBufmTask = useCallback((id, reviewerName) => {
+    setSubmissions(prev =>
+      prev.map(s =>
+        s.id === id && s.bufmUnclaimed && s.status === RSA_STATUS.Pending_BUFM
+          ? { ...s, bufmUnclaimed: false, assignedBufmReviewer: reviewerName, updated: TODAY() }
+          : s,
+      ),
+    )
+  }, [])
+
+  const setKmtEscalation = useCallback((id, { level, reason }) => {
+    setSubmissions(prev =>
+      prev.map(s =>
+        s.id === id ? { ...s, kmtEscalationLevel: level, kmtEscalationReason: reason || '', updated: TODAY() } : s,
+      ),
+    )
+  }, [])
+
+  const extendOfferingExpiry = useCallback((id, { newExpiryDate, offeringName }) => {
+    setSubmissions(prev =>
+      prev.map(s =>
+        s.id === id
+          ? {
+              ...s,
+              serviceArea: { ...s.serviceArea, expiryDate: newExpiryDate },
+              offeringExpiryLabel: offeringName || s.offeringExpiryLabel,
+              updated: TODAY(),
+            }
+          : s,
+      ),
+    )
+  }, [])
+
+  const archiveSubmission = useCallback((id, { reason }) => {
+    setSubmissions(prev =>
+      prev.map(s =>
+        s.id === id ? { ...s, archived: true, archiveReason: reason || '', updated: TODAY() } : s,
+      ),
     )
   }, [])
 
@@ -359,6 +660,11 @@ export function RsaUIProvider({ children }) {
   const removeSubmission = useCallback((id) => {
     setSubmissions(prev => prev.filter(s => s.id !== id))
   }, [])
+
+  const getBufmUnclaimed = useCallback(
+    () => submissions.filter(s => s.status === RSA_STATUS.Pending_BUFM && s.bufmUnclaimed),
+    [submissions],
+  )
 
   const value = {
     submissions,
@@ -376,6 +682,12 @@ export function RsaUIProvider({ children }) {
     patchSubmission,
     getPendingForBUFM,
     getPendingForKMT,
+    getBufmUnclaimed,
+    releaseBufmToUnclaimed,
+    claimBufmTask,
+    setKmtEscalation,
+    extendOfferingExpiry,
+    archiveSubmission,
     getPublishedAreasForCreate,
     removeSubmission,
     cloneSubmission,

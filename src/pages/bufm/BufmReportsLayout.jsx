@@ -5,6 +5,7 @@ const TABS = [
   { path: 'review', label: 'Review Queue' },
   { path: 'approved', label: 'Approved' },
   { path: 'rejected', label: 'Rejected' },
+  { path: 'unclaimed', label: 'Unclaimed Tasks' },
 ]
 
 export default function BufmReportsLayout() {

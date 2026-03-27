@@ -1,18 +1,41 @@
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Layout from '../../components/Layout.jsx'
+import { useAuth } from '../../context/AuthContext.jsx'
 import { useRsaUI } from '../../context/RsaUIContext.jsx'
 import RejectModal from '../../components/RejectModal.jsx'
+import RsaSubmissionDetailView from '../../components/rsa/RsaSubmissionDetailView.jsx'
+import RsaDocumentFullscreenModal from '../../components/rsa/RsaDocumentFullscreenModal.jsx'
 
 export default function KmtRsaSubmissionView() {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const kmtEdit = Boolean(location.state?.kmtEdit)
+  const { user } = useAuth()
   const { getSubmission, approveKMT, rejectKMT, patchSubmission, RSA_STATUS } = useRsaUI()
-  const sub = id ? getSubmission(id) : null
+
+  const paths = useMemo(() => {
+    const rsaui = user?.app === 'RSAUI'
+    const base = rsaui ? '/rsaui/kmt/document-review' : '/kmt/document-review/rsaui'
+    return {
+      review: `${base}/review`,
+      approved: `${base}/approved`,
+      rejected: `${base}/rejected`,
+    }
+  }, [user?.app])
+  const decodedId = id ? decodeURIComponent(id) : ''
+  const sub = decodedId ? getSubmission(decodedId) : null
   const [rejectOpen, setRejectOpen] = useState(false)
   const [draft, setDraft] = useState(null)
+  const [fullscreenOpen, setFullscreenOpen] = useState(false)
+
+  const canPublish = sub?.status === RSA_STATUS.Pending_KMT
+  const canKmtFieldEdit =
+    sub?.status === RSA_STATUS.Pending_KMT || sub?.status === RSA_STATUS.Published
+  const showKmtFieldEditor =
+    Boolean(sub) &&
+    canKmtFieldEdit &&
+    (Boolean(location.state?.kmtFieldEdit) || location.state?.kmtEdit === true)
 
   useEffect(() => {
     if (!sub) {
@@ -26,12 +49,18 @@ export default function KmtRsaSubmissionView() {
     })
   }, [sub?.id])
 
+  useEffect(() => {
+    if (!sub || !location.state?.openReject) return
+    setRejectOpen(true)
+    navigate(location.pathname, { replace: true, state: {} })
+  }, [sub?.id, location.state?.openReject, location.pathname, navigate, sub])
+
   if (!sub) {
     return (
       <Layout>
         <div className="kmt-page kmt-rsa-view kmt-rsa-view--missing">
           <p>Submission not found.</p>
-          <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/rsaui/review')}>
+          <button type="button" className="btn btn-outline" onClick={() => navigate(paths.review)}>
             Back to document review
           </button>
         </div>
@@ -39,7 +68,16 @@ export default function KmtRsaSubmissionView() {
     )
   }
 
-  const canPublish = sub.status === RSA_STATUS.Pending_KMT
+  const goViewOnly = () => {
+    navigate({ pathname: location.pathname, search: location.search || '' }, { replace: true, state: {} })
+  }
+
+  const goFieldEdit = () => {
+    navigate(
+      { pathname: location.pathname, search: location.search || '' },
+      { replace: true, state: { kmtFieldEdit: true } },
+    )
+  }
 
   const saveEdits = () => {
     if (!draft) return
@@ -48,11 +86,43 @@ export default function KmtRsaSubmissionView() {
       pricing: draft.pricing,
       product: draft.product,
     })
+    window.alert('✓ Changes saved')
   }
 
   const handlePublish = () => {
     approveKMT(sub.id)
-    navigate('/kmt/document-review/rsaui/approved')
+    navigate(paths.approved)
+  }
+
+  const rejectionNote =
+    sub.status === RSA_STATUS.Rejected_BUFM
+      ? sub.rejection_comment_BUFM || undefined
+      : sub.status === RSA_STATUS.Rejected_KMT
+        ? sub.rejection_comment_KMT || undefined
+        : undefined
+
+  const showWorkflowInReadView =
+    sub.status === RSA_STATUS.Pending_BUFM ||
+    ((sub.status === RSA_STATUS.Pending_KMT || sub.status === RSA_STATUS.Published) && !showKmtFieldEditor)
+
+  const detailProps = {
+    submission: sub,
+    creatorName: sub.pocName || sub.requestMeta?.requestorName || '—',
+    creatorEmail: sub.requestMeta?.requestorEmail || '—',
+    unifiedPanel: true,
+    showWorkflowTimeline: showWorkflowInReadView,
+    rejectionNote,
+    rejectionTitle: sub.status === RSA_STATUS.Rejected_KMT ? 'KMT rejection' : 'BUFM rejection',
+  }
+
+  const fullscreenWorkflow =
+    showWorkflowInReadView ||
+    (showKmtFieldEditor &&
+      (sub.status === RSA_STATUS.Pending_KMT || sub.status === RSA_STATUS.Published))
+
+  const fullscreenDetailProps = {
+    ...detailProps,
+    showWorkflowTimeline: fullscreenWorkflow,
   }
 
   return (
@@ -71,6 +141,19 @@ export default function KmtRsaSubmissionView() {
             </p>
           </div>
           <div className="kmt-rsa-view__actions">
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => setFullscreenOpen(true)}>
+              Full screen
+            </button>
+            {canKmtFieldEdit && !showKmtFieldEditor && (
+              <button type="button" className="btn btn-outline" onClick={goFieldEdit}>
+                Edit details
+              </button>
+            )}
+            {canKmtFieldEdit && showKmtFieldEditor && (
+              <button type="button" className="btn btn-text btn-sm" onClick={goViewOnly}>
+                View only
+              </button>
+            )}
             {canPublish && (
               <button type="button" className="btn btn-primary" onClick={handlePublish}>
                 Publish
@@ -89,14 +172,25 @@ export default function KmtRsaSubmissionView() {
           </div>
         </header>
 
-        {kmtEdit && (
+        {showKmtFieldEditor && (
           <div className="kmt-doc-view__kmt-edit-banner" role="status">
-            KMT edit mode — update submission fields below, then save. Use Publish when this submission is pending KMT.
+            {canPublish
+              ? 'Edit mode — the read-only summary stays above; update fields in the card below, then Save changes. Use View only to collapse the editor.'
+              : 'Edit mode — published request. Update fields below, then Save changes. Use View only when done.'}
           </div>
         )}
 
-        {kmtEdit && draft ? (
-          <div className="kmt-rsa-view__grid kmt-rsa-view__edit-grid">
+        <div className="kmt-rsa-view__detail rsa-detail-view-wrap">
+          <div className="rsa-read-surface rsa-read-surface--kmt">
+            <RsaSubmissionDetailView {...detailProps} />
+          </div>
+        </div>
+
+        {showKmtFieldEditor && draft ? (
+          <div className="rsa-read-surface rsa-read-surface--kmt rsa-kmt-edit-surface rsa-detail-view-wrap">
+            <div className="rsa-kmt-edit-surface__inner">
+              <h2 className="rsa-kmt-edit-surface__title">Edit submission details</h2>
+              <div className="kmt-rsa-view__grid kmt-rsa-view__edit-grid">
             <section className="kmt-rsa-view__card">
               <h2>POC</h2>
               <p>
@@ -257,56 +351,32 @@ export default function KmtRsaSubmissionView() {
                 />
               </label>
             </section>
-            <div className="kmt-rsa-view__edit-actions">
-              <button type="button" className="btn btn-primary" onClick={saveEdits}>
-                Save changes
-              </button>
+              </div>
             </div>
+            <footer className="rsa-read-surface__footer">
+              <button type="button" className="btn btn-outline" onClick={goViewOnly}>
+                Cancel
+              </button>
+              <div className="rsa-read-surface__footer-right">
+                <button type="button" className="btn btn-primary" onClick={saveEdits}>
+                  Save changes
+                </button>
+              </div>
+            </footer>
           </div>
-        ) : (
-          <div className="kmt-rsa-view__grid">
-            <section className="kmt-rsa-view__card">
-              <h2>POC</h2>
-              <p>
-                <strong>Name</strong> {sub.pocName || '—'}
-              </p>
-            </section>
-            <section className="kmt-rsa-view__card">
-              <h2>Service area</h2>
-              <dl className="kmt-rsa-view__dl">
-                {Object.entries(sub.serviceArea || {}).map(([k, v]) => (
-                  <div key={k}>
-                    <dt>{k}</dt>
-                    <dd>{v || '—'}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-            <section className="kmt-rsa-view__card">
-              <h2>Pricing</h2>
-              <dl className="kmt-rsa-view__dl">
-                {Object.entries(sub.pricing || {}).map(([k, v]) => (
-                  <div key={k}>
-                    <dt>{k}</dt>
-                    <dd>{v || '—'}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-            <section className="kmt-rsa-view__card">
-              <h2>Product</h2>
-              <dl className="kmt-rsa-view__dl">
-                {Object.entries(sub.product || {}).map(([k, v]) => (
-                  <div key={k}>
-                    <dt>{k}</dt>
-                    <dd>{v || '—'}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          </div>
-        )}
+        ) : null}
       </div>
+
+      <RsaDocumentFullscreenModal
+        open={fullscreenOpen}
+        onClose={() => setFullscreenOpen(false)}
+        title={sub.serviceArea?.name || sub.id}
+        subtitle={`RSAUI · ${sub.status?.replace(/_/g, ' ') || '—'} · ${sub.id}`}
+      >
+        <div className="rsa-read-surface rsa-read-surface--kmt">
+          <RsaSubmissionDetailView {...fullscreenDetailProps} />
+        </div>
+      </RsaDocumentFullscreenModal>
 
       <RejectModal
         open={rejectOpen}
@@ -315,7 +385,7 @@ export default function KmtRsaSubmissionView() {
         onClose={() => setRejectOpen(false)}
         onConfirm={comment => {
           rejectKMT(sub.id, comment)
-          navigate('/kmt/document-review/rsaui/rejected')
+          navigate(paths.rejected)
         }}
       />
     </Layout>

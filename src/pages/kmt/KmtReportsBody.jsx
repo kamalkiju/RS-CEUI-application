@@ -239,7 +239,7 @@ export default function KmtReportsBody() {
                         type="button"
                         className="btn btn-outline btn-sm"
                         onClick={() =>
-                          navigate(`/kmt/rsaui-submission/${encodeURIComponent(sub.id)}`, { state: { kmtEdit: false } })
+                          navigate(`/kmt/rsaui-submission/${encodeURIComponent(sub.id)}`, { state: {} })
                         }
                       >
                         View

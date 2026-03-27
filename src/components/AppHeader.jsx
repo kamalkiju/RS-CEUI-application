@@ -17,8 +17,11 @@ export default function AppHeader({ onMobileMenuClick, isMobile }) {
   const unread = user?.role ? unreadCountForRole(user.role) : 0
 
   const handleLogout = () => {
+    const appLabel = user?.app === 'RSAUI' ? 'RSAUI' : 'CEUI'
+    const ok = window.confirm(`Logout of ${appLabel}?\n\nYou will be redirected to the application selector.`)
+    if (!ok) return
     logout()
-    navigate('/login')
+    navigate('/')
   }
 
   return (

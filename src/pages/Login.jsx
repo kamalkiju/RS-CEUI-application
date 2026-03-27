@@ -8,19 +8,31 @@ const ROLE_CONFIG = {
   KMT:  { color: '#27ae60', desc: 'Access to knowledge base management, analytics and publishing', path: '/kmt' },
 }
 
+const RSAUI_ROLE_HOME = {
+  POC: '/rsaui/poc/dashboard',
+  BUFM: '/rsaui/bufm/dashboard',
+  KMT: '/rsaui/kmt/dashboard',
+}
+
 export default function Login() {
   const { login, user } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (user?.role && ROLE_CONFIG[user.role]) {
+    if (!user?.role) return
+    if (user.app === 'RSAUI' && RSAUI_ROLE_HOME[user.role]) {
+      navigate(RSAUI_ROLE_HOME[user.role], { replace: true })
+      return
+    }
+    if (ROLE_CONFIG[user.role]) {
       navigate(ROLE_CONFIG[user.role].path, { replace: true })
     }
   }, [user, navigate])
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [role, setRole] = useState('')
+  /** Demo defaults — prefilled; change role in dropdown as needed. */
+  const [email, setEmail] = useState('demo.user@republicservices.com')
+  const [password, setPassword] = useState('demo123456')
+  const [role, setRole] = useState('POC')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
@@ -43,7 +55,7 @@ export default function Login() {
     setLoading(true)
     setTimeout(() => {
       const name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-      login({ email: email.trim(), role, name })
+      login({ email: email.trim(), role, name, app: 'CEUI' })
       navigate(ROLE_CONFIG[role].path)
     }, 1200)
   }

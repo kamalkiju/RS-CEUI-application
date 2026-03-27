@@ -5,9 +5,9 @@ import { useRsaUI, RSA_STATUS } from '../../context/RsaUIContext.jsx'
 import RejectionBanner from '../../components/RejectionBanner.jsx'
 
 const TABS = [
-  { to: '/rsaui/service-area', label: 'Service Area', end: false },
-  { to: '/rsaui/pricing', label: 'Pricing', end: false },
-  { to: '/rsaui/products', label: 'Product', end: false },
+  { to: '/rsaui/service-area', label: '1. Select Area', end: false },
+  { to: '/rsaui/products', label: '2. Product Config', end: false },
+  { to: '/rsaui/pricing', label: '3. Review', end: false },
 ]
 
 const STEP_PATHS = TABS.map(t => t.to)
@@ -119,7 +119,7 @@ export default function RsaUILayout() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <div>
-            <h1 className="rsa-ui-flow__title">RSAUI submission</h1>
+            <h1 className="rsa-ui-flow__title">Create Service Area</h1>
             <p className="rsa-ui-flow__sub">
               {submissionId ? <code>{submissionId}</code> : 'Create a new submission'} ·{' '}
               {sub?.status || RSA_STATUS.Draft}
@@ -190,7 +190,7 @@ export default function RsaUILayout() {
                 </button>
               )}
               <button type="button" className="btn btn-primary" disabled={saving} onClick={handleSubmit}>
-                Submit for approval
+                4. Submit for approval
               </button>
             </div>
           </div>
