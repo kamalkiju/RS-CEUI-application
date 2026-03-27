@@ -48,3 +48,12 @@ export function productTabKeyOrder(merged) {
   const extras = Object.keys(merged).filter(k => !RSA_CORE_TAB_KEYS.includes(k))
   return [...RSA_CORE_TAB_KEYS, ...extras]
 }
+
+/** Category labels missing a primary offering (wizard cannot leave Product Config until fixed). */
+export function getProductConfigureBlockers(productTabs) {
+  const pt = mergeProductTabs(productTabs || {})
+  const missing = []
+  if (!pt.solidWaste?.primaryOfferings?.length) missing.push('Solid Waste')
+  if (!pt.yardWaste?.primaryOfferings?.length) missing.push('Yard Waste')
+  return missing
+}

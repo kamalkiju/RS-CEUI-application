@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { useOutletContext, useNavigate } from 'react-router-dom'
+import { useOutletContext } from 'react-router-dom'
 import { useRsaUI } from '../../context/RsaUIContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import RsaSubmissionDetailView from '../../components/rsa/RsaSubmissionDetailView.jsx'
@@ -64,7 +64,6 @@ export default function RsauiPocProductConfig() {
     isEditDetailsFlow = false,
     wizardBase = BASE,
   } = useOutletContext()
-  const navigate = useNavigate()
   const { user } = useAuth()
   const { getSubmission, patchSubmission } = useRsaUI()
   const sub = submissionId ? getSubmission(submissionId) : null
@@ -246,18 +245,6 @@ export default function RsauiPocProductConfig() {
   const viewOffering = o => {
     setViewOfferingObj(o)
     setModal('viewOffering')
-  }
-
-  const validateAndGoReview = () => {
-    const pt = mergedTabs
-    const missing = []
-    if (!pt.solidWaste?.primaryOfferings?.length) missing.push('Solid Waste')
-    if (!pt.yardWaste?.primaryOfferings?.length) missing.push('Yard Waste')
-    if (missing.length) {
-      setModal('incomplete')
-      return
-    }
-    navigate(`${wizardBase}/review${tabSuffix}`)
   }
 
   if (!submissionId || !sub) {
@@ -455,12 +442,6 @@ export default function RsauiPocProductConfig() {
           </table>
         </div>
       </section>
-
-      <div className="rsa-step-actions rsa-step-actions--config">
-        <button type="button" className="btn btn-primary btn-lg" onClick={validateAndGoReview}>
-          Continue to review summary →
-        </button>
-      </div>
       </div>
 
       {modal === 'addTab' && (

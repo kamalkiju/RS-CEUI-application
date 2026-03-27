@@ -1332,9 +1332,34 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 }
 .rsa-ui-tabs--in-shell {
   margin: 0;
-  padding: 4px 12px 0;
-  border-bottom: 1px solid #e8edf3;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  padding: 8px 14px 0;
+  gap: 6px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f1f5f9;
+}
+.rsa-ui-tabs--in-shell .rsa-ui-tab {
+  padding: 10px 16px 12px;
+  margin-bottom: -1px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  color: #64748b;
+  font-weight: 600;
+}
+.rsa-ui-tabs--in-shell .rsa-ui-tab:hover {
+  color: #1d4ed8;
+  background: rgba(255, 255, 255, 0.65);
+}
+.rsa-ui-tabs--in-shell .rsa-ui-tab--active {
+  color: #1d4ed8;
+  font-weight: 800;
+  background: #fff;
+  border-color: #e2e8f0;
+  border-bottom: 1px solid #fff;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.04);
 }
 .rsa-ui-flow__shell-body {
   padding: 20px 20px 24px;

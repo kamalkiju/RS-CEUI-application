@@ -2,6 +2,7 @@ import { NavLink, Outlet, useSearchParams, useNavigate, useLocation } from 'reac
 import { useState, useMemo, useEffect } from 'react'
 import Layout from '../../components/Layout.jsx'
 import { useRsaUI, RSA_STATUS } from '../../context/RsaUIContext.jsx'
+import { getProductConfigureBlockers } from '../../utils/rsaProductTabs.js'
 
 const KMT_BASE = '/rsaui/kmt/edit'
 
@@ -98,6 +99,28 @@ export default function RsauiKmtEditLayout() {
     navigate(`${KMT_BASE}/${STEPS[next].path}${tabSuffix}`)
   }
 
+  const handleFooterContinue = () => {
+    if (!submissionId || !sub) {
+      goStep(1)
+      return
+    }
+    if (stepIdx === 0) {
+      const sa = sub.serviceArea || {}
+      if (!String(sa.name || '').trim() || !String(sa.polygonId || '').trim()) {
+        window.alert('Please select a service area to continue.')
+        return
+      }
+    }
+    if (stepIdx === 1) {
+      const missing = getProductConfigureBlockers(sub.productTabs)
+      if (missing.length) {
+        window.alert(`Add at least one primary offering for:\n• ${missing.join('\n• ')}`)
+        return
+      }
+    }
+    goStep(1)
+  }
+
   const tabClass = ({ isActive }) => `rsa-ui-tab${isActive ? ' rsa-ui-tab--active' : ''}`
 
   const outletCtx = useMemo(
@@ -185,7 +208,7 @@ export default function RsauiKmtEditLayout() {
                   <button type="button" className="btn btn-outline" disabled={saving} onClick={handleSaveProgress}>
                     Save
                   </button>
-                  <button type="button" className="btn btn-primary" disabled={saving || stepIdx >= STEPS.length - 1} onClick={() => goStep(1)}>
+                  <button type="button" className="btn btn-primary" disabled={saving || stepIdx >= STEPS.length - 1} onClick={handleFooterContinue}>
                     Continue →
                   </button>
                 </div>

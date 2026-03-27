@@ -1,4 +1,4 @@
-import { useOutletContext, useNavigate } from 'react-router-dom'
+import { useOutletContext } from 'react-router-dom'
 import { useRsaUI } from '../../context/RsaUIContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import RsaSubmissionDetailView from '../../components/rsa/RsaSubmissionDetailView.jsx'
@@ -6,13 +6,9 @@ import RsaSubmissionDetailView from '../../components/rsa/RsaSubmissionDetailVie
 export default function RsauiPocReviewSummary() {
   const {
     submissionId,
-    readOnly,
-    tabSuffix,
     isEditDetailsFlow = false,
-    wizardBase = '/rsaui/poc/create',
     kmtFinalizeMode = false,
   } = useOutletContext()
-  const navigate = useNavigate()
   const { getSubmission } = useRsaUI()
   const { user } = useAuth()
   const sub = submissionId ? getSubmission(submissionId) : null
@@ -43,20 +39,6 @@ export default function RsauiPocReviewSummary() {
           unifiedEmbedded
         />
       </div>
-
-      {!readOnly && (
-        <div className="rsa-poc-review-actions">
-          <button type="button" className="btn btn-outline rsa-poc-review-actions__back" onClick={() => navigate(`${wizardBase}/configure${tabSuffix}`)}>
-            ← Back
-          </button>
-          <button type="button" className="btn btn-outline" onClick={() => navigate(`${wizardBase}/configure${tabSuffix}`)}>
-            {isEditDetailsFlow ? 'Edit details' : 'Edit draft'}
-          </button>
-          <button type="button" className="btn btn-primary rsa-poc-review-actions__next" onClick={() => navigate(`${wizardBase}/submit${tabSuffix}`)}>
-            {kmtFinalizeMode ? 'Continue to publish →' : 'Continue to submit →'}
-          </button>
-        </div>
-      )}
     </div>
   )
 }
