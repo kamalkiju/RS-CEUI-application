@@ -311,53 +311,53 @@ export default function RsauiPocProductConfig() {
         </div>
       </div>
 
-      <div className="rsa-poc-cat-toolbar" role="tablist" aria-label="Product categories">
-        <div className="rsa-poc-cat-toolbar__track">
-          {tabKeysOrdered.map(key => {
-            const t = mergedTabs[key]
-            if (!t) return null
-            const st = tabStatus(t)
-            return (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === key}
-                className={`rsa-poc-cat-tab rsa-poc-cat-tab--toolbar${activeTab === key ? ' rsa-poc-cat-tab--active' : ''}`}
-                onClick={() => setActiveTab(key)}
-              >
-                {t?.label || key}
-                {st === 'done' && ' ✓'}
-                {st === 'required' && ' ⚠'}
-              </button>
-            )
-          })}
-          {!readOnly && (
-            <button
-              type="button"
-              className="rsa-poc-cat-tab rsa-poc-cat-tab--add rsa-poc-cat-tab--toolbar"
-              onClick={() => {
-                setCustomTabName('')
-                setModal('addTab')
-              }}
-            >
-              + Add tab
-            </button>
-          )}
-        </div>
-        {!readOnly && !RSA_CORE_TAB_KEYS.includes(activeTab) && (
-          <p className="rsa-poc-custom-tab-hint">
-            <button type="button" className="btn btn-text btn-sm" onClick={() => removeCustomTab(activeTab)}>
-              Remove &quot;{currentCat.label}&quot; tab
-            </button>
-          </p>
-        )}
-        <p className="rsa-poc-mandatory-hint rsa-poc-mandatory-hint--toolbar">
-          Mandatory: {currentCat.mandatory ? 'Yes — at least one primary offering required' : 'No'}
-        </p>
-      </div>
-
       <div className="rsa-poc-config-card rsa-poc-config-card--tables">
+        <div className="rsa-poc-cat-toolbar rsa-poc-cat-toolbar--in-card" role="tablist" aria-label="Product categories">
+          <div className="rsa-poc-cat-toolbar__track">
+            {tabKeysOrdered.map(key => {
+              const t = mergedTabs[key]
+              if (!t) return null
+              const st = tabStatus(t)
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === key}
+                  className={`rsa-poc-cat-tab rsa-poc-cat-tab--toolbar${activeTab === key ? ' rsa-poc-cat-tab--active' : ''}`}
+                  onClick={() => setActiveTab(key)}
+                >
+                  {t?.label || key}
+                  {st === 'done' && ' ✓'}
+                  {st === 'required' && ' ⚠'}
+                </button>
+              )
+            })}
+            {!readOnly && (
+              <button
+                type="button"
+                className="rsa-poc-cat-tab rsa-poc-cat-tab--add rsa-poc-cat-tab--toolbar"
+                onClick={() => {
+                  setCustomTabName('')
+                  setModal('addTab')
+                }}
+              >
+                + Add tab
+              </button>
+            )}
+          </div>
+          {!readOnly && !RSA_CORE_TAB_KEYS.includes(activeTab) && (
+            <p className="rsa-poc-custom-tab-hint">
+              <button type="button" className="btn btn-text btn-sm" onClick={() => removeCustomTab(activeTab)}>
+                Remove &quot;{currentCat.label}&quot; tab
+              </button>
+            </p>
+          )}
+          <p className="rsa-poc-mandatory-hint rsa-poc-mandatory-hint--toolbar">
+            Mandatory: {currentCat.mandatory ? 'Yes — at least one primary offering required' : 'No'}
+          </p>
+        </div>
+
       <section className="rsa-poc-offering-section">
         <div className="rsa-poc-offering-head">
           <h3>Primary offerings</h3>
