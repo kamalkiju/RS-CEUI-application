@@ -7,7 +7,6 @@ import {
   KmtChartCard,
   KmtBarChartHorizontal,
   KmtPieChart,
-  KmtAreaTrend,
   KmtStackedDistributionBar,
   KmtMiniRing,
   KMT_THEME,
@@ -87,28 +86,6 @@ export default function KMTDashboard() {
       .map(([label, value], i) => ({ label, value, color: THEME_ROT[i % THEME_ROT.length] }))
   }, [docs])
 
-  /** Last 7 calendar days: document activity counts from `updated` dates. */
-  const { trendValues, trendLabels, trendTotal } = useMemo(() => {
-    const days = 7
-    const buckets = Array(days).fill(0)
-    const ref = new Date()
-    ref.setHours(12, 0, 0, 0)
-    for (const d of docs) {
-      if (!d.updated) continue
-      const u = new Date(d.updated.includes('T') ? d.updated : `${d.updated}T12:00:00`)
-      if (Number.isNaN(u.getTime())) continue
-      const dayDiff = Math.floor((ref - u) / 86400000)
-      if (dayDiff >= 0 && dayDiff < days) buckets[days - 1 - dayDiff] += 1
-    }
-    const labels = buckets.map((_, i) => {
-      const dt = new Date(ref)
-      dt.setDate(dt.getDate() - (days - 1 - i))
-      return `${dt.getMonth() + 1}/${dt.getDate()}`
-    })
-    const total = buckets.reduce((a, b) => a + b, 0)
-    return { trendValues: buckets, trendLabels: labels, trendTotal: total }
-  }, [docs])
-
   const CARDS = [
     { key: 'pending', label: 'Pending KMT review', ring: KMT_THEME.purple },
     { key: 'published', label: 'Approved knowledge docs', ring: KMT_THEME.gold },
@@ -176,13 +153,6 @@ export default function KMTDashboard() {
             )}
           </KmtChartCard>
 
-          <KmtChartCard className="kmt-chart-card--wide" title="Document activity" subtitle="Updates in the last 7 days (from document dates)" periods={['Today', 'Week', 'Month']}>
-            {trendTotal > 0 ? (
-              <KmtAreaTrend values={trendValues} xLabels={trendLabels} label="Document activity last 7 days" />
-            ) : (
-              <p className="kmt-chart-empty">No document updates in the last 7 days.</p>
-            )}
-          </KmtChartCard>
         </div>
       </div>
     </Layout>
