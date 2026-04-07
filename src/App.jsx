@@ -141,6 +141,8 @@ export default function App() {
             <Route path="/bufm" element={<ProtectedRoute role="BUFM" app="CEUI" />}>
               <Route index element={<BUFMDashboard />} />
               <Route path="dashboard" element={<Navigate to="/bufm" replace />} />
+              <Route path="review/:id" element={<BufmRsaTaskReview />} />
+              <Route path="reject/:id" element={<BufmRsaRejectPage />} />
               <Route path="document-review" element={<BufmReportsLayout />}>
                 <Route index element={<Navigate to="review" replace />} />
                 <Route path="review" element={<BufmReviewQueue />} />

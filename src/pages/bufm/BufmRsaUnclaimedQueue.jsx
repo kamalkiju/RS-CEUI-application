@@ -12,6 +12,7 @@ export default function BufmRsaUnclaimedQueue() {
   const { getBufmUnclaimed, claimBufmTask } = useRsaUI()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const base = user?.app === 'RSAUI' ? '/rsaui/bufm' : '/bufm'
   const rows = useMemo(() => getBufmUnclaimed().slice(0, 10), [getBufmUnclaimed])
 
   const claim = sub => {
@@ -19,7 +20,7 @@ export default function BufmRsaUnclaimedQueue() {
     const name = user?.name || user?.email || 'Reviewer'
     claimBufmTask(sub.id, name)
     window.alert('✓ Task Claimed Successfully')
-    navigate(`/rsaui/bufm/review/${encodeURIComponent(sub.id)}`)
+    navigate(`${base}/review/${encodeURIComponent(sub.id)}`)
   }
 
   return (
@@ -52,7 +53,7 @@ export default function BufmRsaUnclaimedQueue() {
                   <td>{sub.bufmDueAt || sub.updated}</td>
                   <td>{sub.bufmReleaseNote ? 'Previous reviewer' : '—'}</td>
                   <td>
-                    <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/rsaui/bufm/review/${encodeURIComponent(sub.id)}`)}>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`${base}/review/${encodeURIComponent(sub.id)}`)}>
                       View
                     </button>{' '}
                     <button type="button" className="btn btn-primary btn-sm" onClick={() => claim(sub)}>
