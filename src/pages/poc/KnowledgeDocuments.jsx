@@ -31,7 +31,6 @@ export default function KnowledgeDocuments() {
   const { submissions, removeSubmission } = useRsaUI()
   const [activeTab, setActiveTab] = useState('rejected-tasks')
   const [search, setSearch] = useState('')
-  const [clonedId, setClonedId] = useState(null)
 
   const rsaRejectedRows = submissions
     .filter(s => isRejectedTaskStatus(s.status))
@@ -112,8 +111,7 @@ export default function KnowledgeDocuments() {
       updated: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     }
     addDoc(newDoc)
-    setClonedId(newDoc.id)
-    setTimeout(() => setClonedId(null), 3000)
+    navigate('/poc/editor', { state: { doc: newDoc, mode: 'edit' } })
   }
 
   const createNewVersion = (doc) => {
@@ -157,20 +155,6 @@ export default function KnowledgeDocuments() {
   return (
     <Layout>
       <main className="kd-main">
-        {clonedId && (
-          <div style={{
-            position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
-            background: '#1a2b3c', color: '#fff', borderRadius: 10,
-            padding: '12px 22px', fontSize: 13.5, fontWeight: 500,
-            display: 'flex', alignItems: 'center', gap: 10,
-            boxShadow: '0 6px 24px rgba(0,0,0,.22)', zIndex: 9999,
-            animation: 'fadeInUp .25s ease',
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            Document duplicated — <strong style={{ color: '#93c5fd' }}>{clonedId}</strong> added to the list
-          </div>
-        )}
-
         <div className="kd-page-header">
           <div>
             <h1 className="kd-page-title">Knowledge Documents</h1>
@@ -226,7 +210,6 @@ export default function KnowledgeDocuments() {
                 return (
                   <tr
                     key={rowKey}
-                    style={row.id === clonedId ? { background: '#f0f9ff', transition: 'background 1s' } : {}}
                     className={approvalRowPreview && row._kind === 'doc' ? 'kd-row--click-preview' : undefined}
                     onClick={() => {
                       if (approvalRowPreview && row._kind === 'doc') openApprovalPreview(row)

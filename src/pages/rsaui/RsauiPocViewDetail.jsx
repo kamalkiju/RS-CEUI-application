@@ -47,7 +47,7 @@ export default function RsauiPocViewDetail() {
   const doClone = () => {
     const newId = cloneSubmission(sub.id)
     if (newId) {
-      navigate(`${BASE}/select?submission=${encodeURIComponent(newId)}&mode=edit`)
+      navigate(`${BASE}/view?submission=${encodeURIComponent(newId)}&mode=view&from=draft`)
     }
   }
 

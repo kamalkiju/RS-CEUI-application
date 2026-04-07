@@ -131,7 +131,7 @@ export default function RsaUIList({ syncTabToUrl = false }) {
   const handleClone = id => {
     const newId = cloneSubmission(id)
     if (newId) {
-      navigate(`/rsaui/poc/create/select?submission=${encodeURIComponent(newId)}&mode=edit`)
+      navigate(`/rsaui/poc/create/view?submission=${encodeURIComponent(newId)}&mode=view&from=draft`)
     }
   }
 
