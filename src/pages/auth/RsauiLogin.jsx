@@ -73,7 +73,7 @@ export default function RsauiLogin() {
     <div className="rsaui-login-page">
       <div className="rsaui-login-left">
         <div className="rsaui-login-brand">RSAUI</div>
-        <h1>Revenue Service Area Workspace</h1>
+        <h1>Residential Service Area Workspace</h1>
         <p>Build, review, and govern service area requests across POC, BUFM and KMT workflows.</p>
         <ul>
           <li><strong>POC Workflow</strong> - Create and configure service area requests</li>

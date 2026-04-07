@@ -14,7 +14,7 @@ const APPS = [
     id: 'RSAUI',
     icon: '🗺️',
     title: 'RSAUI',
-    subtitle: 'Revenue Service Area UI',
+    subtitle: 'Residential Service Area UI',
     description: 'Create and manage service area requests, product configurations and approval workflows',
     badge: 'Service Area Management',
     to: '/rsaui/login',

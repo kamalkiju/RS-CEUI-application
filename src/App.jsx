@@ -146,6 +146,7 @@ export default function App() {
                 <Route path="review" element={<BufmReviewQueue />} />
                 <Route path="approved" element={<BufmDocumentList mode="approved" />} />
                 <Route path="rejected" element={<BufmDocumentList mode="rejected" />} />
+                <Route path="unclaimed" element={<BufmRsaUnclaimedQueue />} />
               </Route>
               <Route path="reports/*" element={<DocumentReviewRedirect fromPrefix="/bufm/reports" toPrefix="/bufm/document-review" />} />
               <Route path="document/:id" element={<BufmDocumentView />} />
