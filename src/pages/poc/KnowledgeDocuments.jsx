@@ -59,6 +59,11 @@ export default function KnowledgeDocuments() {
       if (activeTab === 'all') return row._kind === 'doc' || row._kind === 'rsa'
       if (activeTab === 'rejected-tasks') return isRejectedTaskStatus(row.status)
       if (activeTab === 'approved') return row._kind === 'doc' && row.status === 'approved'
+      if (activeTab === 'draft') return row._kind === 'doc' && row.status === 'draft'
+      if (activeTab === 'approval') {
+        if (row._kind === 'rsa') return false
+        return row.status === 'Pending_BUFM' || row.status === 'Pending_KMT'
+      }
       if (row._kind === 'rsa') return false
       return (row.tabs || []).includes(activeTab)
     })()

@@ -29,8 +29,7 @@ function matchesSearch(q, ...parts) {
 }
 
 export default function KmtReportsBody() {
-  const { docType, queue } = useParams()
-  const resolvedType = docType || 'knowledge'
+  const { queue } = useParams()
   const resolvedQueue = queue || 'review'
   const navigate = useNavigate()
   const { docs, updateDoc } = useDocs()
@@ -38,7 +37,6 @@ export default function KmtReportsBody() {
   const [search, setSearch] = useState('')
 
   const knowledgeFiltered = useMemo(() => {
-    if (resolvedType !== 'knowledge') return []
     let list
     if (resolvedQueue === 'review') list = docs.filter(d => d.status === 'Pending_KMT')
     else if (resolvedQueue === 'approved') list = docs.filter(d => d.status === 'approved')
@@ -57,10 +55,9 @@ export default function KmtReportsBody() {
         bufmStatusLabel(d),
       ),
     )
-  }, [docs, resolvedType, resolvedQueue, search])
+  }, [docs, resolvedQueue, search])
 
   const rsaFiltered = useMemo(() => {
-    if (resolvedType !== 'rsaui') return []
     let list
     if (resolvedQueue === 'review') list = submissions.filter(s => s.status === RSA_STATUS.Pending_KMT)
     else if (resolvedQueue === 'approved') list = submissions.filter(s => s.status === RSA_STATUS.Published)
@@ -80,9 +77,7 @@ export default function KmtReportsBody() {
         String(s.serviceArea?.polygonId || ''),
       ),
     )
-  }, [submissions, resolvedType, resolvedQueue, RSA_STATUS, search])
-
-  const base = `/kmt/document-review/${resolvedType}`
+  }, [submissions, resolvedQueue, RSA_STATUS, search])
 
   const publishKnowledgeDoc = doc => {
     if (doc.status !== 'Pending_KMT') return
@@ -103,6 +98,9 @@ export default function KmtReportsBody() {
   }
 
   const showKnowledgePublish = resolvedQueue === 'review'
+  const hasKnowledge = knowledgeFiltered.length > 0
+  const hasRsa = rsaFiltered.length > 0
+  const emptyBoth = !hasKnowledge && !hasRsa
 
   return (
     <>
@@ -110,7 +108,7 @@ export default function KmtReportsBody() {
         {L2.map(t => (
           <NavLink
             key={t.path}
-            to={`${base}/${t.path}`}
+            to={`/kmt/document-review/${t.path}`}
             className={({ isActive }) =>
               `kmt-reports__l2-tab${isActive ? ' kmt-reports__l2-tab--active' : ''}`
             }
@@ -132,54 +130,115 @@ export default function KmtReportsBody() {
       </div>
 
       <div className="kmt-reports__table-wrap">
-        {resolvedType === 'knowledge' && knowledgeFiltered.length > 0 && (
-          <table className="kmt-reports-table">
-            <thead>
-              <tr>
-                <th>Document</th>
-                <th>Version</th>
-                <th>POC name</th>
-                <th>LOB / market</th>
-                <th>Area</th>
-                <th>Status</th>
-                <th>Last updated</th>
-                <th className="kmt-reports-table__actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {knowledgeFiltered.map(doc => {
-                const disp = getDisplayStatus(doc, 'KMT')
-                const stLabel = kmtKnowledgeStatusLabel(doc, resolvedQueue)
-                const showReason = resolvedQueue === 'rejected' && doc.rejection_comment_KMT
-                return (
-                  <tr key={doc.id}>
+        {hasKnowledge && (
+          <>
+            <h3 className="kmt-reports__section-title">Knowledge documents</h3>
+            <table className="kmt-reports-table">
+              <thead>
+                <tr>
+                  <th>Document</th>
+                  <th>Version</th>
+                  <th>POC name</th>
+                  <th>LOB / market</th>
+                  <th>Area</th>
+                  <th>Status</th>
+                  <th>Last updated</th>
+                  <th className="kmt-reports-table__actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {knowledgeFiltered.map(doc => {
+                  const disp = getDisplayStatus(doc, 'KMT')
+                  const stLabel = kmtKnowledgeStatusLabel(doc, resolvedQueue)
+                  const showReason = resolvedQueue === 'rejected' && doc.rejection_comment_KMT
+                  return (
+                    <tr key={doc.id}>
+                      <td>
+                        <strong>{doc.sub || doc.id}</strong>
+                      </td>
+                      <td><VersionBadge doc={doc} /></td>
+                      <td>{doc.pocName || '—'}</td>
+                      <td>
+                        {doc.lob || '—'} · {doc.market || '—'}
+                      </td>
+                      <td>{doc.area || '—'}</td>
+                      <td>
+                        <div className="bufm-status-stack bufm-status-stack--row">
+                          <span className={`bufm-status bufm-status--${disp.statusClass || 'draft'}`}>{stLabel}</span>
+                          {showReason && (
+                            <span className="bufm-comment-indicator" title={doc.rejection_comment_KMT} aria-label="Rejection reason">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>{doc.updated || '—'}</td>
+                      <td className="kmt-reports-table__actions">
+                        <div className="kmt-reports-table__action-row">
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            onClick={() =>
+                              navigate(`/kmt/document/${encodeURIComponent(doc.id)}`, { state: { kmtEdit: false } })
+                            }
+                          >
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            onClick={() =>
+                              navigate(`/kmt/document/${encodeURIComponent(doc.id)}`, { state: { kmtEdit: true } })
+                            }
+                          >
+                            Edit
+                          </button>
+                          {showKnowledgePublish && doc.status === 'Pending_KMT' && (
+                            <button type="button" className="btn btn-primary btn-sm" onClick={() => publishKnowledgeDoc(doc)}>
+                              Publish
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {hasRsa && (
+          <>
+            <h3 className={`kmt-reports__section-title${hasKnowledge ? ' kmt-reports__section-title--spaced' : ''}`}>RSAUI submissions</h3>
+            <table className="kmt-reports-table">
+              <thead>
+                <tr>
+                  <th>Submission / service area</th>
+                  <th>POC name</th>
+                  <th>Status</th>
+                  <th>Last updated</th>
+                  <th className="kmt-reports-table__actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rsaFiltered.map(sub => (
+                  <tr key={sub.id}>
                     <td>
-                      <strong>{doc.sub || doc.id}</strong>
+                      <strong>{sub.serviceArea?.name || sub.id}</strong>
                     </td>
-                    <td><VersionBadge doc={doc} /></td>
-                    <td>{doc.pocName || '—'}</td>
+                    <td>{sub.pocName || '—'}</td>
                     <td>
-                      {doc.lob || '—'} · {doc.market || '—'}
+                      <span className="kmt-doc-card__rsa-status">{sub.status?.replace(/_/g, ' ')}</span>
                     </td>
-                    <td>{doc.area || '—'}</td>
-                    <td>
-                      <div className="bufm-status-stack bufm-status-stack--row">
-                        <span className={`bufm-status bufm-status--${disp.statusClass || 'draft'}`}>{stLabel}</span>
-                        {showReason && (
-                          <span className="bufm-comment-indicator" title={doc.rejection_comment_KMT} aria-label="Rejection reason">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>{doc.updated || '—'}</td>
+                    <td>{sub.updated || '—'}</td>
                     <td className="kmt-reports-table__actions">
                       <div className="kmt-reports-table__action-row">
                         <button
                           type="button"
                           className="btn btn-outline btn-sm"
                           onClick={() =>
-                            navigate(`/kmt/document/${encodeURIComponent(doc.id)}`, { state: { kmtEdit: false } })
+                            navigate(`/kmt/rsaui-submission/${encodeURIComponent(sub.id)}`, { state: {} })
                           }
                         >
                           View
@@ -188,86 +247,27 @@ export default function KmtReportsBody() {
                           type="button"
                           className="btn btn-outline btn-sm"
                           onClick={() =>
-                            navigate(`/kmt/document/${encodeURIComponent(doc.id)}`, { state: { kmtEdit: true } })
+                            navigate(`/kmt/rsaui-submission/${encodeURIComponent(sub.id)}`, { state: { kmtEdit: true } })
                           }
                         >
                           Edit
                         </button>
-                        {showKnowledgePublish && doc.status === 'Pending_KMT' && (
-                          <button type="button" className="btn btn-primary btn-sm" onClick={() => publishKnowledgeDoc(doc)}>
+                        {resolvedQueue === 'review' && sub.status === RSA_STATUS.Pending_KMT && (
+                          <button type="button" className="btn btn-primary btn-sm" onClick={() => publishRsaSubmission(sub)}>
                             Publish
                           </button>
                         )}
                       </div>
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
 
-        {resolvedType === 'knowledge' && knowledgeFiltered.length === 0 && (
-          <p className="kmt-reports__empty">No knowledge documents in this queue.</p>
-        )}
-
-        {resolvedType === 'rsaui' && rsaFiltered.length > 0 && (
-          <table className="kmt-reports-table">
-            <thead>
-              <tr>
-                <th>Submission / service area</th>
-                <th>POC name</th>
-                <th>Status</th>
-                <th>Last updated</th>
-                <th className="kmt-reports-table__actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rsaFiltered.map(sub => (
-                <tr key={sub.id}>
-                  <td>
-                    <strong>{sub.serviceArea?.name || sub.id}</strong>
-                  </td>
-                  <td>{sub.pocName || '—'}</td>
-                  <td>
-                    <span className="kmt-doc-card__rsa-status">{sub.status?.replace(/_/g, ' ')}</span>
-                  </td>
-                  <td>{sub.updated || '—'}</td>
-                  <td className="kmt-reports-table__actions">
-                    <div className="kmt-reports-table__action-row">
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-sm"
-                        onClick={() =>
-                          navigate(`/kmt/rsaui-submission/${encodeURIComponent(sub.id)}`, { state: {} })
-                        }
-                      >
-                        View
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-sm"
-                        onClick={() =>
-                          navigate(`/kmt/rsaui-submission/${encodeURIComponent(sub.id)}`, { state: { kmtEdit: true } })
-                        }
-                      >
-                        Edit
-                      </button>
-                      {resolvedQueue === 'review' && sub.status === RSA_STATUS.Pending_KMT && (
-                        <button type="button" className="btn btn-primary btn-sm" onClick={() => publishRsaSubmission(sub)}>
-                          Publish
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-
-        {resolvedType === 'rsaui' && rsaFiltered.length === 0 && (
-          <p className="kmt-reports__empty">No RSAUI submissions in this queue.</p>
+        {emptyBoth && (
+          <p className="kmt-reports__empty">No knowledge documents or RSAUI submissions in this queue.</p>
         )}
       </div>
     </>

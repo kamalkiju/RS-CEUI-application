@@ -161,8 +161,8 @@ export default function App() {
             <Route path="/kmt" element={<ProtectedRoute role="KMT" app="CEUI" />}>
               <Route index element={<KMTDashboard />} />
               <Route path="document-review" element={<KmtReportsShell />}>
-                <Route index element={<Navigate to="knowledge/review" replace />} />
-                <Route path=":docType/:queue" element={<KmtReportsBody />} />
+                <Route index element={<Navigate to="review" replace />} />
+                <Route path=":queue" element={<KmtReportsBody />} />
               </Route>
               <Route path="reports/*" element={<DocumentReviewRedirect fromPrefix="/kmt/reports" toPrefix="/kmt/document-review" />} />
               <Route path="document/:id" element={<KmtDocumentView />} />

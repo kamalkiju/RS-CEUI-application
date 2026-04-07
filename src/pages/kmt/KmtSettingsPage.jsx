@@ -4,6 +4,8 @@ import Layout from '../../components/Layout.jsx'
 export default function KmtSettingsPage() {
   const [slaBufm, setSlaBufm] = useState(3)
   const [slaKmt, setSlaKmt] = useState(2)
+  const [slaPocDraft, setSlaPocDraft] = useState(5)
+  const [slaPocSubmit, setSlaPocSubmit] = useState(2)
   const [emailOnPublish, setEmailOnPublish] = useState(true)
   const [emailOnReject, setEmailOnReject] = useState(true)
   const [requireDualKmt, setRequireDualKmt] = useState(false)
@@ -24,6 +26,15 @@ export default function KmtSettingsPage() {
           <label className="kmt-field">
             <span>KMT review SLA (days)</span>
             <input type="number" min={0} className="kmt-input kmt-input--narrow" value={slaKmt} onChange={e => setSlaKmt(+e.target.value)} />
+          </label>
+          <p className="kmt-settings__hint">POC (CEUI) knowledge documents use the same approval chain; set target turnaround for draft work and submission handoff.</p>
+          <label className="kmt-field">
+            <span>POC draft completion SLA (days)</span>
+            <input type="number" min={0} className="kmt-input kmt-input--narrow" value={slaPocDraft} onChange={e => setSlaPocDraft(+e.target.value)} />
+          </label>
+          <label className="kmt-field">
+            <span>POC submit-to-BUFM SLA (days)</span>
+            <input type="number" min={0} className="kmt-input kmt-input--narrow" value={slaPocSubmit} onChange={e => setSlaPocSubmit(+e.target.value)} />
           </label>
         </section>
 

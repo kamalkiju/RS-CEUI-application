@@ -258,31 +258,42 @@ export function KmtPieChart({ segments, size = 176 }) {
   )
 }
 
-/** Smooth area + line; points: y normalized 0..1 */
-export function KmtAreaTrend({ points, xLabels, label }) {
-  const w = 360
-  const h = 140
-  const padL = 36
-  const padR = 12
-  const padT = 14
-  const padB = 28
+/** Smooth area + line from raw counts; Y-axis labels + hover tooltips. */
+export function KmtAreaTrend({ values, xLabels, label }) {
+  const [hover, setHover] = React.useState(null)
+  const w = 400
+  const h = 160
+  const padL = 44
+  const padR = 14
+  const padT = 16
+  const padB = 30
   const iw = w - padL - padR
   const ih = h - padT - padB
-  const n = points.length
+  const vals = values?.length ? [...values] : [0]
+  const n = vals.length
+  const maxRaw = Math.max(...vals, 0)
+  const maxVal = Math.max(1, maxRaw)
+  const norm = vals.map(v => 0.06 + (v / maxVal) * 0.9)
   const step = iw / Math.max(1, n - 1)
-  const coords = points.map((py, i) => [padL + i * step, padT + (1 - py) * ih])
+  const coords = norm.map((py, i) => [padL + i * step, padT + (1 - py) * ih])
   const lineD = smoothLinePath(coords)
   const last = coords[coords.length - 1]
-  const areaD = `${lineD} L ${last[0]} ${h - padB} L ${coords[0][0]} ${h - padB} Z`
+  const first = coords[0]
+  const areaD = lineD ? `${lineD} L ${last[0]} ${h - padB} L ${first[0]} ${h - padB} Z` : ''
   const gid = uid()
-  const peakIdx = points.indexOf(Math.max(...points))
-  const peak = coords[peakIdx]
-
   const xl = xLabels || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].slice(0, n)
+  const lastPt = coords[coords.length - 1]
 
   return (
     <div className="kmt-chart-area-wrap">
-      <svg className="kmt-chart-svg kmt-chart-trend" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={label}>
+      <svg
+        className="kmt-chart-svg kmt-chart-trend"
+        viewBox={`0 0 ${w} ${h}`}
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label={label}
+        onMouseLeave={() => setHover(null)}
+      >
         <defs>
           <linearGradient id={`${gid}-area`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={KMT_THEME.orange} stopOpacity="0.38" />
@@ -291,16 +302,66 @@ export function KmtAreaTrend({ points, xLabels, label }) {
         </defs>
         {[0, 1, 2, 3, 4].map(g => {
           const gy = padT + (ih * g) / 4
-          return <line key={g} x1={padL} y1={gy} x2={w - padR} y2={gy} stroke={KMT_THEME.grid} strokeWidth="1" />
+          const tickVal = Math.round(maxVal * (1 - g / 4))
+          return (
+            <g key={g}>
+              <line x1={padL} y1={gy} x2={w - padR} y2={gy} stroke={KMT_THEME.grid} strokeWidth="1" />
+              <text x="6" y={gy + 4} fontSize="9" fontWeight="600" fill={KMT_THEME.textMuted} textAnchor="start">
+                {tickVal}
+              </text>
+            </g>
+          )
         })}
-        <path d={areaD} fill={`url(#${gid}-area)`} />
-        <path d={lineD} fill="none" stroke={KMT_THEME.orange} strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx={peak[0]} cy={peak[1]} r="5" fill="#fff" stroke={KMT_THEME.orange} strokeWidth="2.5" />
+        {areaD ? <path d={areaD} fill={`url(#${gid}-area)`} /> : null}
+        {lineD ? (
+          <path d={lineD} fill="none" stroke={KMT_THEME.orange} strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round" />
+        ) : null}
+        {lastPt ? (
+          <circle cx={lastPt[0]} cy={lastPt[1]} r="5" fill="#fff" stroke={KMT_THEME.orange} strokeWidth="2.5" />
+        ) : null}
+        {coords.map((c, i) => {
+          const half = Math.max(12, step / 2)
+          return (
+            <rect
+              key={i}
+              x={c[0] - half}
+              y={padT}
+              width={half * 2}
+              height={ih}
+              fill="transparent"
+              style={{ cursor: 'pointer' }}
+              onMouseEnter={() => setHover({ i, x: c[0], y: c[1], count: vals[i] ?? 0 })}
+            />
+          )
+        })}
         {coords.map((c, i) => (
-          <text key={i} x={c[0]} y={h - 6} textAnchor="middle" fontSize="9" fontWeight="600" fill={KMT_THEME.textMuted}>
+          <text key={`l-${i}`} x={c[0]} y={h - 6} textAnchor="middle" fontSize="9" fontWeight="600" fill={KMT_THEME.textMuted}>
             {xl[i] ?? i}
           </text>
         ))}
+        {hover && (
+          <g pointerEvents="none">
+            <rect
+              x={Math.min(Math.max(hover.x - 52, padL), w - padR - 104)}
+              y={Math.max(padT + 2, hover.y - 36)}
+              width={104}
+              height={26}
+              rx={6}
+              fill="#1a1d26"
+              opacity={0.94}
+            />
+            <text
+              x={Math.min(Math.max(hover.x, padL + 52), w - padR - 52)}
+              y={Math.max(padT + 20, hover.y - 18)}
+              textAnchor="middle"
+              fontSize="10"
+              fontWeight="600"
+              fill="#fff"
+            >
+              {`${xl[hover.i] ?? hover.i}: ${hover.count}`}
+            </text>
+          </g>
+        )}
       </svg>
     </div>
   )

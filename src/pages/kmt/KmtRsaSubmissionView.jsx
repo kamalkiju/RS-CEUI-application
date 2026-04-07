@@ -16,7 +16,7 @@ export default function KmtRsaSubmissionView() {
 
   const paths = useMemo(() => {
     const rsaui = user?.app === 'RSAUI'
-    const base = rsaui ? '/rsaui/kmt/document-review' : '/kmt/document-review/rsaui'
+    const base = rsaui ? '/rsaui/kmt/document-review' : '/kmt/document-review'
     return {
       review: `${base}/review`,
       approved: `${base}/approved`,

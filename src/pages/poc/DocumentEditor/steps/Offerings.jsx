@@ -12,48 +12,54 @@ const SERVICE_TYPES = [
   'Damage / Replacement', 'Special Instructions', 'Holiday Schedule',
 ]
 
-function AddOfferingWizard({ onClose, onSave }) {
-  const [step, setStep] = useState(1)
-  const [form, setForm] = useState({
-    summaryBilled: '', serviceCategory: '', serviceLevel: '', containerType: '',
-    chargeFreq: '', facePrice: '', avgPrice: '', targetPrice: '',
-    chargeType: '', chargeMethod: '', rateNotes: '', baseRate: '',
-    contractGroup: '', serviceSetupBy: '',
-    secondaryCharges: '', asset: '', maxQty: '', serviceFreq: '',
-    serviceDayNotes: '', chargeCode: '', stopType: '', rateType: '',
-    districtCode: '', containerColor: '',
-    serviceTypes: [], serviceOwnerException: 'no',
-  })
+const EMPTY_OFFERING_FORM = {
+  summaryBilled: '', serviceCategory: '', serviceLevel: '', containerType: '',
+  chargeFreq: '', facePrice: '', avgPrice: '', targetPrice: '',
+  chargeType: '', chargeMethod: '', rateNotes: '', baseRate: '',
+  contractGroup: '', serviceSetupBy: '',
+  secondaryCharges: '', asset: '', maxQty: '', serviceFreq: '',
+  serviceDayNotes: '', chargeCode: '', stopType: '', rateType: '',
+  districtCode: '', containerColor: '',
+  serviceTypes: [], serviceOwnerException: 'no',
+}
 
-  const update = (field, val) => setForm(p => ({...p, [field]: val}))
+function offeringDisplayName(form) {
+  const cat = form.serviceCategory?.trim() || 'Offering'
+  const lvl = form.serviceLevel?.trim() || 'Standard'
+  return `${cat} – ${lvl}`
+}
+
+function AddOfferingWizard({ onClose, onSave, initialForm, modalTitle }) {
+  const [step, setStep] = useState(1)
+  const [form, setForm] = useState(() =>
+    initialForm ? { ...EMPTY_OFFERING_FORM, ...initialForm } : { ...EMPTY_OFFERING_FORM },
+  )
+
+  useEffect(() => {
+    setForm(initialForm ? { ...EMPTY_OFFERING_FORM, ...initialForm } : { ...EMPTY_OFFERING_FORM })
+    setStep(1)
+  }, [initialForm])
+
+  const update = (field, val) => setForm(p => ({ ...p, [field]: val }))
   const toggleServiceType = (t) => setForm(p => ({
     ...p,
-    serviceTypes: p.serviceTypes.includes(t) ? p.serviceTypes.filter(x => x !== t) : [...p.serviceTypes, t]
+    serviceTypes: p.serviceTypes.includes(t) ? p.serviceTypes.filter(x => x !== t) : [...p.serviceTypes, t],
   }))
 
   const handleSave = () => {
-    onSave({
-      name: `${form.serviceCategory || 'New Offering'} – ${form.serviceLevel || 'Standard'}`,
-      asset: form.asset || 'N/A',
-      chargeFreq: form.chargeFreq || '—',
-      baseRate: form.baseRate || '—',
-      chargeType: form.chargeType || '—',
-    })
-    onClose()
+    onSave({ ...form })
   }
 
   return (
-    <div className={`off-wiz-backdrop open`} onClick={(e) => { if (e.target.classList.contains('off-wiz-backdrop')) onClose() }}>
+    <div className="off-wiz-backdrop open" onClick={(e) => { if (e.target.classList.contains('off-wiz-backdrop')) onClose() }}>
       <div className="off-wiz-modal">
-        {/* Top bar */}
         <div className="off-wiz-topbar">
-          <span className="off-wiz-topbar-title">Add Offering</span>
-          <button className="off-wiz-x" onClick={onClose}>
+          <span className="off-wiz-topbar-title">{modalTitle}</span>
+          <button type="button" className="off-wiz-x" onClick={onClose}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
 
-        {/* Progress */}
         <div className="off-wiz-progress">
           {WIZ_STEPS.map((s, i) => (
             <div key={s.num} className="off-wiz-step-wrap">
@@ -73,9 +79,7 @@ function AddOfferingWizard({ onClose, onSave }) {
           ))}
         </div>
 
-        {/* Body */}
         <div className="off-wiz-body">
-          {/* Step 1: Rate Details */}
           <div className={`off-wiz-step-content${step === 1 ? ' active' : ''}`}>
             <div className="off-wiz-step-heading">Rate Details</div>
             <div className="wiz-grid-2">
@@ -152,7 +156,6 @@ function AddOfferingWizard({ onClose, onSave }) {
             </div>
           </div>
 
-          {/* Step 2: Offerings */}
           <div className={`off-wiz-step-content${step === 2 ? ' active' : ''}`}>
             <div className="off-wiz-step-heading">Offerings</div>
             <div className="wiz-grid-2">
@@ -209,7 +212,6 @@ function AddOfferingWizard({ onClose, onSave }) {
             </div>
           </div>
 
-          {/* Step 3: Service Types */}
           <div className={`off-wiz-step-content${step === 3 ? ' active' : ''}`}>
             <div className="off-wiz-step-heading">Service Types</div>
             <p style={{ fontSize: 13, color: '#5c7185', marginBottom: 14 }}>Select all service types that apply to this offering.</p>
@@ -227,7 +229,6 @@ function AddOfferingWizard({ onClose, onSave }) {
             </div>
           </div>
 
-          {/* Step 4: Service Owner */}
           <div className={`off-wiz-step-content${step === 4 ? ' active' : ''}`}>
             <div className="off-wiz-step-heading">Service Owner</div>
             <div className="wiz-field">
@@ -261,28 +262,27 @@ function AddOfferingWizard({ onClose, onSave }) {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="off-wiz-footer">
           <div>
             {step > 1 && (
-              <button className="btn btn-outline" onClick={() => setStep(p => p - 1)} style={{ padding: '8px 16px', fontSize: 13 }}>
+              <button type="button" className="btn btn-outline" onClick={() => setStep(p => p - 1)} style={{ padding: '8px 16px', fontSize: 13 }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                 Back
               </button>
             )}
           </div>
           <div className="off-wiz-footer-right">
-            <button className="btn btn-outline" onClick={onClose} style={{ padding: '8px 16px', fontSize: 13 }}>Cancel</button>
+            <button type="button" className="btn btn-outline" onClick={onClose} style={{ padding: '8px 16px', fontSize: 13 }}>Cancel</button>
             {step < 4
               ? (
-                <button className="btn btn-primary" onClick={() => setStep(p => p + 1)} style={{ padding: '8px 16px', fontSize: 13 }}>
+                <button type="button" className="btn btn-primary" onClick={() => setStep(p => p + 1)} style={{ padding: '8px 16px', fontSize: 13 }}>
                   Next
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </button>
               ) : (
-                <button className="btn btn-primary" onClick={handleSave} style={{ padding: '8px 16px', fontSize: 13 }}>
+                <button type="button" className="btn btn-primary" onClick={handleSave} style={{ padding: '8px 16px', fontSize: 13 }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  Save Offering
+                  {initialForm ? 'Save changes' : 'Save Offering'}
                 </button>
               )
             }
@@ -293,93 +293,128 @@ function AddOfferingWizard({ onClose, onSave }) {
   )
 }
 
-const DEFAULT_OFFERING = {
-  id: 1,
-  name: 'Residential Solid Waste – Standard',
+const DEFAULT_FORM = {
+  ...EMPTY_OFFERING_FORM,
+  serviceCategory: 'Solid Waste',
+  serviceLevel: 'Standard',
   asset: 'Cart – 65 gal',
   chargeFreq: 'Monthly',
-  baseRate: '$22.50',
+  baseRate: '22.50',
   chargeType: 'Flat Rate',
 }
 
 export default function Offerings({ onPrev, onNext, onCountChange }) {
-  const [offerings, setOfferings] = useState([DEFAULT_OFFERING])
-  const [showWizard, setShowWizard] = useState(false)
+  const [offerings, setOfferings] = useState([{ id: 1, form: DEFAULT_FORM }])
+  const [wizardOpen, setWizardOpen] = useState(false)
+  const [wizardInitial, setWizardInitial] = useState(null)
+  const [wizardEditId, setWizardEditId] = useState(null)
 
   useEffect(() => {
     onCountChange?.(offerings.length, offerings.length)
-  }, [offerings.length])
+  }, [offerings.length, onCountChange])
 
-  const removeOffering = (id) => setOfferings(prev => prev.filter(o => o.id !== id))
-  const saveOffering = (data) => setOfferings(prev => [...prev, { ...data, id: Date.now() }])
+  const removeOffering = (id) => {
+    if (!window.confirm('Remove this offering from the document?')) return
+    setOfferings(prev => prev.filter(o => o.id !== id))
+  }
+
+  const openAddWizard = () => {
+    setWizardInitial(null)
+    setWizardEditId(null)
+    setWizardOpen(true)
+  }
+
+  const openEditWizard = (off) => {
+    setWizardInitial({ ...off.form })
+    setWizardEditId(off.id)
+    setWizardOpen(true)
+  }
+
+  const saveOffering = (form) => {
+    if (wizardEditId != null) {
+      setOfferings(prev => prev.map(o => (o.id === wizardEditId ? { ...o, form: { ...form } } : o)))
+    } else {
+      setOfferings(prev => [...prev, { id: Date.now(), form: { ...form } }])
+    }
+    setWizardOpen(false)
+    setWizardEditId(null)
+    setWizardInitial(null)
+  }
 
   return (
     <div className="off-page">
-      {/* Header */}
       <div className="off-header">
         <div>
           <div className="off-title">Offerings</div>
           <div className="off-subtitle">Configure service offerings and pricing for this knowledge document.</div>
         </div>
-        <button className="off-refresh-btn">
+        <button type="button" className="off-refresh-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           Refresh Assets
         </button>
       </div>
 
-      {/* Info banner */}
       <div className="off-info-banner">
         <p><strong>What are Offerings?</strong> Offerings represent specific service packages available to customers within this service area.</p>
         <p>Each offering defines the container type, service frequency, pricing model, charge codes, and applicable service types. Configure each offering to match the contracted service terms.</p>
         <p><em>Tip: Add multiple offerings to cover all service tiers — e.g., Standard, Premium, and Bulk service levels.</em></p>
       </div>
 
-      {/* Configured Offerings */}
       <div className="off-section-title">Configured Offerings</div>
-      {offerings.map(off => (
-        <div key={off.id} className="off-card">
-          <div className="off-card-head">
-            <div>
-              <span className="off-card-name">{off.name}</span>
-              <span className="off-card-asset">— {off.asset}</span>
+      {offerings.map(off => {
+        const f = off.form
+        const baseDisplay = f.baseRate ? (String(f.baseRate).startsWith('$') ? f.baseRate : `$${f.baseRate}`) : '—'
+        return (
+          <div key={off.id} className="off-card">
+            <div className="off-card-head">
+              <div>
+                <span className="off-card-name">{offeringDisplayName(f)}</span>
+                <span className="off-card-asset">— {f.asset || 'N/A'}</span>
+              </div>
+              <div className="off-card-head-actions">
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => openEditWizard(off)}>
+                  Edit
+                </button>
+                <button type="button" className="off-close-btn" title="Delete offering" onClick={() => removeOffering(off.id)}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
             </div>
-            <button className="off-close-btn" onClick={() => removeOffering(off.id)}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+            <div className="off-card-detail">
+              <span><b>Charge Frequency:</b> {f.chargeFreq || '—'}</span>
+              <span><b>Base Rate:</b> {baseDisplay}</span>
+              <span><b>Charge Type:</b> {f.chargeType || '—'}</span>
+            </div>
           </div>
-          <div className="off-card-detail">
-            <span><b>Charge Frequency:</b> {off.chargeFreq}</span>
-            <span><b>Base Rate:</b> {off.baseRate}</span>
-            <span><b>Charge Type:</b> {off.chargeType}</span>
-          </div>
-        </div>
-      ))}
+        )
+      })}
 
-      <button className="off-add-btn" onClick={() => setShowWizard(true)}>
+      <button type="button" className="off-add-btn" onClick={openAddWizard}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add Offering
       </button>
 
-      {/* Action row */}
       <div className="sc-action-row" style={{ marginTop: 32 }}>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-outline" onClick={onPrev}>
+          <button type="button" className="btn btn-outline" onClick={onPrev}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             Previous
           </button>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-primary" onClick={onNext}>
+          <button type="button" className="btn btn-primary" onClick={onNext}>
             Save &amp; Next
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
         </div>
       </div>
 
-      {/* Add Offering Wizard */}
-      {showWizard && (
+      {wizardOpen && (
         <AddOfferingWizard
-          onClose={() => setShowWizard(false)}
+          key={wizardEditId ?? 'new'}
+          modalTitle={wizardEditId != null ? 'Edit Offering' : 'Add Offering'}
+          initialForm={wizardInitial}
+          onClose={() => { setWizardOpen(false); setWizardEditId(null); setWizardInitial(null) }}
           onSave={saveOffering}
         />
       )}

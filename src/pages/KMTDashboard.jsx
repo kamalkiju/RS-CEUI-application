@@ -87,8 +87,8 @@ export default function KMTDashboard() {
       .map(([label, value], i) => ({ label, value, color: THEME_ROT[i % THEME_ROT.length] }))
   }, [docs])
 
-  /** Last 7 calendar days: document activity from `updated` dates (normalized 0..1 for chart). */
-  const { trendPoints, trendLabels } = useMemo(() => {
+  /** Last 7 calendar days: document activity counts from `updated` dates. */
+  const { trendValues, trendLabels, trendTotal } = useMemo(() => {
     const days = 7
     const buckets = Array(days).fill(0)
     const ref = new Date()
@@ -100,14 +100,13 @@ export default function KMTDashboard() {
       const dayDiff = Math.floor((ref - u) / 86400000)
       if (dayDiff >= 0 && dayDiff < days) buckets[days - 1 - dayDiff] += 1
     }
-    const max = Math.max(1, ...buckets)
-    const pts = buckets.map(b => 0.06 + (b / max) * 0.9)
     const labels = buckets.map((_, i) => {
       const dt = new Date(ref)
       dt.setDate(dt.getDate() - (days - 1 - i))
       return `${dt.getMonth() + 1}/${dt.getDate()}`
     })
-    return { trendPoints: pts, trendLabels: labels }
+    const total = buckets.reduce((a, b) => a + b, 0)
+    return { trendValues: buckets, trendLabels: labels, trendTotal: total }
   }, [docs])
 
   const CARDS = [
@@ -178,7 +177,11 @@ export default function KMTDashboard() {
           </KmtChartCard>
 
           <KmtChartCard className="kmt-chart-card--wide" title="Document activity" subtitle="Updates in the last 7 days (from document dates)" periods={['Today', 'Week', 'Month']}>
-            <KmtAreaTrend points={trendPoints} xLabels={trendLabels} label="Document activity last 7 days" />
+            {trendTotal > 0 ? (
+              <KmtAreaTrend values={trendValues} xLabels={trendLabels} label="Document activity last 7 days" />
+            ) : (
+              <p className="kmt-chart-empty">No document updates in the last 7 days.</p>
+            )}
           </KmtChartCard>
         </div>
       </div>

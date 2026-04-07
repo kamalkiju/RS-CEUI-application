@@ -157,13 +157,91 @@ function CategoryAccordion({ cat, isOpen, onToggle }) {
           {/* Service Levels */}
           <div className="sc-section-card">
             <div className="sc-section-label">Service Levels</div>
+            <p className="sc-sl-hint">Define tiers or schedules for this category (e.g. Standard, Premium, seasonal).</p>
             {serviceLevels.length === 0 ? (
               <div className="sl-empty">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                 <span>No service levels configured yet.</span>
               </div>
-            ) : null}
-            <button className="sc-add-sl-btn" onClick={() => setServiceLevels(prev => [...prev, { id: Date.now() }])}>
+            ) : (
+              <div className="sc-sl-list">
+                {serviceLevels.map((sl, slIdx) => (
+                  <div key={sl.id} className="sc-sl-card">
+                    <div className="sc-sl-card__head">
+                      <span className="sc-sl-card__title">Service level {slIdx + 1}</span>
+                      <button
+                        type="button"
+                        className="sc-del-btn"
+                        title="Remove service level"
+                        onClick={() => setServiceLevels(prev => prev.filter(s => s.id !== sl.id))}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                      </button>
+                    </div>
+                    <div className="sc-sl-grid">
+                      <div className="sc-field">
+                        <div className="sc-label">Level name <span style={{ color: '#e74c3c' }}>*</span></div>
+                        <input
+                          type="text"
+                          className="sc-select"
+                          style={{ paddingRight: 12 }}
+                          value={sl.name}
+                          onChange={e =>
+                            setServiceLevels(prev =>
+                              prev.map(s => (s.id === sl.id ? { ...s, name: e.target.value } : s)),
+                            )
+                          }
+                          placeholder="e.g. Standard, Premium"
+                        />
+                      </div>
+                      <div className="sc-field">
+                        <div className="sc-label">Pickup / service frequency</div>
+                        <select
+                          className="sc-select"
+                          value={sl.frequency}
+                          onChange={e =>
+                            setServiceLevels(prev =>
+                              prev.map(s => (s.id === sl.id ? { ...s, frequency: e.target.value } : s)),
+                            )
+                          }
+                        >
+                          <option value="">— Select —</option>
+                          <option>1x / week</option>
+                          <option>2x / week</option>
+                          <option>Bi-weekly</option>
+                          <option>Monthly</option>
+                          <option>On-call</option>
+                        </select>
+                      </div>
+                      <div className="sc-field" style={{ gridColumn: '1 / -1' }}>
+                        <div className="sc-label">Description &amp; notes</div>
+                        <textarea
+                          className="sc-select"
+                          style={{ minHeight: 72, padding: '10px 12px', resize: 'vertical' }}
+                          value={sl.notes}
+                          onChange={e =>
+                            setServiceLevels(prev =>
+                              prev.map(s => (s.id === sl.id ? { ...s, notes: e.target.value } : s)),
+                            )
+                          }
+                          placeholder="What this level includes, container limits, exceptions…"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              className="sc-add-sl-btn"
+              onClick={() =>
+                setServiceLevels(prev => [
+                  ...prev,
+                  { id: Date.now(), name: '', frequency: '', notes: '' },
+                ])
+              }
+            >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Service Level
             </button>

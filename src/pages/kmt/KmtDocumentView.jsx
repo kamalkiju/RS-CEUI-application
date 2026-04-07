@@ -88,7 +88,7 @@ export default function KmtDocumentView() {
       <Layout>
         <div className="bufm-doc-view bufm-doc-view--missing">
           <p>Document not found.</p>
-          <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/knowledge/review')}>
+          <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/review')}>
             Back to review queue
           </button>
         </div>
@@ -109,7 +109,7 @@ export default function KmtDocumentView() {
       kmtApproveDate: today,
       tabs: Array.from(new Set([...(doc.tabs || []), 'all'])),
     })
-    navigate('/kmt/document-review/knowledge/approved')
+    navigate('/kmt/document-review/approved')
   }
 
   const handleRejectConfirm = (comment) => {
@@ -120,7 +120,7 @@ export default function KmtDocumentView() {
       kmtRejectDate: today,
       tabs: Array.from(new Set([...(doc.tabs || []), 'rejected-tasks', 'all'])),
     })
-    navigate('/kmt/document-review/knowledge/rejected')
+    navigate('/kmt/document-review/rejected')
   }
 
   const viewerName = user?.name || 'KMT Reviewer'

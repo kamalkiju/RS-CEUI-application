@@ -161,7 +161,7 @@ const KMT_SEED = [
     documentName: 'Commercial Policy',
     timestamp: new Date(Date.now() - 1200000).toISOString(),
     isRead: false,
-    ctaAction: { label: 'Open Approval', path: '/kmt/document-review/knowledge/review' },
+    ctaAction: { label: 'Open Approval', path: '/kmt/document-review/review' },
   },
   {
     id: 'kmt-2',
@@ -173,7 +173,7 @@ const KMT_SEED = [
     documentName: 'Metro Commercial Waste',
     timestamp: new Date(Date.now() - 4800000).toISOString(),
     isRead: false,
-    ctaAction: { label: 'Open Document', path: '/kmt/document-review/knowledge/review' },
+    ctaAction: { label: 'Open Document', path: '/kmt/document-review/review' },
   },
   {
     id: 'kmt-3',
@@ -185,7 +185,7 @@ const KMT_SEED = [
     documentName: 'Service Pricing',
     timestamp: new Date(Date.now() - 86400000 * 3).toISOString(),
     isRead: true,
-    ctaAction: { label: 'View History', path: '/kmt/document-review/knowledge/rejected' },
+    ctaAction: { label: 'View History', path: '/kmt/document-review/rejected' },
   },
   {
     id: 'kmt-4',
@@ -197,7 +197,7 @@ const KMT_SEED = [
     documentName: 'Ocala Services',
     timestamp: new Date(Date.now() - 86400000 * 5).toISOString(),
     isRead: true,
-    ctaAction: { label: 'View Document', path: '/kmt/document-review/knowledge/approved' },
+    ctaAction: { label: 'View Document', path: '/kmt/document-review/approved' },
   },
   {
     id: 'kmt-5',
