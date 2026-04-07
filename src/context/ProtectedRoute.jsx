@@ -8,7 +8,7 @@ const CEUI_HOME = {
 }
 
 const RSAUI_HOME = {
-  POC: '/rsaui/poc/dashboard',
+  POC: '/rsaui/poc/document-review',
   BUFM: '/rsaui/bufm/dashboard',
   KMT: '/rsaui/kmt/dashboard',
 }

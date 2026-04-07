@@ -53,7 +53,6 @@ const NAV_ITEMS_POC = [
 ]
 
 const RSA_NAV_ITEMS_POC = [
-  { label: 'Dashboard', path: '/rsaui/poc/dashboard', icon: ICON_OVERVIEW },
   { label: 'Document Review', path: '/rsaui/poc/document-review', icon: ICON_REPORT },
   { label: 'Settings', path: '/rsaui/poc/settings', icon: ICON_SETTINGS },
 ]
@@ -134,7 +133,6 @@ function getNavItems(role, app) {
 function isNavPathActive(pathname, path) {
   if (!path || path === '#') return false
   if (path === '/poc') return pathname === '/poc' || pathname.startsWith('/poc/')
-  if (path === '/rsaui/poc/dashboard') return pathname === '/rsaui/poc/dashboard'
   if (path === '/rsaui/poc/document-review') return pathname.startsWith('/rsaui/poc/document-review')
   if (path === '/rsaui/poc/settings') return pathname.startsWith('/rsaui/poc/settings')
   if (path === '/rsaui/bufm/document-review/review') {

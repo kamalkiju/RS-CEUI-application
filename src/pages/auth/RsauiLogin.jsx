@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
 
 const RSAUI_HOME = {
-  POC: '/rsaui/poc/dashboard',
+  POC: '/rsaui/poc/document-review',
   BUFM: '/rsaui/bufm/dashboard',
   KMT: '/rsaui/kmt/dashboard',
 }

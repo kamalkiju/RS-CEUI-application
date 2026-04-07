@@ -101,28 +101,19 @@ export default function KmtRsaSubmissionView() {
         ? sub.rejection_comment_KMT || undefined
         : undefined
 
-  const showWorkflowInReadView =
-    sub.status === RSA_STATUS.Pending_BUFM ||
-    ((sub.status === RSA_STATUS.Pending_KMT || sub.status === RSA_STATUS.Published) && !showKmtFieldEditor)
-
   const detailProps = {
     submission: sub,
     creatorName: sub.pocName || sub.requestMeta?.requestorName || '—',
     creatorEmail: sub.requestMeta?.requestorEmail || '—',
     unifiedPanel: true,
-    showWorkflowTimeline: showWorkflowInReadView,
+    showWorkflowTimeline: false,
     rejectionNote,
     rejectionTitle: sub.status === RSA_STATUS.Rejected_KMT ? 'KMT rejection' : 'BUFM rejection',
   }
 
-  const fullscreenWorkflow =
-    showWorkflowInReadView ||
-    (showKmtFieldEditor &&
-      (sub.status === RSA_STATUS.Pending_KMT || sub.status === RSA_STATUS.Published))
-
   const fullscreenDetailProps = {
     ...detailProps,
-    showWorkflowTimeline: fullscreenWorkflow,
+    showWorkflowTimeline: false,
   }
 
   return (

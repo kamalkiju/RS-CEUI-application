@@ -43,7 +43,6 @@ import DocumentReviewRedirect from './components/DocumentReviewRedirect.jsx'
 import ApplicationSelector from './pages/landing/ApplicationSelector.jsx'
 import RsauiLogin from './pages/auth/RsauiLogin.jsx'
 import RsauiRoleSelect from './pages/auth/RsauiRoleSelect.jsx'
-import RsauiPocDashboard from './pages/rsaui/RsauiPocDashboard.jsx'
 import CeuiComingSoon from './pages/auth/CeuiComingSoon.jsx'
 import BufmRsaReviewQueue from './pages/bufm/BufmRsaReviewQueue.jsx'
 import BufmRsaUnclaimedQueue from './pages/bufm/BufmRsaUnclaimedQueue.jsx'
@@ -83,14 +82,14 @@ export default function App() {
             </Route>
 
             <Route path="/rsaui" element={<ProtectedRoute role="POC" app="RSAUI" />}>
-              <Route index element={<Navigate to="/rsaui/poc/dashboard" replace />} />
+              <Route index element={<Navigate to="/rsaui/poc/document-review" replace />} />
               <Route path="service-area" element={<Navigate to="/rsaui/poc/create/select" replace />} />
               <Route path="pricing" element={<Navigate to="/rsaui/poc/create/review" replace />} />
               <Route path="products" element={<Navigate to="/rsaui/poc/create/configure" replace />} />
             </Route>
 
             <Route path="/rsaui/poc" element={<ProtectedRoute role="POC" app="RSAUI" />}>
-              <Route path="dashboard" element={<RsauiPocDashboard />} />
+              <Route path="dashboard" element={<Navigate to="/rsaui/poc/document-review" replace />} />
               <Route path="document-review" element={<RsaUIList syncTabToUrl />} />
               <Route path="create" element={<RsauiPocCreateLayout />}>
                 <Route index element={<RsauiPocCreateIndex />} />

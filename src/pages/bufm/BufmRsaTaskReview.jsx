@@ -92,7 +92,7 @@ export default function BufmRsaTaskReview() {
     creatorName: sub.pocName || sub.requestMeta?.requestorName || '—',
     creatorEmail: sub.requestMeta?.requestorEmail || '—',
     unifiedPanel: true,
-    showWorkflowTimeline: true,
+    showWorkflowTimeline: false,
     rejectionNote: sub.rejection_comment_BUFM || undefined,
     rejectionTitle: 'BUFM note',
   }
@@ -158,7 +158,7 @@ export default function BufmRsaTaskReview() {
               rejectionTitle="BUFM note"
               unifiedPanel
               unifiedEmbedded
-              showWorkflowTimeline
+              showWorkflowTimeline={false}
             />
           </div>
 

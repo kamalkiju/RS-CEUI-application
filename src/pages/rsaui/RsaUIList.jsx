@@ -60,23 +60,6 @@ function rejectionPreview(sub) {
   return ''
 }
 
-function listProgressPct(sub) {
-  if (typeof sub.progress === 'number') return Math.min(100, Math.max(0, sub.progress))
-  let p = 0
-  if (sub.serviceArea?.name && sub.serviceArea?.polygonId) p += 30
-  const pt = sub.productTabs
-  if (pt?.solidWaste?.primaryOfferings?.length && pt?.yardWaste?.primaryOfferings?.length) p += 50
-  else if (pt?.solidWaste?.primaryOfferings?.length || pt?.yardWaste?.primaryOfferings?.length) p += 25
-  if (sub.requestMeta?.assignedBUFM && sub.requestMeta?.reasonForRequest) p += 20
-  return Math.min(100, p)
-}
-
-function progressBarClass(pct) {
-  if (pct < 33) return 'rsa-progress rsa-progress--low'
-  if (pct < 66) return 'rsa-progress rsa-progress--mid'
-  return 'rsa-progress rsa-progress--high'
-}
-
 function truncate(text, max = 96) {
   if (!text) return ''
   const t = String(text).trim()
@@ -125,17 +108,9 @@ export default function RsaUIList({ syncTabToUrl = false }) {
   }
 
   const filtered = useMemo(() => {
-    const list = submissions.filter(s => matchesFilter(s, filterId))
-    if (filterId === 'awaiting') {
-      const rank = s => (s.status === RSA_STATUS.Pending_BUFM ? 0 : 1)
-      return [...list].sort((a, b) => rank(a) - rank(b) || String(b.updated).localeCompare(String(a.updated)))
-    }
-    if (filterId === 'rejected') {
-      const rank = s => (s.status === RSA_STATUS.Rejected_BUFM ? 0 : 1)
-      return [...list].sort((a, b) => rank(a) - rank(b) || String(b.updated).localeCompare(String(a.updated)))
-    }
-    return [...list].sort((a, b) => String(b.updated).localeCompare(String(a.updated)))
-  }, [submissions, filterId])
+    const list = [...submissions]
+    return list.sort((a, b) => String(b.updated).localeCompare(String(a.updated)))
+  }, [submissions])
 
   const visibleRows = useMemo(() => filtered.slice(0, 10), [filtered])
 
@@ -313,7 +288,6 @@ export default function RsaUIList({ syncTabToUrl = false }) {
                     <th>ID</th>
                     <th>Service area</th>
                     <th>Polygon ID</th>
-                    <th>Progress</th>
                     <th>Status</th>
                     <th>Rejection / notes</th>
                     <th>Updated</th>
@@ -323,18 +297,11 @@ export default function RsaUIList({ syncTabToUrl = false }) {
                 <tbody>
                   {visibleRows.map(sub => {
                     const comment = rejectionPreview(sub)
-                    const pct = listProgressPct(sub)
                     return (
                       <tr key={sub.id}>
                         <td><strong>{sub.id}</strong></td>
                         <td>{sub.serviceArea?.name || '—'}</td>
                         <td>{sub.serviceArea?.polygonId || '—'}</td>
-                        <td>
-                          <div className={progressBarClass(pct)} title={`${pct}%`}>
-                            <div className="rsa-progress__fill" style={{ width: `${pct}%` }} />
-                            <span className="rsa-progress__label">{pct}%</span>
-                          </div>
-                        </td>
                         <td>
                           <span className={STATUS_CLASS[sub.status] || 'kd-status draft'}>{sub.status?.replace(/_/g, ' ')}</span>
                         </td>

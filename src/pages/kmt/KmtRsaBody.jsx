@@ -19,7 +19,9 @@ function daysTone(d) {
 export default function KmtRsaBody() {
   const { queue } = useParams()
   const navigate = useNavigate()
-  const { submissions, RSA_STATUS, approveKMT } = useRsaUI()
+  const { submissions, RSA_STATUS, approveKMT, patchSubmission } = useRsaUI()
+  const APPROVERS = ['Jane Wilson', 'Maria Wilson', 'Robert Chen', 'Alex Morgan']
+  const POC_USERS = ['Alex Morgan', 'Sam Rivera', 'Jordan Lee', 'Chris Park', 'Pat Kim']
 
   const rows = useMemo(() => {
     const list = submissions.filter(s => !s.archived)
@@ -47,6 +49,27 @@ export default function KmtRsaBody() {
     if (!window.confirm('Publish this RSAUI submission? It will go live as a published service area.')) return
     approveKMT(sub.id)
     window.alert('✓ Published')
+  }
+
+  const reassignApprover = sub => {
+    const current = sub.assignedBufmReviewer || ''
+    const options = APPROVERS.map((n, i) => `${i + 1}. ${n}`).join('\n')
+    const pick = window.prompt(`Assign reviewer for approval:\n${options}\n\nCurrent: ${current || '—'}\nEnter reviewer name:`, current)
+    if (!pick || !pick.trim()) return
+    patchSubmission(sub.id, { assignedBufmReviewer: pick.trim() })
+    window.alert(`✓ Reviewer assigned to ${pick.trim()}`)
+  }
+
+  const reassignPoc = sub => {
+    const current = sub.pocName || sub.requestMeta?.requestorName || ''
+    const options = POC_USERS.map((n, i) => `${i + 1}. ${n}`).join('\n')
+    const pick = window.prompt(`Reassign document to another POC:\n${options}\n\nCurrent: ${current || '—'}\nEnter POC name:`, current)
+    if (!pick || !pick.trim()) return
+    patchSubmission(sub.id, {
+      pocName: pick.trim(),
+      requestMeta: { requestorName: pick.trim() },
+    })
+    window.alert(`✓ POC reassigned to ${pick.trim()}`)
   }
 
   if (queue === 'review') {
@@ -108,6 +131,20 @@ export default function KmtRsaBody() {
                           }
                         >
                           Reject
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm"
+                          onClick={() => reassignApprover(sub)}
+                        >
+                          Assign reviewer
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm"
+                          onClick={() => reassignPoc(sub)}
+                        >
+                          Reassign POC
                         </button>
                       </div>
                     </td>

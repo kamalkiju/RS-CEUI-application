@@ -131,7 +131,7 @@ export default function RsauiPocCreateLayout() {
       ? sp.get('from')
         ? `/rsaui/poc/document-review?tab=${encodeURIComponent(sp.get('from'))}`
         : '/rsaui/poc/document-review'
-      : '/rsaui/poc/dashboard'
+      : '/rsaui/poc/document-review'
 
   const handleFooterContinue = () => {
     if (!submissionId || !sub) {
@@ -177,7 +177,7 @@ export default function RsauiPocCreateLayout() {
 
   const backTarget = sp.get('from')
     ? `/rsaui/poc/document-review?tab=${encodeURIComponent(sp.get('from'))}`
-    : '/rsaui/poc/dashboard'
+    : '/rsaui/poc/document-review'
 
   if (isViewRoute) {
     return (
@@ -241,7 +241,7 @@ export default function RsauiPocCreateLayout() {
             type="button"
             className="back-btn rsa-ui-back"
             onClick={() => navigate(pocWizardExitPath)}
-            aria-label={isEditDetailsFlow || sp.get('from') ? 'Back to document review' : 'Back to dashboard'}
+            aria-label="Back to document review"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="15 18 9 12 15 6" />
