@@ -3382,6 +3382,24 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   border-radius: var(--radius);
   overflow: hidden;
   background: #f8fafc;
+  padding: 14px;
+}
+.kmt-template-editor__assignees-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.kmt-template-editor__assignee {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
 }
 .kmt-template-editor__footer {
   position: sticky;
@@ -3567,6 +3585,30 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   letter-spacing: 0.04em;
   color: var(--text-muted);
   margin: 0 0 10px;
+}
+.kmt-template-view__assignees-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.kmt-template-view__assignees-grid > div {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.kmt-template-view__assignees-grid strong {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.kmt-template-view__assignees-grid p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
 }
 .kmt-template-view__empty-tab {
   font-size: 14px;

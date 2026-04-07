@@ -2,9 +2,9 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import Layout from '../../components/Layout.jsx'
 import { useKmtTemplates } from '../../context/KmtTemplateContext.jsx'
+import { useKmtUsers } from '../../context/KmtUsersContext.jsx'
 import { normalizeTemplateForm } from './pocReferenceFormSeed.js'
 import ReadOnlyFieldsAccordion from '../../components/ReadOnlyFieldsAccordion.jsx'
-import { buildWorkflowTimeline } from '../../components/kmt/WorkflowBuilderBody.jsx'
 
 const STEPPER_STEPS = [
   { n: 1, short: 'Knowledge Area' },
@@ -32,16 +32,22 @@ export default function KmtTemplateView() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { getTemplate } = useKmtTemplates()
+  const { users } = useKmtUsers()
   const t = id ? getTemplate(id) : null
 
   const [activeStep, setActiveStep] = useState(1)
 
   const formModel = useMemo(() => normalizeTemplateForm(t?.form || { tabs: [] }), [t])
 
-  const wfPreview = useMemo(
-    () => buildWorkflowTimeline(t?.workflow?.nodes || [], t?.workflow?.edges || []),
-    [t],
-  )
+  const nameById = useMemo(() => Object.fromEntries(users.map(u => [u.id, u.name])), [users])
+  const assignedNames = useMemo(() => {
+    const a = t?.assignees || {}
+    return {
+      poc: (a.pocUserIds || []).map(uid => nameById[uid]).filter(Boolean),
+      bufm: (a.bufmUserIds || []).map(uid => nameById[uid]).filter(Boolean),
+      kmt: (a.kmtUserIds || []).map(uid => nameById[uid]).filter(Boolean),
+    }
+  }, [t, nameById])
 
   const activeTab = formModel.tabs[activeStep - 1]
   const headingTitle = activeTab?.title || STEPPER_STEPS[activeStep - 1]?.short || 'Form'
@@ -120,15 +126,21 @@ export default function KmtTemplateView() {
               </div>
             </section>
 
-            <section className="kmt-template-view__wf-strip" aria-label="Workflow preview">
-              <h3 className="kmt-template-view__wf-title">Workflow</h3>
-              <div className="kmt-wf__timeline-track">
-                {wfPreview.map((label, i) => (
-                  <span key={`${label}-${i}`} className="kmt-wf__timeline-join">
-                    {i > 0 && <span className="kmt-wf__timeline-arrow">→</span>}
-                    <span className="kmt-wf__timeline-chip">{label}</span>
-                  </span>
-                ))}
+            <section className="kmt-template-view__wf-strip" aria-label="Template assignees">
+              <h3 className="kmt-template-view__wf-title">Assigned users</h3>
+              <div className="kmt-template-view__assignees-grid">
+                <div>
+                  <strong>POC users</strong>
+                  <p>{assignedNames.poc.length ? assignedNames.poc.join(', ') : '—'}</p>
+                </div>
+                <div>
+                  <strong>BUFM approvers</strong>
+                  <p>{assignedNames.bufm.length ? assignedNames.bufm.join(', ') : '—'}</p>
+                </div>
+                <div>
+                  <strong>KMT approvers</strong>
+                  <p>{assignedNames.kmt.length ? assignedNames.kmt.join(', ') : '—'}</p>
+                </div>
               </div>
             </section>
           </div>

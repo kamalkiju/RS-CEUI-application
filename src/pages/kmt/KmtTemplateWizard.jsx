@@ -4,9 +4,9 @@ import Layout from '../../components/Layout.jsx'
 import { useKmtTemplates } from '../../context/KmtTemplateContext.jsx'
 import { useNotifications } from '../../context/NotificationContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
+import { useKmtUsers } from '../../context/KmtUsersContext.jsx'
 import { ensureFivePocTabs } from './kmtFormBuilderShared.js'
 import { normalizeTemplateForm } from './pocReferenceFormSeed.js'
-import WorkflowBuilderBody, { DEFAULT_WF_NODES, DEFAULT_WF_EDGES } from '../../components/kmt/WorkflowBuilderBody.jsx'
 import KmtFormBuilder from './KmtFormBuilder.jsx'
 
 const DOC_TYPES = ['Commercial', 'Residential', 'Municipal', 'RSAUI', 'General']
@@ -19,15 +19,18 @@ export default function KmtTemplateWizard() {
   const { user } = useAuth()
   const { getTemplate, saveTemplate, updateTemplate } = useKmtTemplates()
   const { addNotification } = useNotifications()
+  const { users } = useKmtUsers()
 
   const [name, setName] = useState('')
   const [docType, setDocType] = useState('Commercial')
   const [lineOfBusiness, setLineOfBusiness] = useState(LINE_OF_BUSINESS_OPTIONS[0])
   const [marketType, setMarketType] = useState(MARKET_TYPE_OPTIONS[0])
-  const [nodes, setNodes] = useState(DEFAULT_WF_NODES)
-  const [edges, setEdges] = useState(DEFAULT_WF_EDGES)
+  const [assignees, setAssignees] = useState({
+    pocUserIds: [],
+    bufmUserIds: [],
+    kmtUserIds: [],
+  })
   const [form, setForm] = useState(() => normalizeTemplateForm({ tabs: [] }))
-  const [workflowSavedFlash, setWorkflowSavedFlash] = useState(false)
   const [saveModal, setSaveModal] = useState(false)
   const [sessionId, setSessionId] = useState(null)
 
@@ -44,10 +47,26 @@ export default function KmtTemplateWizard() {
     setLineOfBusiness(LINE_OF_BUSINESS_OPTIONS.includes(lob) ? lob : lob || LINE_OF_BUSINESS_OPTIONS[0])
     const mt = t.marketSegment || ''
     setMarketType(MARKET_TYPE_OPTIONS.includes(mt) ? mt : mt || MARKET_TYPE_OPTIONS[0])
-    if (t.workflow?.nodes?.length) setNodes(t.workflow.nodes)
-    if (t.workflow?.edges?.length) setEdges(t.workflow.edges)
+    setAssignees({
+      pocUserIds: t.assignees?.pocUserIds || [],
+      bufmUserIds: t.assignees?.bufmUserIds || [],
+      kmtUserIds: t.assignees?.kmtUserIds || [],
+    })
     setForm(normalizeTemplateForm(t.form || { tabs: [] }))
   }, [routeId, getTemplate])
+
+  const pocUsers = users.filter(u => u.role === 'POC')
+  const bufmUsers = users.filter(u => u.role === 'BUFM')
+  const kmtUsers = users.filter(u => u.role === 'KMT')
+
+  const toggleAssignee = (groupKey, userId) => {
+    setAssignees(prev => ({
+      ...prev,
+      [groupKey]: prev[groupKey].includes(userId)
+        ? prev[groupKey].filter(id => id !== userId)
+        : [...prev[groupKey], userId],
+    }))
+  }
 
   const breadcrumb = (
     <nav className="kmt-breadcrumb kmt-template-editor__breadcrumb" aria-label="Breadcrumb">
@@ -70,7 +89,7 @@ export default function KmtTemplateWizard() {
         description: existing?.description ?? '',
         marketSegment: marketType,
         status,
-        workflow: { nodes, edges },
+        assignees,
         form: normalized,
       },
       editingId,
@@ -113,12 +132,6 @@ export default function KmtTemplateWizard() {
       ctaAction: { label: 'Open document review', path: '/bufm/document-review/review' },
     })
     navigate('/kmt/documents')
-  }
-
-  const saveWorkflowDraft = () => {
-    persist('draft')
-    setWorkflowSavedFlash(true)
-    window.setTimeout(() => setWorkflowSavedFlash(false), 2000)
   }
 
   const handleSaveDraftChoice = option => {
@@ -195,18 +208,59 @@ export default function KmtTemplateWizard() {
 
         <section className="kmt-template-editor__section kmt-template-editor__section--workflow">
           <div className="kmt-template-editor__section-head">
-            <h2 className="kmt-template-editor__section-title">Workflow builder</h2>
+            <h2 className="kmt-template-editor__section-title">Template assignees</h2>
             <p className="kmt-template-editor__section-sub">
-              Define approval flow. Drag nodes and connect them. Use <strong>Save workflow draft</strong> to persist workflow with the template.
+              Assign who can work on this template: POC authors, BUFM approvers, and KMT approvers.
             </p>
           </div>
-          {workflowSavedFlash && (
-            <p className="kmt-wizard__flash" role="status">
-              Workflow and template saved as draft.
-            </p>
-          )}
           <div className="kmt-template-editor__workflow-shell">
-            <WorkflowBuilderBody compact nodes={nodes} setNodes={setNodes} edges={edges} setEdges={setEdges} showTimeline />
+            <div className="kmt-wizard__fields">
+              <label className="kmt-field">
+                <span>POC users</span>
+                <div className="kmt-template-editor__assignees-list">
+                  {pocUsers.map(u => (
+                    <label key={u.id} className="kmt-template-editor__assignee">
+                      <input
+                        type="checkbox"
+                        checked={assignees.pocUserIds.includes(u.id)}
+                        onChange={() => toggleAssignee('pocUserIds', u.id)}
+                      />
+                      <span>{u.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </label>
+              <label className="kmt-field">
+                <span>BUFM approvers</span>
+                <div className="kmt-template-editor__assignees-list">
+                  {bufmUsers.map(u => (
+                    <label key={u.id} className="kmt-template-editor__assignee">
+                      <input
+                        type="checkbox"
+                        checked={assignees.bufmUserIds.includes(u.id)}
+                        onChange={() => toggleAssignee('bufmUserIds', u.id)}
+                      />
+                      <span>{u.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </label>
+              <label className="kmt-field">
+                <span>KMT approvers</span>
+                <div className="kmt-template-editor__assignees-list">
+                  {kmtUsers.map(u => (
+                    <label key={u.id} className="kmt-template-editor__assignee">
+                      <input
+                        type="checkbox"
+                        checked={assignees.kmtUserIds.includes(u.id)}
+                        onChange={() => toggleAssignee('kmtUserIds', u.id)}
+                      />
+                      <span>{u.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </label>
+            </div>
           </div>
         </section>
 
@@ -216,9 +270,6 @@ export default function KmtTemplateWizard() {
               Back to templates
             </button>
             <div className="kmt-template-editor__footer-actions">
-              <button type="button" className="btn btn-outline" disabled={!canSave} onClick={saveWorkflowDraft}>
-                Save workflow draft
-              </button>
               <button type="button" className="btn btn-outline" disabled={!canSave} onClick={() => setSaveModal(true)}>
                 Save draft…
               </button>

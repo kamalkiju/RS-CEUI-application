@@ -37,6 +37,7 @@ function demoRow(id, status, title, docType, timeline) {
     description: 'Demo template — aligned with POC knowledge document structure.',
     marketSegment: 'Muni',
     status,
+    assignees: { pocUserIds: [], bufmUserIds: [], kmtUserIds: [] },
     workflow: { nodes: DEFAULT_WF_NODES, edges: DEFAULT_WF_EDGES },
     form: newTemplateForm(),
     timeline: timeline || [
@@ -121,6 +122,7 @@ export function KmtTemplateProvider({ children }) {
         description: partial.description ?? exists?.description ?? '',
         marketSegment: partial.marketSegment ?? exists?.marketSegment ?? '',
         status: partial.status ?? exists?.status ?? 'draft',
+        assignees: partial.assignees ?? exists?.assignees ?? { pocUserIds: [], bufmUserIds: [], kmtUserIds: [] },
         workflow: partial.workflow ?? exists?.workflow ?? { nodes: DEFAULT_WF_NODES, edges: DEFAULT_WF_EDGES },
         form: partial.form ?? exists?.form ?? newTemplateForm(),
         timeline: partial.timeline ?? exists?.timeline ?? [],
