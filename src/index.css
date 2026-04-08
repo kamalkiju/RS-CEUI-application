@@ -3374,7 +3374,7 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 }
 /* Workflow assignees builder (CEUI / RSAUI): single card from TemplateAssigneesWorkflow */
 .kmt-template-editor__section--assignees-workflow {
-  padding: 0;
+  padding: 0 24px;
   border: none;
   box-shadow: none;
   background: transparent;

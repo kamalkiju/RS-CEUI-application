@@ -11,7 +11,8 @@
 }
 
 .taw__head {
-  padding: 0 0 12px;
+  padding: 20px 24px 20px;
+  box-sizing: border-box;
 }
 
 .taw__title {
@@ -22,10 +23,11 @@
 }
 
 .taw__sub {
-  margin: 6px 0 0;
+  margin: 10px 0 0;
   font-size: 12px;
   color: #888;
-  line-height: 1.45;
+  line-height: 1.5;
+  max-width: 56rem;
 }
 
 .taw__layout {
