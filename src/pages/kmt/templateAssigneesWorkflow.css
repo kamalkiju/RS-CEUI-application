@@ -152,13 +152,14 @@
   box-sizing: border-box;
 }
 
-/* Narrow slots between Start / gaps / role cards / End — drop to reorder */
+/* Slots between Start / gaps / role cards / End — drop to reorder (wider = easier targets) */
 .taw__drop-zone {
-  flex: 0 0 14px;
+  flex: 0 0 22px;
   align-self: stretch;
   min-height: 72px;
   border-radius: 6px;
   transition: background 0.12s ease, box-shadow 0.12s ease;
+  z-index: 1;
 }
 
 .taw__drop-zone--active {
@@ -179,32 +180,63 @@
 .taw__node-wrap {
   position: relative;
   flex-shrink: 0;
-}
-
-.taw__drag-hint {
-  position: absolute;
-  top: 4px;
-  left: 6px;
-  width: 10px;
-  height: 14px;
-  cursor: grab;
-  color: #ccc;
-  font-size: 10px;
-  line-height: 4px;
-  letter-spacing: -1px;
-  user-select: none;
   z-index: 2;
 }
 
 .taw__node {
-  width: 130px;
-  padding: 14px 12px;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  min-width: 130px;
+  max-width: 168px;
+  padding: 10px 8px 10px 4px;
   background: #fff;
   border: 1px solid #e8eaed;
   border-radius: 8px;
   text-align: center;
-  cursor: pointer;
+  cursor: grab;
   transition: border-color 0.15s, box-shadow 0.15s;
+  -webkit-user-drag: element;
+  user-select: none;
+}
+
+.taw__node:active {
+  cursor: grabbing;
+}
+
+.taw__node-grip {
+  flex-shrink: 0;
+  width: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px 2px;
+  border-radius: 4px;
+  align-self: stretch;
+}
+
+.taw__node-grip:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.taw__node-grip-bar {
+  display: block;
+  width: 3px;
+  height: 4px;
+  border-radius: 1px;
+  background: #cbd5e1;
+}
+
+.taw__node-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
 }
 
 .taw__node--creator {
@@ -306,6 +338,8 @@
   gap: 6px;
   flex-shrink: 0;
   padding: 0 2px;
+  position: relative;
+  z-index: 3;
 }
 
 .taw__add-btn {
@@ -334,7 +368,43 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 120px;
+  min-width: 168px;
+  max-width: 220px;
+}
+
+.taw__gap-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin: 0;
+}
+
+.taw__gap-select {
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #1a2332;
+  background: #fff;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.taw__gap-select:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.taw__gap-kind-hint {
+  margin: 0;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.35;
 }
 
 .taw__gap-input {

@@ -83,6 +83,8 @@ export default function TemplateAssigneesWorkflow({
   const [dropHoverGap, setDropHoverGap] = useState(null)
   const [activeGap, setActiveGap] = useState(null)
   const [newRoleDraft, setNewRoleDraft] = useState('')
+  /** When adding a role: Approval inserts at the chosen gap; Creator is always inserted at index 0. */
+  const [newRoleKind, setNewRoleKind] = useState('approval')
   const [roleEditDraft, setRoleEditDraft] = useState('')
 
   useEffect(() => {
@@ -144,11 +146,16 @@ export default function TemplateAssigneesWorkflow({
     if (!trimmed) return
     const nid = uid()
     const next = [...stages]
-    next.splice(gapIndex, 0, { id: nid, name: trimmed })
+    if (newRoleKind === 'creator') {
+      next.splice(0, 0, { id: nid, name: trimmed })
+    } else {
+      next.splice(gapIndex, 0, { id: nid, name: trimmed })
+    }
     onStagesChange(next)
     onAssigneesChange(prev => ({ ...prev, [nid]: [] }))
     setActiveGap(null)
     setNewRoleDraft('')
+    setNewRoleKind('approval')
     setSelectedId(nid)
   }
 
@@ -222,9 +229,30 @@ export default function TemplateAssigneesWorkflow({
       <div className="taw__add-gap">
         {activeGap === gapIndex ? (
           <div className="taw__gap-form">
+            <label className="taw__gap-label" htmlFor={`taw-gap-kind-${gapIndex}`}>
+              Step type
+            </label>
+            <select
+              id={`taw-gap-kind-${gapIndex}`}
+              className="taw__gap-select"
+              value={newRoleKind}
+              onChange={e => setNewRoleKind(e.target.value)}
+            >
+              <option value="approval">Approval</option>
+              <option value="creator">Creator</option>
+            </select>
+            <p className="taw__gap-kind-hint">
+              {newRoleKind === 'creator'
+                ? 'Creator is placed first; the previous first step becomes an approval.'
+                : 'This role is inserted at this position in the chain.'}
+            </p>
+            <label className="taw__gap-label" htmlFor={`taw-gap-name-${gapIndex}`}>
+              Role name
+            </label>
             <input
+              id={`taw-gap-name-${gapIndex}`}
               className="taw__gap-input"
-              placeholder="Role name"
+              placeholder="e.g. POC, BUFM, KMT"
               value={newRoleDraft}
               onChange={e => setNewRoleDraft(e.target.value)}
               onKeyDown={e => {
@@ -232,6 +260,7 @@ export default function TemplateAssigneesWorkflow({
                 if (e.key === 'Escape') {
                   setActiveGap(null)
                   setNewRoleDraft('')
+                  setNewRoleKind('approval')
                 }
               }}
               autoFocus
@@ -245,6 +274,7 @@ export default function TemplateAssigneesWorkflow({
               onClick={() => {
                 setActiveGap(null)
                 setNewRoleDraft('')
+                setNewRoleKind('approval')
               }}
             >
               Cancel
@@ -255,9 +285,11 @@ export default function TemplateAssigneesWorkflow({
             type="button"
             className="taw__add-btn"
             aria-label="Add role here"
-            onClick={() => {
+            onClick={e => {
+              e.stopPropagation()
               setActiveGap(gapIndex)
               setNewRoleDraft('')
+              setNewRoleKind('approval')
             }}
           >
             +
@@ -276,7 +308,7 @@ export default function TemplateAssigneesWorkflow({
       <div className="taw__head">
         <h2 className="taw__title">Template assignees</h2>
         <p className="taw__sub">
-          Build the flow on the left (Start → Creator → Approval roles → End). Drag the ⋮ handle to move a role; drop on a blue slot to place it between steps. Click a role card to assign users on the right.
+          Build the flow on the left (Start → Creator → Approval roles → End). Drag a role card (or its grip) to reorder; drop on a blue slot between steps. Click + to add a role: choose Creator or Approval, enter the name, then Add role. Click a card to assign users on the right.
         </p>
       </div>
 
@@ -293,7 +325,9 @@ export default function TemplateAssigneesWorkflow({
               <span className="taw__legend-sep">→</span>
               <span className="taw__legend-chip taw__legend-chip--end">End</span>
             </div>
-            <p className="taw__workflow-hint">First role is the Creator step; additional roles are Approval steps. Use + to add a role and name it (e.g. POC, BUFM).</p>
+            <p className="taw__workflow-hint">
+              The first role in the chain is the Creator step; the rest are Approval steps. Use + to pick step type, enter a role name, then Add role.
+            </p>
           </div>
           <div className="taw__canvas-wrap">
             <div className="taw__canvas-scroll">
@@ -311,40 +345,39 @@ export default function TemplateAssigneesWorkflow({
                     <Fragment key={stage.id}>
                       <div className="taw__node-wrap">
                         <div
-                          className="taw__drag-hint"
+                          role="button"
+                          tabIndex={0}
                           draggable
-                          title="Drag to reorder"
+                          title="Drag to reorder — drop on a blue slot between steps"
+                          className={`taw__node${i === 0 ? ' taw__node--creator' : ' taw__node--approval'}${isSel ? ' taw__node--selected' : ''}${draggingId === stage.id ? ' taw__node--dragging' : ''}`}
                           onDragStart={e => handleNodeDragStart(e, i)}
                           onDragEnd={handleNodeDragEnd}
-                          aria-hidden
+                          onClick={() => setSelectedId(stage.id)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              setSelectedId(stage.id)
+                            }
+                          }}
                         >
-                        ⋮
-                        <br />
-                        ⋮
-                      </div>
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        className={`taw__node${i === 0 ? ' taw__node--creator' : ' taw__node--approval'}${isSel ? ' taw__node--selected' : ''}${draggingId === stage.id ? ' taw__node--dragging' : ''}`}
-                        onClick={() => setSelectedId(stage.id)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            setSelectedId(stage.id)
-                          }
-                        }}
-                      >
-                        <div className="taw__node-icon" style={{ background: colors.tint }}>
-                          <div className="taw__node-dot" style={{ background: colors.dot }} />
+                          <div className="taw__node-grip" aria-hidden>
+                            <span className="taw__node-grip-bar" />
+                            <span className="taw__node-grip-bar" />
+                            <span className="taw__node-grip-bar" />
+                          </div>
+                          <div className="taw__node-main">
+                            <div className="taw__node-icon" style={{ background: colors.tint }}>
+                              <div className="taw__node-dot" style={{ background: colors.dot }} />
+                            </div>
+                            <div className="taw__node-role">{stage.name || 'Role'}</div>
+                            <div className="taw__node-type">{i === 0 ? 'Creator' : 'Approval'}</div>
+                            <div
+                              className={`taw__node-badge ${count > 0 ? 'taw__node-badge--ok' : 'taw__node-badge--empty'}`}
+                            >
+                              {count > 0 ? `${count} user${count === 1 ? '' : 's'} assigned` : 'No users'}
+                            </div>
+                          </div>
                         </div>
-                        <div className="taw__node-role">{stage.name || 'Role'}</div>
-                        <div className="taw__node-type">{i === 0 ? 'Creator' : 'Approval'}</div>
-                        <div
-                          className={`taw__node-badge ${count > 0 ? 'taw__node-badge--ok' : 'taw__node-badge--empty'}`}
-                        >
-                          {count > 0 ? `${count} user${count === 1 ? '' : 's'} assigned` : 'No users'}
-                        </div>
-                      </div>
                     </div>
                     {renderDropZone(i + 1)}
                     {renderGap(i + 1)}
