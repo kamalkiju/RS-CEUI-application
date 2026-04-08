@@ -430,24 +430,34 @@ export default function KmtTemplateWizard() {
                           matches.slice(0, 24).map(u => {
                             const already = selected.includes(u.id)
                             return (
-                              <li key={u.id}>
+                              <li
+                                key={u.id}
+                                className={already ? 'kmt-stage-assignee-picker__row kmt-stage-assignee-picker__row--assigned' : 'kmt-stage-assignee-picker__row'}
+                              >
                                 <button
                                   type="button"
-                                  className="kmt-stage-assignee-picker__add"
+                                  className={`kmt-stage-assignee-picker__add${already ? ' kmt-stage-assignee-picker__add--assigned' : ''}`}
                                   disabled={already}
                                   onClick={() => addUserToStage(lvl.id, u.id)}
                                 >
                                   <span className="kmt-stage-assignee-picker__user-name">{u.name}</span>
                                   <span className="kmt-stage-assignee-picker__user-meta">{u.email || '—'}</span>
-                                  {already ? <span className="kmt-stage-assignee-picker__badge">Added</span> : <span className="kmt-stage-assignee-picker__hint">Add</span>}
+                                  {already ? (
+                                    <span className="kmt-stage-assignee-picker__badge">Assigned</span>
+                                  ) : (
+                                    <span className="kmt-stage-assignee-picker__hint">Add</span>
+                                  )}
                                 </button>
                               </li>
                             )
                           })
                         )}
                       </ul>
-                      <div className="kmt-stage-assignee-picker__assigned" aria-label="Users assigned to this stage">
-                        <span className="kmt-stage-assignee-picker__assigned-label">Assigned to this stage</span>
+                      <div
+                        className={`kmt-stage-assignee-picker__assigned${selected.length ? ' kmt-stage-assignee-picker__assigned--has-users' : ''}`}
+                        aria-label="Assigned users"
+                      >
+                        <span className="kmt-stage-assignee-picker__assigned-label">Assigned</span>
                         {selected.length === 0 ? (
                           <p className="kmt-template-editor__assignees-empty">No one assigned yet. Use search above to add users.</p>
                         ) : (
@@ -463,7 +473,7 @@ export default function KmtTemplateWizard() {
                               }
                               return (
                                 <li key={uid}>
-                                  <span className="kmt-assignee-chip">
+                                  <span className="kmt-assignee-chip kmt-assignee-chip--highlight">
                                     <span className="kmt-assignee-chip__name">{u.name}</span>
                                     <button
                                       type="button"
