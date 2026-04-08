@@ -19,6 +19,15 @@ const APPS = [
     badge: 'Service Area Management',
     to: '/rsaui/login',
   },
+  {
+    id: 'IT',
+    icon: '⚙️',
+    title: 'IT Team',
+    subtitle: 'Template operations',
+    description: 'Document template authoring, publishing, and platform settings for CEUI and RSAUI',
+    badge: 'Internal',
+    to: '/it/login',
+  },
 ]
 
 export default function ApplicationSelector() {

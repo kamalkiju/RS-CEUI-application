@@ -5,15 +5,19 @@ import { useKmtTemplates } from '../../context/KmtTemplateContext.jsx'
 import { useNotifications } from '../../context/NotificationContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useKmtUsers } from '../../context/KmtUsersContext.jsx'
-import { ensureFivePocTabs } from './kmtFormBuilderShared.js'
-import { normalizeTemplateForm } from './pocReferenceFormSeed.js'
-import KmtFormBuilder from './KmtFormBuilder.jsx'
+import { ensureFivePocTabs } from '../kmt/kmtFormBuilderShared.js'
+import { normalizeTemplateForm } from '../kmt/pocReferenceFormSeed.js'
+import KmtFormBuilder from '../kmt/KmtFormBuilder.jsx'
 
 const DOC_TYPES = ['Commercial', 'Residential', 'Municipal', 'RSAUI', 'General']
 const LINE_OF_BUSINESS_OPTIONS = ['Commercial', 'Residential', 'Municipal', 'Industrial', 'Roll-off', 'Other']
 const MARKET_TYPE_OPTIONS = ['Residential', 'Commercial', 'Municipal', 'Industrial', 'Open Market', 'Other']
+const TARGET_APPS = [
+  { value: 'CEUI', label: 'CEUI' },
+  { value: 'RSAUI', label: 'RSAUI' },
+]
 
-export default function KmtTemplateWizard() {
+export default function ItTemplateWizard() {
   const { id: routeId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -21,6 +25,7 @@ export default function KmtTemplateWizard() {
   const { addNotification } = useNotifications()
   const { users } = useKmtUsers()
 
+  const [targetApp, setTargetApp] = useState('CEUI')
   const [name, setName] = useState('')
   const [docType, setDocType] = useState('Commercial')
   const [lineOfBusiness, setLineOfBusiness] = useState(LINE_OF_BUSINESS_OPTIONS[0])
@@ -41,6 +46,7 @@ export default function KmtTemplateWizard() {
     const t = getTemplate(routeId)
     if (!t) return
     setSessionId(t.id)
+    setTargetApp(t.targetApp === 'RSAUI' ? 'RSAUI' : 'CEUI')
     setName(t.name)
     setDocType(t.docType)
     const lob = t.lineOfBusiness || ''
@@ -70,7 +76,7 @@ export default function KmtTemplateWizard() {
 
   const breadcrumb = (
     <nav className="kmt-breadcrumb kmt-template-editor__breadcrumb" aria-label="Breadcrumb">
-      <Link to="/kmt/documents">Documents</Link>
+      <Link to="/it/documents">Documents</Link>
       <span aria-hidden> / </span>
       <span>{editingId ? 'Edit template' : 'Create template'}</span>
     </nav>
@@ -84,6 +90,7 @@ export default function KmtTemplateWizard() {
       {
         name,
         docType,
+        targetApp,
         lineOfBusiness,
         serviceArea: existing?.serviceArea ?? '',
         description: existing?.description ?? '',
@@ -108,17 +115,18 @@ export default function KmtTemplateWizard() {
           id: `ev-${Date.now()}`,
           stage: 'Published',
           detail: 'Template is live. POC and BUFM were notified.',
-          actor: user?.name || 'KMT',
+          actor: user?.name || 'IT',
           at: new Date().toISOString(),
         },
       ],
     })
+    const actor = user?.name || 'IT'
     addNotification({
       role: 'POC',
       statusType: 'publish',
       title: 'New document template published',
-      message: `KMT published template "${name}".`,
-      actor: user?.name || 'KMT',
+      message: `IT published template "${name}" for ${targetApp}.`,
+      actor,
       documentName: name,
       ctaAction: { label: 'View documents', path: '/poc' },
     })
@@ -127,22 +135,22 @@ export default function KmtTemplateWizard() {
       statusType: 'publish',
       title: 'Template catalog update',
       message: `New template "${name}" is available for reference.`,
-      actor: user?.name || 'KMT',
+      actor,
       documentName: name,
       ctaAction: { label: 'Open document review', path: '/bufm/document-review/review' },
     })
-    navigate('/kmt/documents')
+    navigate('/it/documents')
   }
 
   const handleSaveDraftChoice = option => {
     setSaveModal(false)
     if (option === 'draft') {
       persist('draft')
-      navigate('/kmt/documents')
+      navigate('/it/documents')
     } else if (option === 'submit') {
       const tid = persist('submitted')
       updateTemplate(tid, { status: 'submitted' })
-      navigate('/kmt/documents')
+      navigate('/it/documents')
     }
   }
 
@@ -152,6 +160,25 @@ export default function KmtTemplateWizard() {
     <Layout>
       <div className="kmt-page kmt-template-editor">
         {breadcrumb}
+
+        <section className="kmt-template-editor__section kmt-template-editor__section--basic">
+          <div className="kmt-template-editor__section-head">
+            <h1 className="kmt-template-editor__section-title">Target application</h1>
+            <p className="kmt-template-editor__section-sub">Choose whether this template is for CEUI or RSAUI.</p>
+          </div>
+          <div className="kmt-template-editor__fields kmt-wizard__fields">
+            <label className="kmt-field">
+              <span>Application</span>
+              <select className="kmt-input" value={targetApp} onChange={e => setTargetApp(e.target.value)}>
+                {TARGET_APPS.map(a => (
+                  <option key={a.value} value={a.value}>
+                    {a.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </section>
 
         <section className="kmt-template-editor__section kmt-template-editor__section--basic">
           <div className="kmt-template-editor__section-head">
@@ -220,11 +247,7 @@ export default function KmtTemplateWizard() {
                 <div className="kmt-template-editor__assignees-list">
                   {pocUsers.map(u => (
                     <label key={u.id} className="kmt-template-editor__assignee">
-                      <input
-                        type="checkbox"
-                        checked={assignees.pocUserIds.includes(u.id)}
-                        onChange={() => toggleAssignee('pocUserIds', u.id)}
-                      />
+                      <input type="checkbox" checked={assignees.pocUserIds.includes(u.id)} onChange={() => toggleAssignee('pocUserIds', u.id)} />
                       <span>{u.name}</span>
                     </label>
                   ))}
@@ -235,11 +258,7 @@ export default function KmtTemplateWizard() {
                 <div className="kmt-template-editor__assignees-list">
                   {bufmUsers.map(u => (
                     <label key={u.id} className="kmt-template-editor__assignee">
-                      <input
-                        type="checkbox"
-                        checked={assignees.bufmUserIds.includes(u.id)}
-                        onChange={() => toggleAssignee('bufmUserIds', u.id)}
-                      />
+                      <input type="checkbox" checked={assignees.bufmUserIds.includes(u.id)} onChange={() => toggleAssignee('bufmUserIds', u.id)} />
                       <span>{u.name}</span>
                     </label>
                   ))}
@@ -250,11 +269,7 @@ export default function KmtTemplateWizard() {
                 <div className="kmt-template-editor__assignees-list">
                   {kmtUsers.map(u => (
                     <label key={u.id} className="kmt-template-editor__assignee">
-                      <input
-                        type="checkbox"
-                        checked={assignees.kmtUserIds.includes(u.id)}
-                        onChange={() => toggleAssignee('kmtUserIds', u.id)}
-                      />
+                      <input type="checkbox" checked={assignees.kmtUserIds.includes(u.id)} onChange={() => toggleAssignee('kmtUserIds', u.id)} />
                       <span>{u.name}</span>
                     </label>
                   ))}
@@ -266,7 +281,7 @@ export default function KmtTemplateWizard() {
 
         <footer className="kmt-template-editor__footer">
           <div className="kmt-template-editor__footer-inner">
-            <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/documents')}>
+            <button type="button" className="btn btn-outline" onClick={() => navigate('/it/documents')}>
               Back to templates
             </button>
             <div className="kmt-template-editor__footer-actions">

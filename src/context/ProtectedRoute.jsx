@@ -5,6 +5,7 @@ const CEUI_HOME = {
   POC: '/poc',
   BUFM: '/bufm',
   KMT: '/kmt',
+  IT: '/it/documents',
 }
 
 const RSAUI_HOME = {
@@ -13,15 +14,16 @@ const RSAUI_HOME = {
   KMT: '/rsaui/kmt/dashboard',
 }
 
+const IT_HOME = '/it/documents'
+
 /**
- * @param {{ role: 'POC'|'BUFM'|'KMT', app?: 'CEUI'|'RSAUI' }} props
+ * @param {{ role: 'POC'|'BUFM'|'KMT'|'IT', app?: 'CEUI'|'RSAUI'|'IT' }} props
  */
 export default function ProtectedRoute({ role, app = 'CEUI' }) {
   const { user } = useAuth()
   const location = useLocation()
 
-  const loginPath = app === 'RSAUI' ? '/rsaui/login' : '/login'
-  const homes = app === 'RSAUI' ? RSAUI_HOME : CEUI_HOME
+  const loginPath = app === 'RSAUI' ? '/rsaui/login' : app === 'IT' ? '/it/login' : '/login'
 
   if (!user) {
     return <Navigate to={loginPath} replace state={{ from: location.pathname }} />
@@ -30,12 +32,18 @@ export default function ProtectedRoute({ role, app = 'CEUI' }) {
   const userApp = user.app || 'CEUI'
 
   if (userApp !== app) {
-    const fallback = userApp === 'RSAUI' ? RSAUI_HOME[user.role] : CEUI_HOME[user.role]
-    return <Navigate to={fallback || '/'} replace />
+    let fallback = '/'
+    if (userApp === 'RSAUI') fallback = RSAUI_HOME[user.role] || '/rsaui/login'
+    else if (userApp === 'IT') fallback = IT_HOME
+    else fallback = CEUI_HOME[user.role] || '/login'
+    return <Navigate to={fallback} replace />
   }
 
   if (user.role !== role) {
-    const redirect = homes[user.role] || loginPath
+    let redirect = loginPath
+    if (app === 'RSAUI') redirect = RSAUI_HOME[user.role] || loginPath
+    else if (app === 'IT') redirect = IT_HOME
+    else redirect = CEUI_HOME[user.role] || loginPath
     return <Navigate to={redirect} replace />
   }
 

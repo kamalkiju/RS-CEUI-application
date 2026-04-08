@@ -32,13 +32,14 @@ import KmtReportsBody from './pages/kmt/KmtReportsBody.jsx'
 import KmtDocumentView from './pages/kmt/KmtDocumentView.jsx'
 import KmtRsaSubmissionView from './pages/kmt/KmtRsaSubmissionView.jsx'
 import KmtDocumentsPage from './pages/kmt/KmtDocumentsPage.jsx'
-import KmtWorkflowBuilder from './pages/kmt/KmtWorkflowBuilder.jsx'
-import KmtFormBuilder from './pages/kmt/KmtFormBuilder.jsx'
 import KmtUsersPage from './pages/kmt/KmtUsersPage.jsx'
 import KmtDelegationsPage from './pages/kmt/KmtDelegationsPage.jsx'
 import KmtSettingsPage from './pages/kmt/KmtSettingsPage.jsx'
-import KmtTemplateWizard from './pages/kmt/KmtTemplateWizard.jsx'
 import KmtTemplateView from './pages/kmt/KmtTemplateView.jsx'
+import ItLogin from './pages/it/ItLogin.jsx'
+import ItDocumentsPage from './pages/it/ItDocumentsPage.jsx'
+import ItTemplateWizard from './pages/it/ItTemplateWizard.jsx'
+import ItTemplateView from './pages/it/ItTemplateView.jsx'
 import DocumentReviewRedirect from './components/DocumentReviewRedirect.jsx'
 import ApplicationSelector from './pages/landing/ApplicationSelector.jsx'
 import RsauiLogin from './pages/auth/RsauiLogin.jsx'
@@ -73,6 +74,16 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/rsaui/login" element={<RsauiLogin />} />
             <Route path="/rsaui/role-select" element={<RsauiRoleSelect />} />
+            <Route path="/it/login" element={<ItLogin />} />
+
+            <Route path="/it" element={<ProtectedRoute role="IT" app="IT" />}>
+              <Route index element={<Navigate to="/it/documents" replace />} />
+              <Route path="documents/new" element={<ItTemplateWizard />} />
+              <Route path="documents/:id/edit" element={<ItTemplateWizard />} />
+              <Route path="documents/:id" element={<ItTemplateView />} />
+              <Route path="documents" element={<ItDocumentsPage />} />
+              <Route path="settings" element={<KmtSettingsPage />} />
+            </Route>
 
             {/* POC Routes */}
             <Route path="/poc" element={<ProtectedRoute role="POC" app="CEUI" />}>
@@ -166,12 +177,10 @@ export default function App() {
               <Route path="reports/*" element={<DocumentReviewRedirect fromPrefix="/kmt/reports" toPrefix="/kmt/document-review" />} />
               <Route path="document/:id" element={<KmtDocumentView />} />
               <Route path="rsaui-submission/:id" element={<KmtRsaSubmissionView />} />
-              <Route path="documents/new" element={<KmtTemplateWizard />} />
-              <Route path="documents/:id/edit" element={<KmtTemplateWizard />} />
               <Route path="documents/:id" element={<KmtTemplateView />} />
               <Route path="documents" element={<KmtDocumentsPage />} />
-              <Route path="workflow-builder" element={<KmtWorkflowBuilder />} />
-              <Route path="form-builder" element={<KmtFormBuilder />} />
+              <Route path="workflow-builder" element={<Navigate to="/it/documents" replace />} />
+              <Route path="form-builder" element={<Navigate to="/it/documents" replace />} />
               <Route path="users" element={<KmtUsersPage />} />
               <Route path="delegations" element={<KmtDelegationsPage />} />
               <Route path="settings" element={<KmtSettingsPage />} />

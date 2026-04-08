@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import Layout from '../../components/Layout.jsx'
 import { useKmtTemplates } from '../../context/KmtTemplateContext.jsx'
 import { useKmtUsers } from '../../context/KmtUsersContext.jsx'
-import { normalizeTemplateForm } from './pocReferenceFormSeed.js'
+import { normalizeTemplateForm } from '../kmt/pocReferenceFormSeed.js'
 import ReadOnlyFieldsAccordion from '../../components/ReadOnlyFieldsAccordion.jsx'
 
 const STEPPER_STEPS = [
@@ -28,7 +28,7 @@ function fieldToReadOnly(f, isDraft) {
   return { label, value, multiline }
 }
 
-export default function KmtTemplateView() {
+export default function ItTemplateView() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { getTemplate } = useKmtTemplates()
@@ -61,21 +61,8 @@ export default function KmtTemplateView() {
       <Layout>
         <div className="kmt-page">
           <p>Template not found.</p>
-          <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/documents')}>
+          <button type="button" className="btn btn-outline" onClick={() => navigate('/it/documents')}>
             Back to documents
-          </button>
-        </div>
-      </Layout>
-    )
-  }
-
-  if (t.status !== 'published') {
-    return (
-      <Layout>
-        <div className="kmt-page">
-          <p>KMT can only open templates that are published. This template is not in the published catalog.</p>
-          <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/documents')}>
-            Back to published templates
           </button>
         </div>
       </Layout>
@@ -93,7 +80,7 @@ export default function KmtTemplateView() {
         <div className="bufm-doc-view__inner">
           <div className="bufm-doc-view__sticky">
             <header className="bufm-doc-view__header">
-              <button type="button" className="back-btn bufm-doc-view__back" onClick={() => navigate('/kmt/documents')} aria-label="Back">
+              <button type="button" className="back-btn bufm-doc-view__back" onClick={() => navigate('/it/documents')} aria-label="Back">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="15 18 9 12 15 6" />
                 </svg>
@@ -110,6 +97,11 @@ export default function KmtTemplateView() {
                     </>
                   )}
                 </p>
+              </div>
+              <div className="bufm-doc-view__header-actions">
+                <button type="button" className="btn btn-outline" onClick={() => navigate(`/it/documents/${t.id}/edit`)}>
+                  Edit template
+                </button>
               </div>
             </header>
 

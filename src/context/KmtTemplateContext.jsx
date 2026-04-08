@@ -18,7 +18,7 @@ function nowIso() {
   return new Date().toISOString()
 }
 
-/** Minimum demo rows per Documents tab (Draft / Submitted). */
+/** Minimum demo rows per Documents tab (Draft / Submitted / Published catalog). */
 const MIN_TEMPLATES_PER_TAB = 8
 
 const DOC_TYPES_ROT = ['Commercial', 'Residential', 'Municipal', 'RSAUI', 'General', 'Commercial', 'Residential', 'Municipal']
@@ -27,11 +27,12 @@ function newTemplateForm() {
   return normalizeTemplateForm({ tabs: [] })
 }
 
-function demoRow(id, status, title, docType, timeline) {
+function demoRow(id, status, title, docType, timeline, targetApp = 'CEUI') {
   return {
     id,
     name: title,
     docType,
+    targetApp,
     lineOfBusiness: 'Municipal',
     serviceArea: 'Florida',
     description: 'Demo template — aligned with POC knowledge document structure.',
@@ -68,6 +69,17 @@ const DEMO_SUBMITTED = Array.from({ length: MIN_TEMPLATES_PER_TAB }, (_, i) =>
   ),
 )
 
+const DEMO_PUBLISHED = Array.from({ length: MIN_TEMPLATES_PER_TAB }, (_, i) =>
+  demoRow(
+    `tpl-demo-pub-${String(i + 1).padStart(2, '0')}`,
+    'published',
+    `Published — ${['City franchise', 'HOA bundle', 'Roll-off SOP', 'Cart exchange', 'Yard waste', 'E-waste', 'Compactor', 'Special waste'][i]}`,
+    DOC_TYPES_ROT[(i + 4) % 8],
+    [{ id: `p-${i}`, stage: 'Published', detail: 'Live in catalog', actor: 'IT', at: '2024-03-21T09:00:00.000Z' }],
+    i % 2 === 0 ? 'CEUI' : 'RSAUI',
+  ),
+)
+
 /**
  * Ensures at least MIN_TEMPLATES_PER_TAB items per tab. Merges fixed demo ids so
  * sparse localStorage still fills both tabs.
@@ -78,6 +90,7 @@ function mergeMinimumDemoTemplates(existing) {
 
   const countDraft = () => out.filter(t => t.status === 'draft').length
   const countSubmitted = () => out.filter(t => t.status === 'submitted').length
+  const countPublished = () => out.filter(t => t.status === 'published').length
 
   for (const row of DEMO_DRAFT) {
     if (countDraft() >= MIN_TEMPLATES_PER_TAB) break
@@ -88,6 +101,13 @@ function mergeMinimumDemoTemplates(existing) {
   }
   for (const row of DEMO_SUBMITTED) {
     if (countSubmitted() >= MIN_TEMPLATES_PER_TAB) break
+    if (!byId.has(row.id)) {
+      out.push(row)
+      byId.add(row.id)
+    }
+  }
+  for (const row of DEMO_PUBLISHED) {
+    if (countPublished() >= MIN_TEMPLATES_PER_TAB) break
     if (!byId.has(row.id)) {
       out.push(row)
       byId.add(row.id)
@@ -121,6 +141,7 @@ export function KmtTemplateProvider({ children }) {
         serviceArea: partial.serviceArea ?? exists?.serviceArea ?? '',
         description: partial.description ?? exists?.description ?? '',
         marketSegment: partial.marketSegment ?? exists?.marketSegment ?? '',
+        targetApp: partial.targetApp ?? exists?.targetApp ?? 'CEUI',
         status: partial.status ?? exists?.status ?? 'draft',
         assignees: partial.assignees ?? exists?.assignees ?? { pocUserIds: [], bufmUserIds: [], kmtUserIds: [] },
         workflow: partial.workflow ?? exists?.workflow ?? { nodes: DEFAULT_WF_NODES, edges: DEFAULT_WF_EDGES },

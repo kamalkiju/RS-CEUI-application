@@ -119,7 +119,22 @@ const NAV_ITEMS_KMT = [
   { label: 'Settings', path: '/kmt/settings', icon: ICON_SETTINGS },
 ]
 
+const NAV_ITEMS_IT = [
+  {
+    label: 'Document templates',
+    path: '/it/documents',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+      </svg>
+    ),
+  },
+  { label: 'Settings', path: '/it/settings', icon: ICON_SETTINGS },
+]
+
 function getNavItems(role, app) {
+  if (app === 'IT') return NAV_ITEMS_IT
   if (app === 'RSAUI') {
     if (role === 'BUFM') return RSA_NAV_ITEMS_BUFM
     if (role === 'KMT') return RSA_NAV_ITEMS_KMT
@@ -158,13 +173,9 @@ function isNavPathActive(pathname, path) {
   if (path === '/bufm/document-review') return pathname.startsWith('/bufm/document-review')
   if (path === '/kmt') return pathname === '/kmt' || pathname === '/kmt/'
   if (path === '/kmt/document-review') return pathname.startsWith('/kmt/document-review')
-  if (path === '/kmt/documents') {
-    return (
-      pathname.startsWith('/kmt/documents') ||
-      pathname.startsWith('/kmt/form-builder') ||
-      pathname.startsWith('/kmt/workflow-builder')
-    )
-  }
+  if (path === '/kmt/documents') return pathname.startsWith('/kmt/documents')
+  if (path === '/it/documents') return pathname.startsWith('/it/documents')
+  if (path === '/it/settings') return pathname.startsWith('/it/settings')
   if (path === '/kmt/users') return pathname.startsWith('/kmt/users')
   if (path === '/kmt/delegations') return pathname.startsWith('/kmt/delegations')
   if (path === '/kmt/settings') return pathname.startsWith('/kmt/settings')
@@ -208,7 +219,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onClose }) {
           <button type="button" className="hamburger" onClick={onToggle} aria-label="Toggle menu">
             <span /><span /><span />
           </button>
-          <span className="sidebar-logo">{user?.app === 'RSAUI' ? 'RSAUI' : 'CEUI'}</span>
+          <span className="sidebar-logo">{user?.app === 'RSAUI' ? 'RSAUI' : user?.app === 'IT' ? 'IT' : 'CEUI'}</span>
         </div>
 
         <nav className="sidebar-nav">
