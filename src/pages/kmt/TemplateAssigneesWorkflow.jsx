@@ -228,12 +228,109 @@ export default function TemplateAssigneesWorkflow({
       <div className="taw__head">
         <h2 className="taw__title">Template assignees</h2>
         <p className="taw__sub">
-          For each role, search the directory by name, email, or role. Then add users. Any user can be assigned to any role.
+          Build the flow on the left (Start → Creator → Approval roles → End). Click a role card to assign users on the right.
         </p>
       </div>
 
       <div className="taw__layout">
-        <div className="taw__panel-wrap taw__panel-wrap--left">
+        <div className="taw__workflow-column">
+          <div className="taw__workflow-head">
+            <span className="taw__workflow-head-title">Workflow</span>
+            <div className="taw__legend" aria-hidden>
+              <span className="taw__legend-chip taw__legend-chip--start">Start</span>
+              <span className="taw__legend-sep">→</span>
+              <span className="taw__legend-chip taw__legend-chip--creator">Creator</span>
+              <span className="taw__legend-sep">→</span>
+              <span className="taw__legend-chip taw__legend-chip--approval">Approval</span>
+              <span className="taw__legend-sep">→</span>
+              <span className="taw__legend-chip taw__legend-chip--end">End</span>
+            </div>
+            <p className="taw__workflow-hint">First role is the Creator step; additional roles are Approval steps. Use + to add a role and name it (e.g. POC, BUFM).</p>
+          </div>
+          <div className="taw__canvas-wrap">
+            <div className="taw__canvas-scroll">
+              <div className="taw__canvas-inner">
+                <div className="taw__start" aria-hidden>
+                  Start
+                </div>
+                {renderGap(0)}
+                {stages.map((stage, i) => {
+                  const colors = getRoleColor(stage.name)
+                  const count = (assigneesByLevel[stage.id] || []).length
+                  const isSel = selectedId === stage.id
+                  const isDrop = dropTargetId === stage.id && draggingId && draggingId !== stage.id
+                  return (
+                    <Fragment key={stage.id}>
+                      <div className="taw__node-wrap">
+                        <div
+                          className="taw__drag-hint"
+                        draggable
+                        title="Drag to swap order"
+                        onDragStart={e => {
+                          e.stopPropagation()
+                          setDraggingId(stage.id)
+                          e.dataTransfer.effectAllowed = 'move'
+                        }}
+                        onDragEnd={() => {
+                          setDraggingId(null)
+                          setDropTargetId(null)
+                        }}
+                        aria-hidden
+                      >
+                        ⋮
+                        <br />
+                        ⋮
+                      </div>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className={`taw__node${i === 0 ? ' taw__node--creator' : ' taw__node--approval'}${isSel ? ' taw__node--selected' : ''}${isDrop ? ' taw__node--drop' : ''}`}
+                        onDragOver={e => {
+                          e.preventDefault()
+                          if (draggingId && draggingId !== stage.id) setDropTargetId(stage.id)
+                        }}
+                        onDragLeave={() => setDropTargetId(null)}
+                        onDrop={e => {
+                          e.preventDefault()
+                          if (draggingId && draggingId !== stage.id) swapNodes(draggingId, stage.id)
+                          setDraggingId(null)
+                          setDropTargetId(null)
+                        }}
+                        onClick={() => setSelectedId(stage.id)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setSelectedId(stage.id)
+                          }
+                        }}
+                      >
+                        <div className="taw__node-icon" style={{ background: colors.tint }}>
+                          <div className="taw__node-dot" style={{ background: colors.dot }} />
+                        </div>
+                        <div className="taw__node-role">{stage.name || 'Role'}</div>
+                        <div className="taw__node-type">{i === 0 ? 'Creator' : 'Approval'}</div>
+                        <div
+                          className={`taw__node-badge ${count > 0 ? 'taw__node-badge--ok' : 'taw__node-badge--empty'}`}
+                        >
+                          {count > 0 ? `${count} user${count === 1 ? '' : 's'} assigned` : 'No users'}
+                        </div>
+                      </div>
+                    </div>
+                    {renderGap(i + 1)}
+                  </Fragment>
+                )
+              })}
+                <div className="taw__end" aria-hidden>
+                  End
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="taw__divider" aria-hidden />
+
+        <div className="taw__panel-wrap taw__panel-wrap--right">
           {!selected ? (
             <div className="taw__panel taw__panel-placeholder">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5">
@@ -241,7 +338,7 @@ export default function TemplateAssigneesWorkflow({
                 <circle cx="9" cy="7" r="4" />
                 <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
-              <span>Click a role to assign users</span>
+              <span>Click a Creator or Approval role on the left to assign users</span>
             </div>
           ) : (
             <div className="taw__panel">
@@ -255,6 +352,9 @@ export default function TemplateAssigneesWorkflow({
                   }}
                 >
                   {selected.name}
+                </span>
+                <span className="taw__panel-kind">
+                  {stages.findIndex(s => s.id === selectedId) === 0 ? 'Creator' : 'Approval'}
                 </span>
               </div>
 
@@ -368,88 +468,6 @@ export default function TemplateAssigneesWorkflow({
               )}
             </div>
           )}
-        </div>
-
-        <div className="taw__divider" aria-hidden />
-
-        <div className="taw__canvas-wrap">
-          <div className="taw__canvas-scroll">
-            <div className="taw__canvas-inner">
-              <div className="taw__start" aria-hidden>
-                Start
-              </div>
-              {renderGap(0)}
-              {stages.map((stage, i) => {
-                const colors = getRoleColor(stage.name)
-                const count = (assigneesByLevel[stage.id] || []).length
-                const isSel = selectedId === stage.id
-                const isDrop = dropTargetId === stage.id && draggingId && draggingId !== stage.id
-                return (
-                  <Fragment key={stage.id}>
-                    <div className="taw__node-wrap">
-                      <div
-                        className="taw__drag-hint"
-                        draggable
-                        title="Drag to swap order"
-                        onDragStart={e => {
-                          e.stopPropagation()
-                          setDraggingId(stage.id)
-                          e.dataTransfer.effectAllowed = 'move'
-                        }}
-                        onDragEnd={() => {
-                          setDraggingId(null)
-                          setDropTargetId(null)
-                        }}
-                        aria-hidden
-                      >
-                        ⋮
-                        <br />
-                        ⋮
-                      </div>
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        className={`taw__node${isSel ? ' taw__node--selected' : ''}${isDrop ? ' taw__node--drop' : ''}`}
-                        onDragOver={e => {
-                          e.preventDefault()
-                          if (draggingId && draggingId !== stage.id) setDropTargetId(stage.id)
-                        }}
-                        onDragLeave={() => setDropTargetId(null)}
-                        onDrop={e => {
-                          e.preventDefault()
-                          if (draggingId && draggingId !== stage.id) swapNodes(draggingId, stage.id)
-                          setDraggingId(null)
-                          setDropTargetId(null)
-                        }}
-                        onClick={() => setSelectedId(stage.id)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            setSelectedId(stage.id)
-                          }
-                        }}
-                      >
-                        <div className="taw__node-icon" style={{ background: colors.tint }}>
-                          <div className="taw__node-dot" style={{ background: colors.dot }} />
-                        </div>
-                        <div className="taw__node-role">{stage.name || 'Role'}</div>
-                        <div className="taw__node-type">{i === 0 ? 'Creator' : 'Approval'}</div>
-                        <div
-                          className={`taw__node-badge ${count > 0 ? 'taw__node-badge--ok' : 'taw__node-badge--empty'}`}
-                        >
-                          {count > 0 ? `${count} user${count === 1 ? '' : 's'} assigned` : 'No users'}
-                        </div>
-                      </div>
-                    </div>
-                    {renderGap(i + 1)}
-                  </Fragment>
-                )
-              })}
-              <div className="taw__end" aria-hidden>
-                End
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
