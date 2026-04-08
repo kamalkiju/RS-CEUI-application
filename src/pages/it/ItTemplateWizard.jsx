@@ -9,6 +9,10 @@ import { ensureFivePocTabs } from '../kmt/kmtFormBuilderShared.js'
 import { normalizeTemplateForm } from '../kmt/pocReferenceFormSeed.js'
 import KmtFormBuilder from '../kmt/KmtFormBuilder.jsx'
 
+const DOC_TYPES = ['Commercial', 'Residential', 'Municipal', 'RSAUI', 'General']
+const LINE_OF_BUSINESS_OPTIONS = ['Commercial', 'Residential', 'Municipal', 'Industrial', 'Roll-off', 'Other']
+const MARKET_TYPE_OPTIONS = ['Residential', 'Commercial', 'Municipal', 'Industrial', 'Open Market', 'Other']
+
 export default function ItTemplateWizard() {
   const { id: routeId } = useParams()
   const navigate = useNavigate()
@@ -19,6 +23,10 @@ export default function ItTemplateWizard() {
 
   /** Free-text application (label shown as CEUI — type e.g. CEUI, RSAUI). */
   const [targetApp, setTargetApp] = useState('CEUI')
+  const [name, setName] = useState('')
+  const [docType, setDocType] = useState('Commercial')
+  const [lineOfBusiness, setLineOfBusiness] = useState(LINE_OF_BUSINESS_OPTIONS[0])
+  const [marketType, setMarketType] = useState(MARKET_TYPE_OPTIONS[0])
   const [assignees, setAssignees] = useState({
     pocUserIds: [],
     bufmUserIds: [],
@@ -36,6 +44,12 @@ export default function ItTemplateWizard() {
     if (!t) return
     setSessionId(t.id)
     setTargetApp(typeof t.targetApp === 'string' ? t.targetApp : 'CEUI')
+    setName(t.name || '')
+    setDocType(t.docType || 'Commercial')
+    const lob = t.lineOfBusiness || ''
+    setLineOfBusiness(LINE_OF_BUSINESS_OPTIONS.includes(lob) ? lob : lob || LINE_OF_BUSINESS_OPTIONS[0])
+    const mt = t.marketSegment || ''
+    setMarketType(MARKET_TYPE_OPTIONS.includes(mt) ? mt : mt || MARKET_TYPE_OPTIONS[0])
     setAssignees({
       pocUserIds: t.assignees?.pocUserIds || [],
       bufmUserIds: t.assignees?.bufmUserIds || [],
@@ -57,7 +71,7 @@ export default function ItTemplateWizard() {
     }))
   }
 
-  const workflowTitle = () => targetApp.trim() || 'Workflow template'
+  const displayName = () => name.trim() || targetApp.trim() || 'Workflow template'
 
   const breadcrumb = (
     <nav className="kmt-breadcrumb kmt-template-editor__breadcrumb" aria-label="Breadcrumb">
@@ -73,13 +87,13 @@ export default function ItTemplateWizard() {
     const existing = editingId ? getTemplate(editingId) : null
     const tid = saveTemplate(
       {
-        name: workflowTitle(),
-        docType: 'Workflow',
+        name: displayName(),
+        docType,
         targetApp: targetApp.trim() || 'CEUI',
-        lineOfBusiness: existing?.lineOfBusiness ?? '',
+        lineOfBusiness,
         serviceArea: existing?.serviceArea ?? '',
         description: existing?.description ?? '',
-        marketSegment: existing?.marketSegment ?? '',
+        marketSegment: marketType,
         status,
         assignees,
         form: normalized,
@@ -106,7 +120,7 @@ export default function ItTemplateWizard() {
       ],
     })
     const actor = user?.name || 'IT'
-    const title = workflowTitle()
+    const title = displayName()
     addNotification({
       role: 'POC',
       statusType: 'publish',
@@ -140,7 +154,7 @@ export default function ItTemplateWizard() {
     }
   }
 
-  const canSave = targetApp.trim().length > 0
+  const canSave = targetApp.trim().length > 0 && name.trim().length > 0
 
   return (
     <Layout>
@@ -162,6 +176,54 @@ export default function ItTemplateWizard() {
                 placeholder="Type application, e.g. CEUI or RSAUI"
                 autoComplete="off"
               />
+            </label>
+          </div>
+        </section>
+
+        <section className="kmt-template-editor__section kmt-template-editor__section--basic">
+          <div className="kmt-template-editor__section-head">
+            <h2 className="kmt-template-editor__section-title">Basic information</h2>
+            <p className="kmt-template-editor__section-sub">Document name, type, line of business, and market type.</p>
+          </div>
+          <div className="kmt-template-editor__fields kmt-wizard__fields">
+            <label className="kmt-field">
+              <span>Document name</span>
+              <input
+                className="kmt-input"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="e.g. DIV 386 MUNI – City of Port Orange, FL"
+              />
+            </label>
+            <label className="kmt-field">
+              <span>Document type</span>
+              <select className="kmt-input" value={docType} onChange={e => setDocType(e.target.value)}>
+                {DOC_TYPES.map(d => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="kmt-field">
+              <span>Line of business</span>
+              <select className="kmt-input" value={lineOfBusiness} onChange={e => setLineOfBusiness(e.target.value)}>
+                {LINE_OF_BUSINESS_OPTIONS.map(d => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="kmt-field">
+              <span>Market type</span>
+              <select className="kmt-input" value={marketType} onChange={e => setMarketType(e.target.value)}>
+                {MARKET_TYPE_OPTIONS.map(d => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
         </section>
