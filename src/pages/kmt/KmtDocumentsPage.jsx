@@ -1,28 +1,46 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Layout from '../../components/Layout.jsx'
 import { useKmtTemplates } from '../../context/KmtTemplateContext.jsx'
+import ConfirmModal from '../../components/ConfirmModal.jsx'
+
+const TABS = [
+  { id: 'draft', label: 'Draft' },
+  { id: 'submitted', label: 'Submitted' },
+]
 
 export default function KmtDocumentsPage() {
   const navigate = useNavigate()
-  const { templates } = useKmtTemplates()
+  const location = useLocation()
+  const templateApp = location.pathname.startsWith('/rsaui/kmt') ? 'RSAUI' : 'CEUI'
+  const basePath = templateApp === 'RSAUI' ? '/rsaui/kmt/documents' : '/kmt/documents'
+
+  const { templates, deleteTemplate } = useKmtTemplates()
+  const [tab, setTab] = useState('draft')
+  const [deleteId, setDeleteId] = useState(null)
   const [search, setSearch] = useState('')
 
-  const published = useMemo(() => templates.filter(t => t.status === 'published'), [templates])
+  const scoped = useMemo(
+    () => templates.filter(t => (t.targetApp || 'CEUI') === templateApp),
+    [templates, templateApp],
+  )
 
   const filtered = useMemo(() => {
+    const list =
+      tab === 'draft' ? scoped.filter(t => t.status === 'draft') : scoped.filter(t => t.status === 'submitted')
     const q = search.trim().toLowerCase()
-    if (!q) return published
-    return published.filter(
+    if (!q) return list
+    return list.filter(
       t =>
         (t.name || '').toLowerCase().includes(q) ||
         (t.docType || '').toLowerCase().includes(q) ||
         (t.id || '').toLowerCase().includes(q) ||
         (t.lineOfBusiness || '').toLowerCase().includes(q) ||
-        (t.marketSegment || '').toLowerCase().includes(q) ||
-        (t.targetApp || '').toLowerCase().includes(q),
+        (t.marketSegment || '').toLowerCase().includes(q),
     )
-  }, [published, search])
+  }, [scoped, tab, search])
+
+  const del = deleteId ? templates.find(t => t.id === deleteId) : null
 
   return (
     <Layout>
@@ -30,16 +48,36 @@ export default function KmtDocumentsPage() {
         <div className="kmt-templates__head">
           <div>
             <h1 className="kmt-page__title">Document templates</h1>
-            <p className="kmt-page__sub">Published catalog only — browse and open templates. Authoring is managed by IT.</p>
+            <p className="kmt-page__sub">
+              {templateApp === 'RSAUI'
+                ? 'Create and publish RSAUI workflow templates. Drafts and submitted templates.'
+                : 'Create and publish CEUI workflow templates. Drafts and submitted templates.'}
+            </p>
           </div>
+          <button type="button" className="btn btn-primary" onClick={() => navigate(`${basePath}/new`)}>
+            Create workflow template
+          </button>
         </div>
+
+        <nav className="kmt-templates__tabs" aria-label="Template status">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              type="button"
+              className={`kmt-templates__tab${tab === t.id ? ' kmt-templates__tab--active' : ''}`}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
 
         <div className="kmt-templates__toolbar">
           <input
             className="kmt-input kmt-templates__search"
             type="search"
-            aria-label="Search published templates"
-            placeholder="Search by name, document type, application, line of business, market type, or template ID…"
+            aria-label="Search templates"
+            placeholder="Search by name, document type, line of business, market type, or template ID…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -50,7 +88,6 @@ export default function KmtDocumentsPage() {
             <table className="kmt-templates-table">
               <thead>
                 <tr>
-                  <th>Application</th>
                   <th>Document name</th>
                   <th>Document type</th>
                   <th>Line of business</th>
@@ -63,7 +100,6 @@ export default function KmtDocumentsPage() {
               <tbody>
                 {filtered.map(t => (
                   <tr key={t.id}>
-                    <td>{t.targetApp || 'CEUI'}</td>
                     <td>
                       <strong>{t.name}</strong>
                     </td>
@@ -75,8 +111,19 @@ export default function KmtDocumentsPage() {
                     </td>
                     <td>{t.updatedAt?.slice(0, 10) || '—'}</td>
                     <td className="kmt-templates-table__actions">
-                      <button type="button" className="btn btn-primary kmt-btn-compact" onClick={() => navigate(`/kmt/documents/${t.id}`)}>
+                      <button type="button" className="btn btn-outline kmt-btn-compact" onClick={() => navigate(`${basePath}/${t.id}`)}>
                         View
+                      </button>
+                      <button type="button" className="btn btn-primary kmt-btn-compact" onClick={() => navigate(`${basePath}/${t.id}/edit`)}>
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline kmt-btn-compact"
+                        style={{ color: 'var(--danger)', borderColor: '#fecaca' }}
+                        onClick={() => setDeleteId(t.id)}
+                      >
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -84,9 +131,22 @@ export default function KmtDocumentsPage() {
               </tbody>
             </table>
           ) : (
-            <p className="kmt-reports__empty">No published templates match your search.</p>
+            <p className="kmt-reports__empty">No templates in this tab.</p>
           )}
         </div>
+
+        <ConfirmModal
+          open={!!deleteId}
+          title="Delete template?"
+          message={del ? `Remove "${del.name}" permanently?` : ''}
+          confirmLabel="Delete"
+          danger
+          onClose={() => setDeleteId(null)}
+          onConfirm={() => {
+            if (deleteId) deleteTemplate(deleteId)
+            setDeleteId(null)
+          }}
+        />
       </div>
     </Layout>
   )

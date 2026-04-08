@@ -89,3 +89,44 @@ export function ensureFivePocTabs(form) {
 export function defaultForm() {
   return ensureFivePocTabs({ tabs: [] })
 }
+
+/** RSAUI service-area workflow template steps (aligned with POC create flow). */
+export const RSAUI_FORM_TAB_TITLES = [
+  'Request overview',
+  'Service area & map',
+  'Product configuration',
+  'Pricing & fees',
+  'Review & submit',
+]
+
+/**
+ * Ensures five tabs for RSAUI templates with default groups/fields.
+ */
+export function ensureFiveRsauiTabs(form) {
+  const base = form && typeof form === 'object' ? form : {}
+  const existing = Array.isArray(base.tabs) ? base.tabs.slice(0, 5) : []
+  const tabs = []
+  for (let i = 0; i < 5; i++) {
+    if (existing[i]) {
+      tabs.push({ ...existing[i], title: RSAUI_FORM_TAB_TITLES[i] })
+    } else {
+      tabs.push({
+        id: uid(),
+        title: RSAUI_FORM_TAB_TITLES[i],
+        groups: [
+          {
+            id: uid(),
+            title: i === 0 ? 'Request & service ID' : i === 1 ? 'Geography & market' : 'RSAUI defaults',
+            columns: 2,
+            fields: [emptyField('text'), emptyField(i === 3 ? 'currency' : 'notes')],
+          },
+        ],
+      })
+    }
+  }
+  return {
+    ...base,
+    tabs,
+    headerGroups: Array.isArray(base.headerGroups) ? base.headerGroups : [],
+  }
+}

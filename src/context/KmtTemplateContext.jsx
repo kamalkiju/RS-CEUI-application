@@ -1,6 +1,15 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react'
 import { normalizeTemplateForm } from '../pages/kmt/pocReferenceFormSeed.js'
+import { uid } from '../pages/kmt/kmtFormBuilderShared.js'
 import { DEFAULT_WF_NODES, DEFAULT_WF_EDGES } from '../components/kmt/WorkflowBuilderBody.jsx'
+
+function defaultApprovalLevels() {
+  return [
+    { id: `lvl-${uid()}`, role: 'POC' },
+    { id: `lvl-${uid()}`, role: 'BUFM' },
+    { id: `lvl-${uid()}`, role: 'KMT' },
+  ]
+}
 
 const STORAGE_KEY = 'ceui_kmt_templates'
 
@@ -39,6 +48,7 @@ function demoRow(id, status, title, docType, timeline, targetApp = 'CEUI') {
     marketSegment: 'Muni',
     status,
     assignees: { pocUserIds: [], bufmUserIds: [], kmtUserIds: [] },
+    approvalLevels: defaultApprovalLevels(),
     workflow: { nodes: DEFAULT_WF_NODES, edges: DEFAULT_WF_EDGES },
     form: newTemplateForm(),
     timeline: timeline || [
@@ -75,8 +85,19 @@ const DEMO_PUBLISHED = Array.from({ length: MIN_TEMPLATES_PER_TAB }, (_, i) =>
     'published',
     `Published — ${['City franchise', 'HOA bundle', 'Roll-off SOP', 'Cart exchange', 'Yard waste', 'E-waste', 'Compactor', 'Special waste'][i]}`,
     DOC_TYPES_ROT[(i + 4) % 8],
-    [{ id: `p-${i}`, stage: 'Published', detail: 'Live in catalog', actor: 'IT', at: '2024-03-21T09:00:00.000Z' }],
+    [{ id: `p-${i}`, stage: 'Published', detail: 'Live in catalog', actor: 'KMT', at: '2024-03-21T09:00:00.000Z' }],
     i % 2 === 0 ? 'CEUI' : 'RSAUI',
+  ),
+)
+
+const DEMO_RSAUI_DRAFT = Array.from({ length: 4 }, (_, i) =>
+  demoRow(
+    `tpl-rsa-draft-${String(i + 1).padStart(2, '0')}`,
+    'draft',
+    `RSAUI Draft — ${['North zone', 'South cart mix', 'Pricing tier A', 'Holiday route'][i]}`,
+    'RSAUI',
+    [{ id: `rd-${i}`, stage: 'Draft', detail: 'RSAUI template', actor: 'KMT', at: '2024-03-19T08:00:00.000Z' }],
+    'RSAUI',
   ),
 )
 
@@ -91,6 +112,7 @@ function mergeMinimumDemoTemplates(existing) {
   const countDraft = () => out.filter(t => t.status === 'draft').length
   const countSubmitted = () => out.filter(t => t.status === 'submitted').length
   const countPublished = () => out.filter(t => t.status === 'published').length
+  const countRsaDraft = () => out.filter(t => t.status === 'draft' && t.targetApp === 'RSAUI').length
 
   for (const row of DEMO_DRAFT) {
     if (countDraft() >= MIN_TEMPLATES_PER_TAB) break
@@ -108,6 +130,13 @@ function mergeMinimumDemoTemplates(existing) {
   }
   for (const row of DEMO_PUBLISHED) {
     if (countPublished() >= MIN_TEMPLATES_PER_TAB) break
+    if (!byId.has(row.id)) {
+      out.push(row)
+      byId.add(row.id)
+    }
+  }
+  for (const row of DEMO_RSAUI_DRAFT) {
+    if (countRsaDraft() >= 4) break
     if (!byId.has(row.id)) {
       out.push(row)
       byId.add(row.id)
@@ -144,6 +173,7 @@ export function KmtTemplateProvider({ children }) {
         targetApp: partial.targetApp ?? exists?.targetApp ?? 'CEUI',
         status: partial.status ?? exists?.status ?? 'draft',
         assignees: partial.assignees ?? exists?.assignees ?? { pocUserIds: [], bufmUserIds: [], kmtUserIds: [] },
+        approvalLevels: partial.approvalLevels ?? exists?.approvalLevels ?? defaultApprovalLevels(),
         workflow: partial.workflow ?? exists?.workflow ?? { nodes: DEFAULT_WF_NODES, edges: DEFAULT_WF_EDGES },
         form: partial.form ?? exists?.form ?? newTemplateForm(),
         timeline: partial.timeline ?? exists?.timeline ?? [],

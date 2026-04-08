@@ -3411,6 +3411,53 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   border-radius: 8px;
   padding: 8px 10px;
 }
+.kmt-approval-levels {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #f8fafc;
+  padding: 14px;
+}
+.kmt-approval-levels__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kmt-approval-levels__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: grab;
+}
+.kmt-approval-levels__grip {
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: -2px;
+  user-select: none;
+}
+.kmt-approval-levels__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.kmt-template-view__approval-order-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
 .kmt-template-editor__footer {
   position: sticky;
   bottom: 0;
