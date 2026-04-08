@@ -23,8 +23,8 @@ const APPS = [
     id: 'IT',
     icon: '⚙️',
     title: 'IT Team',
-    subtitle: 'Template operations',
-    description: 'Document template authoring, publishing, and platform settings for CEUI and RSAUI',
+    subtitle: '',
+    description: 'Workflow builder, template publishing, and platform settings for CEUI and RSAUI',
     badge: 'Internal',
     to: '/it/login',
   },
@@ -51,7 +51,7 @@ export default function ApplicationSelector() {
                 <h2>{app.title}</h2>
                 <span>{app.badge}</span>
               </div>
-              <h3>{app.subtitle}</h3>
+              {app.subtitle ? <h3>{app.subtitle}</h3> : null}
               <p>{app.description}</p>
             </button>
           ))}

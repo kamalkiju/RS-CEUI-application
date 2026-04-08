@@ -79,7 +79,11 @@ export function ensureFivePocTabs(form) {
       })
     }
   }
-  return { ...base, tabs }
+  return {
+    ...base,
+    tabs,
+    headerGroups: Array.isArray(base.headerGroups) ? base.headerGroups : [],
+  }
 }
 
 export function defaultForm() {

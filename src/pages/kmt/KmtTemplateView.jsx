@@ -175,6 +175,24 @@ export default function KmtTemplateView() {
           </div>
 
           <div className="bufm-doc-view__scroll">
+            {(formModel.headerGroups || []).map(hg => (
+              <section key={hg.id} className="bufm-doc-view__step-content kmt-template-view__above-tabs">
+                <h2 className="bufm-doc-view__step-heading">{hg.title}</h2>
+                <p className="bufm-doc-view__step-sub">Section above workflow steps</p>
+                <div className="bufm-doc-view__accordions">
+                  {(hg.fields || []).length ? (
+                    <ReadOnlyFieldsAccordion
+                      title="Fields"
+                      badge={`${(hg.fields || []).length} field(s)`}
+                      fields={(hg.fields || []).map(f => fieldToReadOnly(f, isDraft))}
+                    />
+                  ) : (
+                    <p className="kmt-template-view__empty-tab">No fields in this section.</p>
+                  )}
+                </div>
+              </section>
+            ))}
+
             <section className="bufm-doc-view__step-content">
               <h2 className="bufm-doc-view__step-heading">{headingTitle}</h2>
               <p className="bufm-doc-view__step-sub">{headingSub}</p>

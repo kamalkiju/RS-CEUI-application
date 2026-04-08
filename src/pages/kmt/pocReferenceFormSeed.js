@@ -239,5 +239,10 @@ export function hydrateSparseTabsWithReference(form) {
 
 /** Hydrate sparse tabs, then enforce five POC tab titles. Use for wizard init, edit load, and demos. */
 export function normalizeTemplateForm(form) {
-  return ensureFivePocTabs(hydrateSparseTabsWithReference(form && typeof form === 'object' ? form : { tabs: [] }))
+  const raw = form && typeof form === 'object' ? form : { tabs: [] }
+  const hydrated = ensureFivePocTabs(hydrateSparseTabsWithReference(raw))
+  return {
+    ...hydrated,
+    headerGroups: Array.isArray(hydrated.headerGroups) ? hydrated.headerGroups : [],
+  }
 }

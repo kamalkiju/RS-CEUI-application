@@ -9,14 +9,6 @@ import { ensureFivePocTabs } from '../kmt/kmtFormBuilderShared.js'
 import { normalizeTemplateForm } from '../kmt/pocReferenceFormSeed.js'
 import KmtFormBuilder from '../kmt/KmtFormBuilder.jsx'
 
-const DOC_TYPES = ['Commercial', 'Residential', 'Municipal', 'RSAUI', 'General']
-const LINE_OF_BUSINESS_OPTIONS = ['Commercial', 'Residential', 'Municipal', 'Industrial', 'Roll-off', 'Other']
-const MARKET_TYPE_OPTIONS = ['Residential', 'Commercial', 'Municipal', 'Industrial', 'Open Market', 'Other']
-const TARGET_APPS = [
-  { value: 'CEUI', label: 'CEUI' },
-  { value: 'RSAUI', label: 'RSAUI' },
-]
-
 export default function ItTemplateWizard() {
   const { id: routeId } = useParams()
   const navigate = useNavigate()
@@ -25,17 +17,14 @@ export default function ItTemplateWizard() {
   const { addNotification } = useNotifications()
   const { users } = useKmtUsers()
 
+  /** Free-text application (label shown as CEUI — type e.g. CEUI, RSAUI). */
   const [targetApp, setTargetApp] = useState('CEUI')
-  const [name, setName] = useState('')
-  const [docType, setDocType] = useState('Commercial')
-  const [lineOfBusiness, setLineOfBusiness] = useState(LINE_OF_BUSINESS_OPTIONS[0])
-  const [marketType, setMarketType] = useState(MARKET_TYPE_OPTIONS[0])
   const [assignees, setAssignees] = useState({
     pocUserIds: [],
     bufmUserIds: [],
     kmtUserIds: [],
   })
-  const [form, setForm] = useState(() => normalizeTemplateForm({ tabs: [] }))
+  const [form, setForm] = useState(() => normalizeTemplateForm({ tabs: [], headerGroups: [] }))
   const [saveModal, setSaveModal] = useState(false)
   const [sessionId, setSessionId] = useState(null)
 
@@ -46,19 +35,13 @@ export default function ItTemplateWizard() {
     const t = getTemplate(routeId)
     if (!t) return
     setSessionId(t.id)
-    setTargetApp(t.targetApp === 'RSAUI' ? 'RSAUI' : 'CEUI')
-    setName(t.name)
-    setDocType(t.docType)
-    const lob = t.lineOfBusiness || ''
-    setLineOfBusiness(LINE_OF_BUSINESS_OPTIONS.includes(lob) ? lob : lob || LINE_OF_BUSINESS_OPTIONS[0])
-    const mt = t.marketSegment || ''
-    setMarketType(MARKET_TYPE_OPTIONS.includes(mt) ? mt : mt || MARKET_TYPE_OPTIONS[0])
+    setTargetApp(typeof t.targetApp === 'string' ? t.targetApp : 'CEUI')
     setAssignees({
       pocUserIds: t.assignees?.pocUserIds || [],
       bufmUserIds: t.assignees?.bufmUserIds || [],
       kmtUserIds: t.assignees?.kmtUserIds || [],
     })
-    setForm(normalizeTemplateForm(t.form || { tabs: [] }))
+    setForm(normalizeTemplateForm(t.form || { tabs: [], headerGroups: [] }))
   }, [routeId, getTemplate])
 
   const pocUsers = users.filter(u => u.role === 'POC')
@@ -74,11 +57,13 @@ export default function ItTemplateWizard() {
     }))
   }
 
+  const workflowTitle = () => targetApp.trim() || 'Workflow template'
+
   const breadcrumb = (
     <nav className="kmt-breadcrumb kmt-template-editor__breadcrumb" aria-label="Breadcrumb">
-      <Link to="/it/documents">Documents</Link>
+      <Link to="/it/documents">Document templates</Link>
       <span aria-hidden> / </span>
-      <span>{editingId ? 'Edit template' : 'Create template'}</span>
+      <span>{editingId ? 'Edit workflow template' : 'Create workflow template'}</span>
     </nav>
   )
 
@@ -88,13 +73,13 @@ export default function ItTemplateWizard() {
     const existing = editingId ? getTemplate(editingId) : null
     const tid = saveTemplate(
       {
-        name,
-        docType,
-        targetApp,
-        lineOfBusiness,
+        name: workflowTitle(),
+        docType: 'Workflow',
+        targetApp: targetApp.trim() || 'CEUI',
+        lineOfBusiness: existing?.lineOfBusiness ?? '',
         serviceArea: existing?.serviceArea ?? '',
         description: existing?.description ?? '',
-        marketSegment: marketType,
+        marketSegment: existing?.marketSegment ?? '',
         status,
         assignees,
         form: normalized,
@@ -114,29 +99,30 @@ export default function ItTemplateWizard() {
         {
           id: `ev-${Date.now()}`,
           stage: 'Published',
-          detail: 'Template is live. POC and BUFM were notified.',
+          detail: 'Workflow template is live. POC and BUFM were notified.',
           actor: user?.name || 'IT',
           at: new Date().toISOString(),
         },
       ],
     })
     const actor = user?.name || 'IT'
+    const title = workflowTitle()
     addNotification({
       role: 'POC',
       statusType: 'publish',
-      title: 'New document template published',
-      message: `IT published template "${name}" for ${targetApp}.`,
+      title: 'New workflow template published',
+      message: `IT published workflow template "${title}" (${targetApp.trim() || 'CEUI'}).`,
       actor,
-      documentName: name,
+      documentName: title,
       ctaAction: { label: 'View documents', path: '/poc' },
     })
     addNotification({
       role: 'BUFM',
       statusType: 'publish',
       title: 'Template catalog update',
-      message: `New template "${name}" is available for reference.`,
+      message: `New workflow template "${title}" is available for reference.`,
       actor,
-      documentName: name,
+      documentName: title,
       ctaAction: { label: 'Open document review', path: '/bufm/document-review/review' },
     })
     navigate('/it/documents')
@@ -154,7 +140,7 @@ export default function ItTemplateWizard() {
     }
   }
 
-  const canSave = name.trim().length > 0
+  const canSave = targetApp.trim().length > 0
 
   return (
     <Layout>
@@ -163,62 +149,19 @@ export default function ItTemplateWizard() {
 
         <section className="kmt-template-editor__section kmt-template-editor__section--basic">
           <div className="kmt-template-editor__section-head">
-            <h1 className="kmt-template-editor__section-title">Target application</h1>
-            <p className="kmt-template-editor__section-sub">Choose whether this template is for CEUI or RSAUI.</p>
+            <h1 className="kmt-template-editor__section-title">Workflow template</h1>
+            <p className="kmt-template-editor__section-sub">Enter the target application name (free text).</p>
           </div>
           <div className="kmt-template-editor__fields kmt-wizard__fields">
             <label className="kmt-field">
-              <span>Application</span>
-              <select className="kmt-input" value={targetApp} onChange={e => setTargetApp(e.target.value)}>
-                {TARGET_APPS.map(a => (
-                  <option key={a.value} value={a.value}>
-                    {a.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </section>
-
-        <section className="kmt-template-editor__section kmt-template-editor__section--basic">
-          <div className="kmt-template-editor__section-head">
-            <h1 className="kmt-template-editor__section-title">Basic information</h1>
-            <p className="kmt-template-editor__section-sub">Document name, type, line of business, and market type.</p>
-          </div>
-          <div className="kmt-template-editor__fields kmt-wizard__fields">
-            <label className="kmt-field">
-              <span>Document name</span>
-              <input className="kmt-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. DIV 386 MUNI – City of Port Orange, FL" />
-            </label>
-            <label className="kmt-field">
-              <span>Document type</span>
-              <select className="kmt-input" value={docType} onChange={e => setDocType(e.target.value)}>
-                {DOC_TYPES.map(d => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="kmt-field">
-              <span>Line of business</span>
-              <select className="kmt-input" value={lineOfBusiness} onChange={e => setLineOfBusiness(e.target.value)}>
-                {LINE_OF_BUSINESS_OPTIONS.map(d => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="kmt-field">
-              <span>Market type</span>
-              <select className="kmt-input" value={marketType} onChange={e => setMarketType(e.target.value)}>
-                {MARKET_TYPE_OPTIONS.map(d => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
+              <span>CEUI</span>
+              <input
+                className="kmt-input"
+                value={targetApp}
+                onChange={e => setTargetApp(e.target.value)}
+                placeholder="Type application, e.g. CEUI or RSAUI"
+                autoComplete="off"
+              />
             </label>
           </div>
         </section>
@@ -226,7 +169,9 @@ export default function ItTemplateWizard() {
         <section className="kmt-template-editor__section kmt-template-editor__section--form">
           <div className="kmt-template-editor__section-head">
             <h2 className="kmt-template-editor__section-title">Form builder</h2>
-            <p className="kmt-template-editor__section-sub">Tabs, groups, and fields. Drag field types from the library onto the canvas.</p>
+            <p className="kmt-template-editor__section-sub">
+              Add sections <strong>above the tabs</strong> (e.g. Basic information), then build each tab. Drag field types from the library.
+            </p>
           </div>
           <div className="kmt-template-editor__form-shell">
             <KmtFormBuilder embedded controlledForm={form} setControlledForm={setForm} />
@@ -299,7 +244,7 @@ export default function ItTemplateWizard() {
           <div className="confirm-modal-backdrop" role="presentation" onClick={() => setSaveModal(false)}>
             <div className="confirm-modal confirm-modal--wide" role="dialog" aria-modal onClick={e => e.stopPropagation()}>
               <h2 className="confirm-modal__title">Save as</h2>
-              <p className="confirm-modal__msg">Choose how to save this template.</p>
+              <p className="confirm-modal__msg">Choose how to save this workflow template.</p>
               <div className="confirm-modal__actions confirm-modal__actions--stack">
                 <button type="button" className="btn btn-primary" onClick={() => handleSaveDraftChoice('draft')}>
                   Save as draft

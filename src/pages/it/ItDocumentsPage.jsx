@@ -41,11 +41,11 @@ export default function ItDocumentsPage() {
           <div>
             <h1 className="kmt-page__title">Document templates</h1>
             <p className="kmt-page__sub">
-              Create and publish templates for CEUI or RSAUI. Drafts stay private until you publish.
+              Build workflow templates with the form builder (sections above tabs and tab steps). Drafts stay private until you publish.
             </p>
           </div>
           <button type="button" className="btn btn-primary" onClick={() => navigate('/it/documents/new')}>
-            Create document template
+            Create workflow template
           </button>
         </div>
 
