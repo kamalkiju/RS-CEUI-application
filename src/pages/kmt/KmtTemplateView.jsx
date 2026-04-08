@@ -39,14 +39,40 @@ export default function KmtTemplateView() {
   }, [t])
 
   const nameById = useMemo(() => Object.fromEntries(users.map(u => [u.id, u.name])), [users])
-  const assignedNames = useMemo(() => {
-    const a = t?.assignees || {}
-    return {
-      poc: (a.pocUserIds || []).map(uid => nameById[uid]).filter(Boolean),
-      bufm: (a.bufmUserIds || []).map(uid => nameById[uid]).filter(Boolean),
-      kmt: (a.kmtUserIds || []).map(uid => nameById[uid]).filter(Boolean),
+
+  const levels = useMemo(() => {
+    if (!t) return []
+    const raw =
+      Array.isArray(t.approvalLevels) && t.approvalLevels.length
+        ? t.approvalLevels
+        : [
+            { id: 'x', name: 'POC' },
+            { id: 'y', name: 'BUFM' },
+            { id: 'z', name: 'KMT' },
+          ]
+    return raw.map(l => ({
+      id: l.id,
+      name: String(l.name ?? l.role ?? 'Stage').trim() || 'Stage',
+    }))
+  }, [t])
+
+  const assigneesByLevelDisplay = useMemo(() => {
+    if (!t) return {}
+    const by = t.assigneesByLevel
+    if (by && typeof by === 'object' && Object.keys(by).length) {
+      return by
     }
-  }, [t, nameById])
+    const a = t.assignees || {}
+    const out = {}
+    levels.forEach(l => {
+      const n = l.name.toUpperCase()
+      if (n === 'POC') out[l.id] = [...(a.pocUserIds || [])]
+      else if (n === 'BUFM') out[l.id] = [...(a.bufmUserIds || [])]
+      else if (n === 'KMT') out[l.id] = [...(a.kmtUserIds || [])]
+      else out[l.id] = []
+    })
+    return out
+  }, [t, levels])
 
   const tabCount = formModel.tabs?.length || 5
   const activeTab = formModel.tabs[activeStep - 1]
@@ -73,7 +99,6 @@ export default function KmtTemplateView() {
   const isApproved = t.status === 'approved'
   const isSubmitted = t.status === 'submitted'
   const showApprovalPipeline = !isDraft
-  const levels = Array.isArray(t.approvalLevels) && t.approvalLevels.length ? t.approvalLevels : [{ id: 'x', role: 'POC' }, { id: 'y', role: 'BUFM' }, { id: 'z', role: 'KMT' }]
 
   return (
     <Layout>
@@ -136,26 +161,26 @@ export default function KmtTemplateView() {
               <h3 className="kmt-template-view__wf-title">Approval order</h3>
               <ol className="kmt-template-view__approval-order-list">
                 {levels.map(lvl => (
-                  <li key={lvl.id}>{lvl.role}</li>
+                  <li key={lvl.id}>{lvl.name}</li>
                 ))}
               </ol>
             </section>
 
             <section className="kmt-template-view__wf-strip" aria-label="Template assignees">
               <h3 className="kmt-template-view__wf-title">Assigned users</h3>
-              <div className="kmt-template-view__assignees-grid">
-                <div>
-                  <strong>POC users</strong>
-                  <p>{assignedNames.poc.length ? assignedNames.poc.join(', ') : '—'}</p>
-                </div>
-                <div>
-                  <strong>BUFM approvers</strong>
-                  <p>{assignedNames.bufm.length ? assignedNames.bufm.join(', ') : '—'}</p>
-                </div>
-                <div>
-                  <strong>KMT approvers</strong>
-                  <p>{assignedNames.kmt.length ? assignedNames.kmt.join(', ') : '—'}</p>
-                </div>
+              <div className="kmt-template-view__assignees-by-stage">
+                {levels.map((lvl, i) => {
+                  const ids = assigneesByLevelDisplay[lvl.id] || []
+                  const names = ids.map(uid => nameById[uid]).filter(Boolean)
+                  return (
+                    <div key={lvl.id} className="kmt-template-view__assignees-stage">
+                      <strong>
+                        {i + 1}. {lvl.name}
+                      </strong>
+                      <p>{names.length ? names.join(', ') : '—'}</p>
+                    </div>
+                  )
+                })}
               </div>
             </section>
           </div>
@@ -253,7 +278,7 @@ export default function KmtTemplateView() {
                         isSubmitted || isApproved || isPublished || i === 0 ? 'kmt-template-view__pipe--done' : ''
                       }`}
                     >
-                      {lvl.role}
+                      {lvl.name}
                     </li>
                   ))}
                   <li className={`kmt-template-view__pipe ${isPublished ? 'kmt-template-view__pipe--done' : ''}`}>Published</li>

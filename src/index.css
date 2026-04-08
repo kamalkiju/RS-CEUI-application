@@ -3411,6 +3411,40 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   border-radius: 8px;
   padding: 8px 10px;
 }
+.kmt-wizard__fields--stage-assignees {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.kmt-field--stage-block {
+  margin: 0;
+}
+.kmt-field--stage-block > span {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.kmt-template-editor__assignee-meta {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.kmt-template-editor__assignees-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.kmt-approval-levels__item .kmt-field--inline {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+}
+.kmt-approval-levels__item .kmt-field--inline .kmt-input {
+  width: 100%;
+}
 .kmt-approval-levels {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -3663,6 +3697,30 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   margin-bottom: 6px;
 }
 .kmt-template-view__assignees-grid p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.kmt-template-view__assignees-by-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.kmt-template-view__assignees-stage {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.kmt-template-view__assignees-stage strong {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.kmt-template-view__assignees-stage p {
   margin: 0;
   font-size: 13px;
   color: var(--text-primary);

@@ -5,10 +5,23 @@ import { DEFAULT_WF_NODES, DEFAULT_WF_EDGES } from '../components/kmt/WorkflowBu
 
 function defaultApprovalLevels() {
   return [
-    { id: `lvl-${uid()}`, role: 'POC' },
-    { id: `lvl-${uid()}`, role: 'BUFM' },
-    { id: `lvl-${uid()}`, role: 'KMT' },
+    { id: `lvl-${uid()}`, name: 'POC' },
+    { id: `lvl-${uid()}`, name: 'BUFM' },
+    { id: `lvl-${uid()}`, name: 'KMT' },
   ]
+}
+
+/** Derive legacy role buckets from named stages + per-stage user ids (for older consumers). */
+function deriveRoleAssignees(levels, byLevel) {
+  const findId = label => levels.find(l => String(l.name || l.role || '').toUpperCase() === label)?.id
+  const pid = findId('POC')
+  const bid = findId('BUFM')
+  const kid = findId('KMT')
+  return {
+    pocUserIds: pid ? byLevel[pid] || [] : [],
+    bufmUserIds: bid ? byLevel[bid] || [] : [],
+    kmtUserIds: kid ? byLevel[kid] || [] : [],
+  }
 }
 
 const STORAGE_KEY = 'ceui_kmt_templates'
@@ -48,6 +61,7 @@ function demoRow(id, status, title, docType, timeline, targetApp = 'CEUI') {
     marketSegment: 'Muni',
     status,
     assignees: { pocUserIds: [], bufmUserIds: [], kmtUserIds: [] },
+    assigneesByLevel: {},
     approvalLevels: defaultApprovalLevels(),
     workflow: { nodes: DEFAULT_WF_NODES, edges: DEFAULT_WF_EDGES },
     form: newTemplateForm(),
@@ -162,6 +176,12 @@ export function KmtTemplateProvider({ children }) {
     const tid = existingId || partial.id || `tpl-${Date.now()}`
     setTemplates(prev => {
       const exists = prev.find(t => t.id === tid)
+      const levelsNorm = (partial.approvalLevels ?? exists?.approvalLevels ?? defaultApprovalLevels()).map(l => ({
+        id: l.id,
+        name: String(l.name ?? l.role ?? 'Stage').trim() || 'Stage',
+      }))
+      const nextByLevel =
+        partial.assigneesByLevel !== undefined ? partial.assigneesByLevel : exists?.assigneesByLevel ?? {}
       const row = {
         id: tid,
         name: partial.name ?? exists?.name ?? 'Untitled',
@@ -172,8 +192,9 @@ export function KmtTemplateProvider({ children }) {
         marketSegment: partial.marketSegment ?? exists?.marketSegment ?? '',
         targetApp: partial.targetApp ?? exists?.targetApp ?? 'CEUI',
         status: partial.status ?? exists?.status ?? 'draft',
-        assignees: partial.assignees ?? exists?.assignees ?? { pocUserIds: [], bufmUserIds: [], kmtUserIds: [] },
-        approvalLevels: partial.approvalLevels ?? exists?.approvalLevels ?? defaultApprovalLevels(),
+        approvalLevels: levelsNorm,
+        assigneesByLevel: nextByLevel,
+        assignees: partial.assignees ?? deriveRoleAssignees(levelsNorm, nextByLevel),
         workflow: partial.workflow ?? exists?.workflow ?? { nodes: DEFAULT_WF_NODES, edges: DEFAULT_WF_EDGES },
         form: partial.form ?? exists?.form ?? newTemplateForm(),
         timeline: partial.timeline ?? exists?.timeline ?? [],

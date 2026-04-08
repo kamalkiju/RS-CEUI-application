@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import Layout from '../../components/Layout.jsx'
 import { useKmtTemplates } from '../../context/KmtTemplateContext.jsx'
@@ -14,15 +14,55 @@ const DOC_TYPES = ['Commercial', 'Residential', 'Municipal', 'RSAUI', 'General']
 const LINE_OF_BUSINESS_OPTIONS = ['Commercial', 'Residential', 'Municipal', 'Industrial', 'Roll-off', 'Other']
 const MARKET_TYPE_OPTIONS = ['Residential', 'Commercial', 'Municipal', 'Industrial', 'Open Market', 'Other']
 
-/** Extra approval stages (in addition to POC / BUFM / KMT) — user can reorder all. */
-const ADDABLE_ROLES = ['POC', 'RTV', 'BUFM', 'KMT', 'LEGAL']
-
-function defaultApprovalLevels() {
-  return [
-    { id: uid(), role: 'POC' },
-    { id: uid(), role: 'BUFM' },
-    { id: uid(), role: 'KMT' },
+function buildDefaultApprovalState() {
+  const approvalLevels = [
+    { id: uid(), name: 'POC' },
+    { id: uid(), name: 'BUFM' },
+    { id: uid(), name: 'KMT' },
   ]
+  return {
+    approvalLevels,
+    assigneesByLevel: Object.fromEntries(approvalLevels.map(l => [l.id, []])),
+  }
+}
+
+function normalizeLevelsFromTemplate(t) {
+  const raw = Array.isArray(t.approvalLevels) && t.approvalLevels.length ? t.approvalLevels : null
+  if (!raw) return buildDefaultApprovalState().approvalLevels
+  return raw.map(x => ({
+    id: x.id || uid(),
+    name: String(x.name ?? x.role ?? 'Stage').trim() || 'Stage',
+  }))
+}
+
+/** Map legacy POC/BUFM/KMT buckets onto level ids when `assigneesByLevel` is missing. */
+function migrateAssigneesByLevel(t, levels) {
+  const existing = t.assigneesByLevel
+  if (existing && typeof existing === 'object' && Object.keys(existing).length) {
+    const out = { ...existing }
+    levels.forEach(l => {
+      if (!out[l.id]) out[l.id] = []
+    })
+    return out
+  }
+  const a = t.assignees || {}
+  const out = {}
+  levels.forEach(l => {
+    const n = l.name.toUpperCase()
+    if (n === 'POC') out[l.id] = [...(a.pocUserIds || [])]
+    else if (n === 'BUFM') out[l.id] = [...(a.bufmUserIds || [])]
+    else if (n === 'KMT') out[l.id] = [...(a.kmtUserIds || [])]
+    else out[l.id] = []
+  })
+  return out
+}
+
+function usersForStage(users, stageName) {
+  const n = String(stageName || '').toUpperCase()
+  if (n === 'POC') return users.filter(u => u.role === 'POC')
+  if (n === 'BUFM') return users.filter(u => u.role === 'BUFM')
+  if (n === 'KMT') return users.filter(u => u.role === 'KMT')
+  return users
 }
 
 export default function KmtTemplateWizard() {
@@ -49,12 +89,9 @@ export default function KmtTemplateWizard() {
   const [docType, setDocType] = useState('Commercial')
   const [lineOfBusiness, setLineOfBusiness] = useState(LINE_OF_BUSINESS_OPTIONS[0])
   const [marketType, setMarketType] = useState(MARKET_TYPE_OPTIONS[0])
-  const [assignees, setAssignees] = useState({
-    pocUserIds: [],
-    bufmUserIds: [],
-    kmtUserIds: [],
-  })
-  const [approvalLevels, setApprovalLevels] = useState(defaultApprovalLevels)
+  const approvalSeedRef = useRef(buildDefaultApprovalState())
+  const [approvalLevels, setApprovalLevels] = useState(() => approvalSeedRef.current.approvalLevels)
+  const [assigneesByLevel, setAssigneesByLevel] = useState(() => approvalSeedRef.current.assigneesByLevel)
   const [dragId, setDragId] = useState(null)
   const [form, setForm] = useState(initialForm)
   const [saveModal, setSaveModal] = useState(false)
@@ -69,8 +106,10 @@ export default function KmtTemplateWizard() {
       setDocType('Commercial')
       setLineOfBusiness(LINE_OF_BUSINESS_OPTIONS[0])
       setMarketType(MARKET_TYPE_OPTIONS[0])
-      setAssignees({ pocUserIds: [], bufmUserIds: [], kmtUserIds: [] })
-      setApprovalLevels(defaultApprovalLevels())
+      const next = buildDefaultApprovalState()
+      approvalSeedRef.current = next
+      setApprovalLevels(next.approvalLevels)
+      setAssigneesByLevel(next.assigneesByLevel)
       setForm(initialForm())
       return
     }
@@ -83,32 +122,20 @@ export default function KmtTemplateWizard() {
     setLineOfBusiness(LINE_OF_BUSINESS_OPTIONS.includes(lob) ? lob : lob || LINE_OF_BUSINESS_OPTIONS[0])
     const mt = t.marketSegment || ''
     setMarketType(MARKET_TYPE_OPTIONS.includes(mt) ? mt : mt || MARKET_TYPE_OPTIONS[0])
-    setAssignees({
-      pocUserIds: t.assignees?.pocUserIds || [],
-      bufmUserIds: t.assignees?.bufmUserIds || [],
-      kmtUserIds: t.assignees?.kmtUserIds || [],
-    })
-    setApprovalLevels(
-      Array.isArray(t.approvalLevels) && t.approvalLevels.length
-        ? t.approvalLevels.map(x => ({ ...x, id: x.id || uid() }))
-        : defaultApprovalLevels(),
-    )
+    const levels = normalizeLevelsFromTemplate(t)
+    setApprovalLevels(levels)
+    setAssigneesByLevel(migrateAssigneesByLevel(t, levels))
     const rawForm = t.form || { tabs: [], headerGroups: [] }
     const app = t.targetApp === 'RSAUI' ? 'RSAUI' : 'CEUI'
     setForm((app === 'RSAUI' ? normalizeRsauiTemplateForm : normalizeTemplateForm)(rawForm))
   }, [routeId, getTemplate, templateApp])
 
-  const pocUsers = users.filter(u => u.role === 'POC')
-  const bufmUsers = users.filter(u => u.role === 'BUFM')
-  const kmtUsers = users.filter(u => u.role === 'KMT')
-
-  const toggleAssignee = (groupKey, userId) => {
-    setAssignees(prev => ({
-      ...prev,
-      [groupKey]: prev[groupKey].includes(userId)
-        ? prev[groupKey].filter(id => id !== userId)
-        : [...prev[groupKey], userId],
-    }))
+  const toggleLevelAssignee = (levelId, userId) => {
+    setAssigneesByLevel(prev => {
+      const cur = prev[levelId] || []
+      const nextIds = cur.includes(userId) ? cur.filter(x => x !== userId) : [...cur, userId]
+      return { ...prev, [levelId]: nextIds }
+    })
   }
 
   const reorderLevels = (fromIdx, toIdx) => {
@@ -123,14 +150,22 @@ export default function KmtTemplateWizard() {
 
   const removeLevel = id => {
     setApprovalLevels(prev => (prev.length <= 1 ? prev : prev.filter(x => x.id !== id)))
+    setAssigneesByLevel(prev => {
+      if (!prev[id]) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
   }
 
-  const addLevel = role => {
-    setApprovalLevels(prev => [...prev, { id: uid(), role }])
+  const addLevel = () => {
+    const nid = uid()
+    setApprovalLevels(prev => [...prev, { id: nid, name: 'New stage' }])
+    setAssigneesByLevel(prev => ({ ...prev, [nid]: [] }))
   }
 
-  const updateLevelRole = (id, role) => {
-    setApprovalLevels(prev => prev.map(x => (x.id === id ? { ...x, role } : x)))
+  const updateLevelName = (id, nextName) => {
+    setApprovalLevels(prev => prev.map(x => (x.id === id ? { ...x, name: nextName } : x)))
   }
 
   const displayName = () => name.trim() || 'Untitled template'
@@ -158,8 +193,8 @@ export default function KmtTemplateWizard() {
         description: existing?.description ?? '',
         marketSegment: marketType,
         status,
-        assignees,
-        approvalLevels,
+        approvalLevels: approvalLevels.map(l => ({ id: l.id, name: String(l.name || '').trim() || 'Stage' })),
+        assigneesByLevel,
         form: normalized,
       },
       editingId,
@@ -295,7 +330,7 @@ export default function KmtTemplateWizard() {
           <div className="kmt-template-editor__section-head">
             <h2 className="kmt-template-editor__section-title">Approval order</h2>
             <p className="kmt-template-editor__section-sub">
-              Drag stages to reorder (e.g. move RTV before BUFM). Add stages with the dropdown. This defines the review sequence before assignees.
+              Name each approval stage, drag to reorder, and add stages as needed. Names like POC, BUFM, or KMT still map to directory roles when you assign users below.
             </p>
           </div>
           <div className="kmt-approval-levels">
@@ -318,17 +353,16 @@ export default function KmtTemplateWizard() {
                   <span className="kmt-approval-levels__grip" title="Drag to reorder">
                     ⋮⋮
                   </span>
-                  <select
-                    className="kmt-input kmt-input--inline"
-                    value={lvl.role}
-                    onChange={e => updateLevelRole(lvl.id, e.target.value)}
-                  >
-                    {ADDABLE_ROLES.map(r => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="kmt-field kmt-field--inline">
+                    <input
+                      type="text"
+                      className="kmt-input kmt-input--inline"
+                      value={lvl.name}
+                      onChange={e => updateLevelName(lvl.id, e.target.value)}
+                      placeholder="Stage name (e.g. POC, Legal review)"
+                      aria-label={`Approval stage ${idx + 1} name`}
+                    />
+                  </label>
                   <button type="button" className="btn btn-outline kmt-btn-compact" onClick={() => removeLevel(lvl.id)}>
                     Remove
                   </button>
@@ -336,25 +370,9 @@ export default function KmtTemplateWizard() {
               ))}
             </ul>
             <div className="kmt-approval-levels__add">
-              <span>Add stage:</span>
-              <select
-                className="kmt-input kmt-input--inline"
-                defaultValue=""
-                onChange={e => {
-                  const v = e.target.value
-                  if (v) addLevel(v)
-                  e.target.value = ''
-                }}
-              >
-                <option value="" disabled>
-                  Select role…
-                </option>
-                {ADDABLE_ROLES.map(r => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
+              <button type="button" className="btn btn-outline kmt-btn-compact" onClick={addLevel}>
+                Add stage
+              </button>
             </div>
           </div>
         </section>
@@ -362,43 +380,42 @@ export default function KmtTemplateWizard() {
         <section className="kmt-template-editor__section kmt-template-editor__section--workflow">
           <div className="kmt-template-editor__section-head">
             <h2 className="kmt-template-editor__section-title">Template assignees</h2>
-            <p className="kmt-template-editor__section-sub">Assign POC authors, BUFM approvers, and KMT approvers for this template.</p>
+            <p className="kmt-template-editor__section-sub">
+              For each stage above, choose which directory users may act at that step. Stages named POC / BUFM / KMT list only users in that role; other stage names list everyone.
+            </p>
           </div>
           <div className="kmt-template-editor__workflow-shell">
-            <div className="kmt-wizard__fields">
-              <label className="kmt-field">
-                <span>POC users</span>
-                <div className="kmt-template-editor__assignees-list">
-                  {pocUsers.map(u => (
-                    <label key={u.id} className="kmt-template-editor__assignee">
-                      <input type="checkbox" checked={assignees.pocUserIds.includes(u.id)} onChange={() => toggleAssignee('pocUserIds', u.id)} />
-                      <span>{u.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </label>
-              <label className="kmt-field">
-                <span>BUFM approvers</span>
-                <div className="kmt-template-editor__assignees-list">
-                  {bufmUsers.map(u => (
-                    <label key={u.id} className="kmt-template-editor__assignee">
-                      <input type="checkbox" checked={assignees.bufmUserIds.includes(u.id)} onChange={() => toggleAssignee('bufmUserIds', u.id)} />
-                      <span>{u.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </label>
-              <label className="kmt-field">
-                <span>KMT approvers</span>
-                <div className="kmt-template-editor__assignees-list">
-                  {kmtUsers.map(u => (
-                    <label key={u.id} className="kmt-template-editor__assignee">
-                      <input type="checkbox" checked={assignees.kmtUserIds.includes(u.id)} onChange={() => toggleAssignee('kmtUserIds', u.id)} />
-                      <span>{u.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </label>
+            <div className="kmt-wizard__fields kmt-wizard__fields--stage-assignees">
+              {approvalLevels.map((lvl, idx) => {
+                const pool = usersForStage(users, lvl.name)
+                const selected = assigneesByLevel[lvl.id] || []
+                return (
+                  <div key={lvl.id} className="kmt-field kmt-field--stage-block">
+                    <span>
+                      {idx + 1}. {lvl.name.trim() || 'Stage'}
+                    </span>
+                    <div className="kmt-template-editor__assignees-list">
+                      {pool.length === 0 ? (
+                        <p className="kmt-template-editor__assignees-empty">No users in the directory for this stage.</p>
+                      ) : (
+                        pool.map(u => (
+                          <label key={u.id} className="kmt-template-editor__assignee">
+                            <input
+                              type="checkbox"
+                              checked={selected.includes(u.id)}
+                              onChange={() => toggleLevelAssignee(lvl.id, u.id)}
+                            />
+                            <span>
+                              {u.name}
+                              <span className="kmt-template-editor__assignee-meta"> ({u.role})</span>
+                            </span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </section>
