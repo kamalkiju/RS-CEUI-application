@@ -3445,6 +3445,148 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .kmt-approval-levels__item .kmt-field--inline .kmt-input {
   width: 100%;
 }
+.kmt-field--search {
+  margin: 0 0 10px;
+}
+.kmt-field--search > span {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.kmt-stage-assignee-picker {
+  margin-top: 8px;
+}
+.kmt-stage-assignee-picker__results {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+.kmt-stage-assignee-picker__results > li {
+  border-bottom: 1px solid var(--border);
+}
+.kmt-stage-assignee-picker__results > li:last-child {
+  border-bottom: none;
+}
+.kmt-stage-assignee-picker__empty {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.kmt-stage-assignee-picker__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-primary);
+}
+.kmt-stage-assignee-picker__add:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+.kmt-stage-assignee-picker__add:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+.kmt-stage-assignee-picker__user-name {
+  font-weight: 600;
+}
+.kmt-stage-assignee-picker__user-meta {
+  flex: 1 1 100%;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+@media (min-width: 520px) {
+  .kmt-stage-assignee-picker__user-meta {
+    flex: 1 1 auto;
+  }
+}
+.kmt-stage-assignee-picker__hint {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary, #0f766e);
+}
+.kmt-stage-assignee-picker__badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.kmt-stage-assignee-picker__assigned {
+  padding-top: 4px;
+}
+.kmt-stage-assignee-picker__assigned-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.kmt-stage-assignee-picker__chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kmt-assignee-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+}
+.kmt-assignee-chip--unknown {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+.kmt-assignee-chip__name {
+  font-weight: 600;
+}
+.kmt-assignee-chip__role {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.kmt-assignee-chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.kmt-assignee-chip__remove:hover {
+  background: #e2e8f0;
+}
 .kmt-approval-levels {
   border: 1px solid var(--border);
   border-radius: var(--radius);

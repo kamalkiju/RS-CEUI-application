@@ -57,12 +57,16 @@ function migrateAssigneesByLevel(t, levels) {
   return out
 }
 
-function usersForStage(users, stageName) {
-  const n = String(stageName || '').toUpperCase()
-  if (n === 'POC') return users.filter(u => u.role === 'POC')
-  if (n === 'BUFM') return users.filter(u => u.role === 'BUFM')
-  if (n === 'KMT') return users.filter(u => u.role === 'KMT')
-  return users
+function filterUsersForPicker(users, query) {
+  const q = String(query || '').trim().toLowerCase()
+  if (!q) return users
+  return users.filter(u => {
+    const name = (u.name || '').toLowerCase()
+    const email = (u.email || '').toLowerCase()
+    const role = (u.role || '').toLowerCase()
+    const region = (u.region || '').toLowerCase()
+    return name.includes(q) || email.includes(q) || role.includes(q) || region.includes(q)
+  })
 }
 
 export default function KmtTemplateWizard() {
@@ -92,6 +96,8 @@ export default function KmtTemplateWizard() {
   const approvalSeedRef = useRef(buildDefaultApprovalState())
   const [approvalLevels, setApprovalLevels] = useState(() => approvalSeedRef.current.approvalLevels)
   const [assigneesByLevel, setAssigneesByLevel] = useState(() => approvalSeedRef.current.assigneesByLevel)
+  /** Per-stage search text for directory picker (CEUI / RSAUI). */
+  const [stageAssigneeQuery, setStageAssigneeQuery] = useState({})
   const [dragId, setDragId] = useState(null)
   const [form, setForm] = useState(initialForm)
   const [saveModal, setSaveModal] = useState(false)
@@ -110,6 +116,7 @@ export default function KmtTemplateWizard() {
       approvalSeedRef.current = next
       setApprovalLevels(next.approvalLevels)
       setAssigneesByLevel(next.assigneesByLevel)
+      setStageAssigneeQuery({})
       setForm(initialForm())
       return
     }
@@ -125,17 +132,25 @@ export default function KmtTemplateWizard() {
     const levels = normalizeLevelsFromTemplate(t)
     setApprovalLevels(levels)
     setAssigneesByLevel(migrateAssigneesByLevel(t, levels))
+    setStageAssigneeQuery({})
     const rawForm = t.form || { tabs: [], headerGroups: [] }
     const app = t.targetApp === 'RSAUI' ? 'RSAUI' : 'CEUI'
     setForm((app === 'RSAUI' ? normalizeRsauiTemplateForm : normalizeTemplateForm)(rawForm))
   }, [routeId, getTemplate, templateApp])
 
-  const toggleLevelAssignee = (levelId, userId) => {
+  const addUserToStage = (levelId, userId) => {
     setAssigneesByLevel(prev => {
       const cur = prev[levelId] || []
-      const nextIds = cur.includes(userId) ? cur.filter(x => x !== userId) : [...cur, userId]
-      return { ...prev, [levelId]: nextIds }
+      if (cur.includes(userId)) return prev
+      return { ...prev, [levelId]: [...cur, userId] }
     })
+  }
+
+  const removeUserFromStage = (levelId, userId) => {
+    setAssigneesByLevel(prev => ({
+      ...prev,
+      [levelId]: (prev[levelId] || []).filter(id => id !== userId),
+    }))
   }
 
   const reorderLevels = (fromIdx, toIdx) => {
@@ -330,7 +345,7 @@ export default function KmtTemplateWizard() {
           <div className="kmt-template-editor__section-head">
             <h2 className="kmt-template-editor__section-title">Approval order</h2>
             <p className="kmt-template-editor__section-sub">
-              Name each approval stage, drag to reorder, and add stages as needed. Names like POC, BUFM, or KMT still map to directory roles when you assign users below.
+              Name each approval stage, drag to reorder, and add stages as needed. Assign people to each stage in the section below—assignment is per stage, not by role label.
             </p>
           </div>
           <div className="kmt-approval-levels">
@@ -381,37 +396,94 @@ export default function KmtTemplateWizard() {
           <div className="kmt-template-editor__section-head">
             <h2 className="kmt-template-editor__section-title">Template assignees</h2>
             <p className="kmt-template-editor__section-sub">
-              For each stage above, choose which directory users may act at that step. Stages named POC / BUFM / KMT list only users in that role; other stage names list everyone.
+              For each stage, search the directory by name, email, or role, then add users. Any user can be assigned to any stage—stage names are labels only.
             </p>
           </div>
           <div className="kmt-template-editor__workflow-shell">
             <div className="kmt-wizard__fields kmt-wizard__fields--stage-assignees">
               {approvalLevels.map((lvl, idx) => {
-                const pool = usersForStage(users, lvl.name)
                 const selected = assigneesByLevel[lvl.id] || []
+                const q = stageAssigneeQuery[lvl.id] ?? ''
+                const matches = filterUsersForPicker(users, q)
                 return (
                   <div key={lvl.id} className="kmt-field kmt-field--stage-block">
                     <span>
                       {idx + 1}. {lvl.name.trim() || 'Stage'}
                     </span>
-                    <div className="kmt-template-editor__assignees-list">
-                      {pool.length === 0 ? (
-                        <p className="kmt-template-editor__assignees-empty">No users in the directory for this stage.</p>
-                      ) : (
-                        pool.map(u => (
-                          <label key={u.id} className="kmt-template-editor__assignee">
-                            <input
-                              type="checkbox"
-                              checked={selected.includes(u.id)}
-                              onChange={() => toggleLevelAssignee(lvl.id, u.id)}
-                            />
-                            <span>
-                              {u.name}
-                              <span className="kmt-template-editor__assignee-meta"> ({u.role})</span>
-                            </span>
-                          </label>
-                        ))
-                      )}
+                    <div className="kmt-stage-assignee-picker">
+                      <label className="kmt-field kmt-field--search">
+                        <span>Search users</span>
+                        <input
+                          type="search"
+                          className="kmt-input"
+                          placeholder="Search by name, email, or role…"
+                          value={q}
+                          onChange={e => setStageAssigneeQuery(prev => ({ ...prev, [lvl.id]: e.target.value }))}
+                          autoComplete="off"
+                          aria-label={`Search users for stage ${idx + 1}`}
+                        />
+                      </label>
+                      <ul className="kmt-stage-assignee-picker__results" aria-label="Matching directory users">
+                        {matches.length === 0 ? (
+                          <li className="kmt-stage-assignee-picker__empty">No users match this search.</li>
+                        ) : (
+                          matches.slice(0, 24).map(u => {
+                            const already = selected.includes(u.id)
+                            return (
+                              <li key={u.id}>
+                                <button
+                                  type="button"
+                                  className="kmt-stage-assignee-picker__add"
+                                  disabled={already}
+                                  onClick={() => addUserToStage(lvl.id, u.id)}
+                                >
+                                  <span className="kmt-stage-assignee-picker__user-name">{u.name}</span>
+                                  <span className="kmt-stage-assignee-picker__user-meta">
+                                    {u.role}
+                                    {u.email ? ` · ${u.email}` : ''}
+                                  </span>
+                                  {already ? <span className="kmt-stage-assignee-picker__badge">Added</span> : <span className="kmt-stage-assignee-picker__hint">Add</span>}
+                                </button>
+                              </li>
+                            )
+                          })
+                        )}
+                      </ul>
+                      <div className="kmt-stage-assignee-picker__assigned" aria-label="Users assigned to this stage">
+                        <span className="kmt-stage-assignee-picker__assigned-label">Assigned to this stage</span>
+                        {selected.length === 0 ? (
+                          <p className="kmt-template-editor__assignees-empty">No one assigned yet. Use search above to add users.</p>
+                        ) : (
+                          <ul className="kmt-stage-assignee-picker__chips">
+                            {selected.map(uid => {
+                              const u = users.find(x => x.id === uid)
+                              if (!u) {
+                                return (
+                                  <li key={uid}>
+                                    <span className="kmt-assignee-chip kmt-assignee-chip--unknown">{uid}</span>
+                                  </li>
+                                )
+                              }
+                              return (
+                                <li key={uid}>
+                                  <span className="kmt-assignee-chip">
+                                    <span className="kmt-assignee-chip__name">{u.name}</span>
+                                    <span className="kmt-assignee-chip__role">{u.role}</span>
+                                    <button
+                                      type="button"
+                                      className="kmt-assignee-chip__remove"
+                                      aria-label={`Remove ${u.name} from this stage`}
+                                      onClick={() => removeUserFromStage(lvl.id, uid)}
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
