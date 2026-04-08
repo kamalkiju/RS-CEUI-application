@@ -188,7 +188,7 @@ export default function TemplateAssigneesWorkflow({
               }}
               autoFocus
             />
-            <button type="button" className="taw__update-btn" style={{ marginTop: 0 }} onClick={() => insertAtGap(gapIndex)}>
+            <button type="button" className="taw__gap-submit-btn" onClick={() => insertAtGap(gapIndex)}>
               Add role
             </button>
             <button
@@ -233,84 +233,7 @@ export default function TemplateAssigneesWorkflow({
       </div>
 
       <div className="taw__layout">
-        <div className="taw__canvas-wrap">
-          <div className="taw__canvas-inner">
-            {renderGap(0)}
-            {stages.map((stage, i) => {
-              const colors = getRoleColor(stage.name)
-              const count = (assigneesByLevel[stage.id] || []).length
-              const isSel = selectedId === stage.id
-              const isDrop = dropTargetId === stage.id && draggingId && draggingId !== stage.id
-              return (
-                <Fragment key={stage.id}>
-                  <div className="taw__node-wrap">
-                    <div
-                      className="taw__drag-hint"
-                      draggable
-                      title="Drag to swap order"
-                      onDragStart={e => {
-                        e.stopPropagation()
-                        setDraggingId(stage.id)
-                        e.dataTransfer.effectAllowed = 'move'
-                      }}
-                      onDragEnd={() => {
-                        setDraggingId(null)
-                        setDropTargetId(null)
-                      }}
-                      aria-hidden
-                    >
-                      ⋮
-                      <br />
-                      ⋮
-                    </div>
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      className={`taw__node${isSel ? ' taw__node--selected' : ''}${isDrop ? ' taw__node--drop' : ''}`}
-                      onDragOver={e => {
-                        e.preventDefault()
-                        if (draggingId && draggingId !== stage.id) setDropTargetId(stage.id)
-                      }}
-                      onDragLeave={() => setDropTargetId(null)}
-                      onDrop={e => {
-                        e.preventDefault()
-                        if (draggingId && draggingId !== stage.id) swapNodes(draggingId, stage.id)
-                        setDraggingId(null)
-                        setDropTargetId(null)
-                      }}
-                      onClick={() => setSelectedId(stage.id)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          setSelectedId(stage.id)
-                        }
-                      }}
-                    >
-                      <div className="taw__node-icon" style={{ background: colors.tint }}>
-                        <div className="taw__node-dot" style={{ background: colors.dot }} />
-                      </div>
-                      <div className="taw__node-role">{stage.name || 'Role'}</div>
-                      <div className="taw__node-type">{i === 0 ? 'Creator' : 'Approval'}</div>
-                      <div
-                        className={`taw__node-badge ${count > 0 ? 'taw__node-badge--ok' : 'taw__node-badge--empty'}`}
-                      >
-                        {count > 0 ? `${count} user${count === 1 ? '' : 's'} assigned` : 'No users'}
-                      </div>
-                    </div>
-                  </div>
-                  {renderGap(i + 1)}
-                </Fragment>
-              )
-            })}
-            <div className="taw__end" aria-hidden>
-              End
-            </div>
-          </div>
-        </div>
-
-        <div className="taw__divider" aria-hidden />
-
-        <div className="taw__panel-wrap">
+        <div className="taw__panel-wrap taw__panel-wrap--left">
           {!selected ? (
             <div className="taw__panel taw__panel-placeholder">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5">
@@ -354,7 +277,7 @@ export default function TemplateAssigneesWorkflow({
                 id="taw-search-users"
                 type="search"
                 className="taw__search"
-                placeholder="Search by name, email, or role..."
+                placeholder="Search by name or email..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 autoComplete="off"
@@ -386,9 +309,7 @@ export default function TemplateAssigneesWorkflow({
                         </div>
                         <div className="taw__user-mid">
                           <div className="taw__user-name">{u.name}</div>
-                          <div className="taw__user-meta">
-                            {u.role} · {u.email || '—'}
-                          </div>
+                          <div className="taw__user-meta">{u.email || '—'}</div>
                         </div>
                         <input
                           type="checkbox"
@@ -421,7 +342,6 @@ export default function TemplateAssigneesWorkflow({
                       <li key={uid}>
                         <span className="taw__chip">
                           <span>{u.name}</span>
-                          <span className="taw__chip-tag">{u.role}</span>
                           <button
                             type="button"
                             className="taw__chip-x"
@@ -448,6 +368,88 @@ export default function TemplateAssigneesWorkflow({
               )}
             </div>
           )}
+        </div>
+
+        <div className="taw__divider" aria-hidden />
+
+        <div className="taw__canvas-wrap">
+          <div className="taw__canvas-scroll">
+            <div className="taw__canvas-inner">
+              <div className="taw__start" aria-hidden>
+                Start
+              </div>
+              {renderGap(0)}
+              {stages.map((stage, i) => {
+                const colors = getRoleColor(stage.name)
+                const count = (assigneesByLevel[stage.id] || []).length
+                const isSel = selectedId === stage.id
+                const isDrop = dropTargetId === stage.id && draggingId && draggingId !== stage.id
+                return (
+                  <Fragment key={stage.id}>
+                    <div className="taw__node-wrap">
+                      <div
+                        className="taw__drag-hint"
+                        draggable
+                        title="Drag to swap order"
+                        onDragStart={e => {
+                          e.stopPropagation()
+                          setDraggingId(stage.id)
+                          e.dataTransfer.effectAllowed = 'move'
+                        }}
+                        onDragEnd={() => {
+                          setDraggingId(null)
+                          setDropTargetId(null)
+                        }}
+                        aria-hidden
+                      >
+                        ⋮
+                        <br />
+                        ⋮
+                      </div>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className={`taw__node${isSel ? ' taw__node--selected' : ''}${isDrop ? ' taw__node--drop' : ''}`}
+                        onDragOver={e => {
+                          e.preventDefault()
+                          if (draggingId && draggingId !== stage.id) setDropTargetId(stage.id)
+                        }}
+                        onDragLeave={() => setDropTargetId(null)}
+                        onDrop={e => {
+                          e.preventDefault()
+                          if (draggingId && draggingId !== stage.id) swapNodes(draggingId, stage.id)
+                          setDraggingId(null)
+                          setDropTargetId(null)
+                        }}
+                        onClick={() => setSelectedId(stage.id)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setSelectedId(stage.id)
+                          }
+                        }}
+                      >
+                        <div className="taw__node-icon" style={{ background: colors.tint }}>
+                          <div className="taw__node-dot" style={{ background: colors.dot }} />
+                        </div>
+                        <div className="taw__node-role">{stage.name || 'Role'}</div>
+                        <div className="taw__node-type">{i === 0 ? 'Creator' : 'Approval'}</div>
+                        <div
+                          className={`taw__node-badge ${count > 0 ? 'taw__node-badge--ok' : 'taw__node-badge--empty'}`}
+                        >
+                          {count > 0 ? `${count} user${count === 1 ? '' : 's'} assigned` : 'No users'}
+                        </div>
+                      </div>
+                    </div>
+                    {renderGap(i + 1)}
+                  </Fragment>
+                )
+              })}
+              <div className="taw__end" aria-hidden>
+                End
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
