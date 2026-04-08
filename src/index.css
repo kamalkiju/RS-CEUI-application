@@ -3458,12 +3458,14 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .kmt-stage-assignee-picker {
   margin-top: 8px;
 }
+/* ~3–4 directory rows visible; scroll for the rest (CEUI / RSAUI template wizard) */
 .kmt-stage-assignee-picker__results {
   list-style: none;
   margin: 0 0 12px;
   padding: 0;
-  max-height: 220px;
+  max-height: calc(3.75 * 2.75rem);
   overflow-y: auto;
+  scrollbar-gutter: stable;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
@@ -3574,10 +3576,14 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .kmt-stage-assignee-picker__chips {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 4px 2px 2px 0;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-content: flex-start;
+  max-height: calc(3.5 * 2.5rem);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 .kmt-assignee-chip {
   display: inline-flex;
