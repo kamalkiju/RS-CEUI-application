@@ -1,0 +1,516 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.taw {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  color: #1a2332;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.taw__head {
+  padding: 0 0 12px;
+}
+
+.taw__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a2332;
+}
+
+.taw__sub {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #888;
+  line-height: 1.45;
+}
+
+.taw__layout {
+  display: flex;
+  align-items: stretch;
+  min-height: 500px;
+  border-top: 1px solid #e8eaed;
+}
+
+.taw__canvas-wrap {
+  flex: 0 0 65%;
+  max-width: 65%;
+  background: #f8f9fb;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-x: auto;
+}
+
+.taw__canvas-inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 200px;
+  gap: 0;
+}
+
+.taw__divider {
+  width: 1px;
+  flex-shrink: 0;
+  background: #e8eaed;
+}
+
+.taw__panel-wrap {
+  flex: 1 1 35%;
+  min-width: 260px;
+  background: #fff;
+  border-left: 1px solid #e8eaed;
+  display: flex;
+  flex-direction: column;
+}
+
+.taw__node-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.taw__drag-hint {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  width: 10px;
+  height: 14px;
+  cursor: grab;
+  color: #ccc;
+  font-size: 10px;
+  line-height: 4px;
+  letter-spacing: -1px;
+  user-select: none;
+  z-index: 2;
+}
+
+.taw__node {
+  width: 130px;
+  padding: 14px 12px;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.taw__node--selected {
+  border: 1.5px solid #0f6e56;
+  background: #fff;
+}
+
+.taw__node--drop {
+  border-style: dashed;
+  border-color: #0f6e56;
+}
+
+.taw__node-icon {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.taw__node-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.taw__node-role {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a2332;
+}
+
+.taw__node-type {
+  margin: 2px 0 0;
+  font-size: 10px;
+  color: #888;
+}
+
+.taw__node-badge {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.taw__node-badge--ok {
+  background: #e1f5ee;
+  color: #085041;
+}
+
+.taw__node-badge--empty {
+  background: #f3f4f6;
+  color: #aaa;
+}
+
+.taw__connector {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+
+.taw__line {
+  width: 20px;
+  height: 1.5px;
+  background: #d1d5db;
+}
+
+.taw__arrow {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid #d1d5db;
+  margin-left: -1px;
+}
+
+.taw__add-gap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.taw__add-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px dashed #d1d5db;
+  background: #fff;
+  color: #aaa;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.taw__add-btn:hover {
+  border-color: #0f6e56;
+  color: #0f6e56;
+}
+
+.taw__gap-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 120px;
+}
+
+.taw__gap-input {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.taw__gap-input:focus {
+  outline: none;
+  border-color: #0f6e56;
+}
+
+.taw__end {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  border: 1px solid #e8eaed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.taw__panel {
+  padding: 20px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.taw__panel-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #aaa;
+  font-size: 13px;
+  gap: 12px;
+}
+
+.taw__panel-placeholder svg {
+  opacity: 0.6;
+}
+
+.taw__panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.taw__panel-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a2332;
+  margin: 0;
+}
+
+.taw__role-pill {
+  font-size: 10px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.taw__label-upper {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.taw__search {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1a2332;
+  box-sizing: border-box;
+}
+
+.taw__search:focus {
+  outline: none;
+  border-color: #0f6e56;
+}
+
+.taw__user-list {
+  margin-top: 8px;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  max-height: calc(3.75 * 2.75rem);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  background: #fff;
+}
+
+.taw__user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 8px;
+  border-bottom: 0.5px solid #f3f4f6;
+  cursor: pointer;
+}
+
+.taw__user-row:last-child {
+  border-bottom: none;
+}
+
+.taw__user-row:hover {
+  background: #f8f9fb;
+}
+
+.taw__user-row--on {
+  background: #e1f5ee;
+}
+
+.taw__user-row--on:hover {
+  background: #e1f5ee;
+}
+
+.taw__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.taw__user-mid {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.taw__user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a2332;
+}
+
+.taw__user-meta {
+  font-size: 11px;
+  color: #888;
+}
+
+.taw__cb {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: #0f6e56;
+  cursor: pointer;
+}
+
+.taw__assigned-label {
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.taw__assigned-empty {
+  font-size: 12px;
+  color: #aaa;
+  margin: 0;
+}
+
+.taw__chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: calc(3.5 * 2.5rem);
+  overflow-y: auto;
+}
+
+.taw__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  background: #e1f5ee;
+  color: #085041;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.taw__chip-tag {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.taw__chip-x {
+  background: none;
+  border: none;
+  color: #085041;
+  opacity: 0.5;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.taw__chip-x:hover {
+  opacity: 1;
+}
+
+.taw__update-btn {
+  width: 100%;
+  height: 36px;
+  margin-top: 16px;
+  background: #0f6e56;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.taw__update-btn:hover {
+  background: #085041;
+}
+
+.taw__role-edit {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.taw__role-edit input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.taw__role-edit input:focus {
+  outline: none;
+  border-color: #0f6e56;
+}
+
+.taw__remove-role {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #888;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  font-family: inherit;
+}
+
+@media (max-width: 960px) {
+  .taw__layout {
+    flex-direction: column;
+  }
+  .taw__canvas-wrap {
+    flex: 1 1 auto;
+    max-width: 100%;
+  }
+  .taw__divider {
+    width: 100%;
+    height: 1px;
+  }
+  .taw__panel-wrap {
+    border-left: none;
+    border-top: 1px solid #e8eaed;
+  }
+}

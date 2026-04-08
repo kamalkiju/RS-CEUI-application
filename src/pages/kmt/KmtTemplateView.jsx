@@ -157,8 +157,8 @@ export default function KmtTemplateView() {
               </div>
             </section>
 
-            <section className="kmt-template-view__wf-strip" aria-label="Approval order">
-              <h3 className="kmt-template-view__wf-title">Approval order</h3>
+            <section className="kmt-template-view__wf-strip" aria-label="Workflow roles">
+              <h3 className="kmt-template-view__wf-title">Workflow roles</h3>
               <ol className="kmt-template-view__approval-order-list">
                 {levels.map(lvl => (
                   <li key={lvl.id}>{lvl.name}</li>
@@ -166,8 +166,8 @@ export default function KmtTemplateView() {
               </ol>
             </section>
 
-            <section className="kmt-template-view__wf-strip" aria-label="Template assignees">
-              <h3 className="kmt-template-view__wf-title">Assigned users</h3>
+            <section className="kmt-template-view__wf-strip" aria-label="Assignees by role">
+              <h3 className="kmt-template-view__wf-title">Assignees by role</h3>
               <div className="kmt-template-view__assignees-by-stage">
                 {levels.map((lvl, i) => {
                   const ids = assigneesByLevelDisplay[lvl.id] || []

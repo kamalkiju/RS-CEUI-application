@@ -9,6 +9,7 @@ import { ensureFivePocTabs, ensureFiveRsauiTabs, uid } from './kmtFormBuilderSha
 import { normalizeTemplateForm } from './pocReferenceFormSeed.js'
 import { normalizeRsauiTemplateForm } from './rsauiReferenceFormSeed.js'
 import KmtFormBuilder from './KmtFormBuilder.jsx'
+import TemplateAssigneesWorkflow from './TemplateAssigneesWorkflow.jsx'
 
 const DOC_TYPES = ['Commercial', 'Residential', 'Municipal', 'RSAUI', 'General']
 const LINE_OF_BUSINESS_OPTIONS = ['Commercial', 'Residential', 'Municipal', 'Industrial', 'Roll-off', 'Other']
@@ -57,18 +58,6 @@ function migrateAssigneesByLevel(t, levels) {
   return out
 }
 
-function filterUsersForPicker(users, query) {
-  const q = String(query || '').trim().toLowerCase()
-  if (!q) return users
-  return users.filter(u => {
-    const name = (u.name || '').toLowerCase()
-    const email = (u.email || '').toLowerCase()
-    const role = (u.role || '').toLowerCase()
-    const region = (u.region || '').toLowerCase()
-    return name.includes(q) || email.includes(q) || role.includes(q) || region.includes(q)
-  })
-}
-
 export default function KmtTemplateWizard() {
   const { id: routeId } = useParams()
   const navigate = useNavigate()
@@ -96,9 +85,6 @@ export default function KmtTemplateWizard() {
   const approvalSeedRef = useRef(buildDefaultApprovalState())
   const [approvalLevels, setApprovalLevels] = useState(() => approvalSeedRef.current.approvalLevels)
   const [assigneesByLevel, setAssigneesByLevel] = useState(() => approvalSeedRef.current.assigneesByLevel)
-  /** Per-stage search text for directory picker (CEUI / RSAUI). */
-  const [stageAssigneeQuery, setStageAssigneeQuery] = useState({})
-  const [dragId, setDragId] = useState(null)
   const [form, setForm] = useState(initialForm)
   const [saveModal, setSaveModal] = useState(false)
   const [sessionId, setSessionId] = useState(null)
@@ -116,7 +102,6 @@ export default function KmtTemplateWizard() {
       approvalSeedRef.current = next
       setApprovalLevels(next.approvalLevels)
       setAssigneesByLevel(next.assigneesByLevel)
-      setStageAssigneeQuery({})
       setForm(initialForm())
       return
     }
@@ -132,56 +117,10 @@ export default function KmtTemplateWizard() {
     const levels = normalizeLevelsFromTemplate(t)
     setApprovalLevels(levels)
     setAssigneesByLevel(migrateAssigneesByLevel(t, levels))
-    setStageAssigneeQuery({})
     const rawForm = t.form || { tabs: [], headerGroups: [] }
     const app = t.targetApp === 'RSAUI' ? 'RSAUI' : 'CEUI'
     setForm((app === 'RSAUI' ? normalizeRsauiTemplateForm : normalizeTemplateForm)(rawForm))
   }, [routeId, getTemplate, templateApp])
-
-  const addUserToStage = (levelId, userId) => {
-    setAssigneesByLevel(prev => {
-      const cur = prev[levelId] || []
-      if (cur.includes(userId)) return prev
-      return { ...prev, [levelId]: [...cur, userId] }
-    })
-  }
-
-  const removeUserFromStage = (levelId, userId) => {
-    setAssigneesByLevel(prev => ({
-      ...prev,
-      [levelId]: (prev[levelId] || []).filter(id => id !== userId),
-    }))
-  }
-
-  const reorderLevels = (fromIdx, toIdx) => {
-    if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0) return
-    setApprovalLevels(prev => {
-      const next = [...prev]
-      const [row] = next.splice(fromIdx, 1)
-      next.splice(toIdx, 0, row)
-      return next
-    })
-  }
-
-  const removeLevel = id => {
-    setApprovalLevels(prev => (prev.length <= 1 ? prev : prev.filter(x => x.id !== id)))
-    setAssigneesByLevel(prev => {
-      if (!prev[id]) return prev
-      const next = { ...prev }
-      delete next[id]
-      return next
-    })
-  }
-
-  const addLevel = () => {
-    const nid = uid()
-    setApprovalLevels(prev => [...prev, { id: nid, name: 'New stage' }])
-    setAssigneesByLevel(prev => ({ ...prev, [nid]: [] }))
-  }
-
-  const updateLevelName = (id, nextName) => {
-    setApprovalLevels(prev => prev.map(x => (x.id === id ? { ...x, name: nextName } : x)))
-  }
 
   const displayName = () => name.trim() || 'Untitled template'
 
@@ -208,7 +147,10 @@ export default function KmtTemplateWizard() {
         description: existing?.description ?? '',
         marketSegment: marketType,
         status,
-        approvalLevels: approvalLevels.map(l => ({ id: l.id, name: String(l.name || '').trim() || 'Stage' })),
+        approvalLevels: approvalLevels.map(l => ({
+          id: l.id,
+          name: String(l.name || '').trim() || 'Role',
+        })),
         assigneesByLevel,
         form: normalized,
       },
@@ -341,161 +283,23 @@ export default function KmtTemplateWizard() {
           </div>
         </section>
 
-        <section className="kmt-template-editor__section kmt-template-editor__section--workflow">
-          <div className="kmt-template-editor__section-head">
-            <h2 className="kmt-template-editor__section-title">Approval order</h2>
-            <p className="kmt-template-editor__section-sub">
-              Name each approval stage, drag to reorder, and add stages as needed. Assign people to each stage in the section below—assignment is per stage, not by role label.
-            </p>
-          </div>
-          <div className="kmt-approval-levels">
-            <ul className="kmt-approval-levels__list">
-              {approvalLevels.map((lvl, idx) => (
-                <li
-                  key={lvl.id}
-                  className="kmt-approval-levels__item"
-                  draggable
-                  onDragStart={() => setDragId(lvl.id)}
-                  onDragOver={e => e.preventDefault()}
-                  onDrop={() => {
-                    if (!dragId || dragId === lvl.id) return
-                    const from = approvalLevels.findIndex(x => x.id === dragId)
-                    const to = idx
-                    reorderLevels(from, to)
-                    setDragId(null)
-                  }}
-                >
-                  <span className="kmt-approval-levels__grip" title="Drag to reorder">
-                    ⋮⋮
-                  </span>
-                  <label className="kmt-field kmt-field--inline">
-                    <input
-                      type="text"
-                      className="kmt-input kmt-input--inline"
-                      value={lvl.name}
-                      onChange={e => updateLevelName(lvl.id, e.target.value)}
-                      placeholder="Stage name (e.g. POC, Legal review)"
-                      aria-label={`Approval stage ${idx + 1} name`}
-                    />
-                  </label>
-                  <button type="button" className="btn btn-outline kmt-btn-compact" onClick={() => removeLevel(lvl.id)}>
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <div className="kmt-approval-levels__add">
-              <button type="button" className="btn btn-outline kmt-btn-compact" onClick={addLevel}>
-                Add stage
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="kmt-template-editor__section kmt-template-editor__section--workflow">
-          <div className="kmt-template-editor__section-head">
-            <h2 className="kmt-template-editor__section-title">Template assignees</h2>
-            <p className="kmt-template-editor__section-sub">
-              For each stage, search the directory by name or email, then add users. Any user can be assigned to any stage—stage names are labels only.
-            </p>
-          </div>
-          <div className="kmt-template-editor__workflow-shell">
-            <div className="kmt-wizard__fields kmt-wizard__fields--stage-assignees">
-              {approvalLevels.map((lvl, idx) => {
-                const selected = assigneesByLevel[lvl.id] || []
-                const q = stageAssigneeQuery[lvl.id] ?? ''
-                const matches = filterUsersForPicker(users, q)
-                return (
-                  <div key={lvl.id} className="kmt-field kmt-field--stage-block">
-                    <span>
-                      {idx + 1}. {lvl.name.trim() || 'Stage'}
-                    </span>
-                    <div className="kmt-stage-assignee-picker">
-                      <label className="kmt-field kmt-field--search">
-                        <span>Search users</span>
-                        <input
-                          type="search"
-                          className="kmt-input"
-                          placeholder="Search by name or email…"
-                          value={q}
-                          onChange={e => setStageAssigneeQuery(prev => ({ ...prev, [lvl.id]: e.target.value }))}
-                          autoComplete="off"
-                          aria-label={`Search users for stage ${idx + 1}`}
-                        />
-                      </label>
-                      <ul className="kmt-stage-assignee-picker__results" aria-label="Matching directory users">
-                        {matches.length === 0 ? (
-                          <li className="kmt-stage-assignee-picker__empty">No users match this search.</li>
-                        ) : (
-                          matches.slice(0, 24).map(u => {
-                            const already = selected.includes(u.id)
-                            return (
-                              <li
-                                key={u.id}
-                                className={already ? 'kmt-stage-assignee-picker__row kmt-stage-assignee-picker__row--assigned' : 'kmt-stage-assignee-picker__row'}
-                              >
-                                <button
-                                  type="button"
-                                  className={`kmt-stage-assignee-picker__add${already ? ' kmt-stage-assignee-picker__add--assigned' : ''}`}
-                                  disabled={already}
-                                  onClick={() => addUserToStage(lvl.id, u.id)}
-                                >
-                                  <span className="kmt-stage-assignee-picker__user-name">{u.name}</span>
-                                  <span className="kmt-stage-assignee-picker__user-meta">{u.email || '—'}</span>
-                                  {already ? (
-                                    <span className="kmt-stage-assignee-picker__badge">Assigned</span>
-                                  ) : (
-                                    <span className="kmt-stage-assignee-picker__hint">Add</span>
-                                  )}
-                                </button>
-                              </li>
-                            )
-                          })
-                        )}
-                      </ul>
-                      <div
-                        className={`kmt-stage-assignee-picker__assigned${selected.length ? ' kmt-stage-assignee-picker__assigned--has-users' : ''}`}
-                        aria-label="Assigned users"
-                      >
-                        <span className="kmt-stage-assignee-picker__assigned-label">Assigned</span>
-                        {selected.length === 0 ? (
-                          <p className="kmt-template-editor__assignees-empty">No one assigned yet. Use search above to add users.</p>
-                        ) : (
-                          <ul className="kmt-stage-assignee-picker__chips">
-                            {selected.map(uid => {
-                              const u = users.find(x => x.id === uid)
-                              if (!u) {
-                                return (
-                                  <li key={uid}>
-                                    <span className="kmt-assignee-chip kmt-assignee-chip--unknown">{uid}</span>
-                                  </li>
-                                )
-                              }
-                              return (
-                                <li key={uid}>
-                                  <span className="kmt-assignee-chip kmt-assignee-chip--highlight">
-                                    <span className="kmt-assignee-chip__name">{u.name}</span>
-                                    <button
-                                      type="button"
-                                      className="kmt-assignee-chip__remove"
-                                      aria-label={`Remove ${u.name} from this stage`}
-                                      onClick={() => removeUserFromStage(lvl.id, uid)}
-                                    >
-                                      ×
-                                    </button>
-                                  </span>
-                                </li>
-                              )
-                            })}
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+        <section className="kmt-template-editor__section kmt-template-editor__section--workflow kmt-template-editor__section--assignees-workflow">
+          <TemplateAssigneesWorkflow
+            stages={approvalLevels}
+            assigneesByLevel={assigneesByLevel}
+            users={users}
+            onStagesChange={setApprovalLevels}
+            onAssigneesChange={setAssigneesByLevel}
+            onNotify={({ title, message }) =>
+              addNotification({
+                role: 'KMT',
+                statusType: 'info',
+                title,
+                message,
+                actor: user?.name || 'KMT',
+              })
+            }
+          />
         </section>
 
         <footer className="kmt-template-editor__footer">

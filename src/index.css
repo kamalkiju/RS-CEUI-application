@@ -3372,6 +3372,16 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   line-height: 1.45;
   max-width: 760px;
 }
+/* Workflow assignees builder (CEUI / RSAUI): single card from TemplateAssigneesWorkflow */
+.kmt-template-editor__section--assignees-workflow {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+.kmt-template-editor__section--assignees-workflow .taw {
+  margin: 0;
+}
 .kmt-template-editor__form-shell .kmt-fb--embedded.kmt-page {
   width: 100%;
   max-width: none;
