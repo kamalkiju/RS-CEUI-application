@@ -152,6 +152,24 @@
   box-sizing: border-box;
 }
 
+/* Narrow slots between Start / gaps / role cards / End — drop to reorder */
+.taw__drop-zone {
+  flex: 0 0 14px;
+  align-self: stretch;
+  min-height: 72px;
+  border-radius: 6px;
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.taw__drop-zone--active {
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.taw__drop-zone--hover {
+  background: rgba(37, 99, 235, 0.16);
+  box-shadow: inset 0 0 0 2px dashed #2563eb;
+}
+
 .taw__divider {
   width: 1px;
   flex-shrink: 0;
@@ -195,6 +213,10 @@
 
 .taw__node--approval {
   box-shadow: inset 0 3px 0 0 #6366f1;
+}
+
+.taw__node--dragging {
+  opacity: 0.88;
 }
 
 .taw__node--selected {

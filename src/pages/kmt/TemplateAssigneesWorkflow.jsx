@@ -79,7 +79,8 @@ export default function TemplateAssigneesWorkflow({
   const [selectedId, setSelectedId] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [draggingId, setDraggingId] = useState(null)
-  const [dropTargetId, setDropTargetId] = useState(null)
+  const [dragFromIndex, setDragFromIndex] = useState(null)
+  const [dropHoverGap, setDropHoverGap] = useState(null)
   const [activeGap, setActiveGap] = useState(null)
   const [newRoleDraft, setNewRoleDraft] = useState('')
   const [roleEditDraft, setRoleEditDraft] = useState('')
@@ -101,15 +102,41 @@ export default function TemplateAssigneesWorkflow({
 
   const matches = useMemo(() => filterUsers(users, searchQuery), [users, searchQuery])
 
-  const swapNodes = (idA, idB) => {
-    const ia = stages.findIndex(s => s.id === idA)
-    const ib = stages.findIndex(s => s.id === idB)
-    if (ia < 0 || ib < 0 || ia === ib) return
-    const next = [...stages]
-    const t = next[ia]
-    next[ia] = next[ib]
-    next[ib] = t
-    onStagesChange(next)
+  /** Insert dragged role at gap g (0..n): g=0 before first role, g=n after last role. */
+  const moveNodeToGap = (fromIndex, gapIndex) => {
+    const n = stages.length
+    if (fromIndex < 0 || gapIndex < 0 || gapIndex > n) return
+    const order = [...Array(n).keys()]
+    const [moved] = order.splice(fromIndex, 1)
+    let pos = gapIndex
+    if (gapIndex > fromIndex) pos = gapIndex - 1
+    order.splice(pos, 0, moved)
+    onStagesChange(order.map(i => stages[i]))
+  }
+
+  const handleNodeDragStart = (e, index) => {
+    e.stopPropagation()
+    setDragFromIndex(index)
+    setDraggingId(stages[index]?.id ?? null)
+    try {
+      e.dataTransfer.setData('text/plain', String(index))
+      e.dataTransfer.effectAllowed = 'move'
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const handleNodeDragEnd = () => {
+    setDraggingId(null)
+    setDragFromIndex(null)
+    setDropHoverGap(null)
+  }
+
+  const handleDropOnGap = gapIndex => {
+    const from = dragFromIndex
+    if (from == null || from < 0) return
+    moveNodeToGap(from, gapIndex)
+    handleNodeDragEnd()
   }
 
   const insertAtGap = gapIndex => {
@@ -164,6 +191,27 @@ export default function TemplateAssigneesWorkflow({
       message: `Saved “${trimmed}” and assignees. Publish or save draft to persist the template.`,
     })
   }
+
+  const renderDropZone = gapIndex => (
+    <div
+      key={`dz-${gapIndex}`}
+      className={`taw__drop-zone${dropHoverGap === gapIndex ? ' taw__drop-zone--hover' : ''}${dragFromIndex != null ? ' taw__drop-zone--active' : ''}`}
+      onDragOver={e => {
+        if (dragFromIndex == null) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        setDropHoverGap(gapIndex)
+      }}
+      onDragLeave={e => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setDropHoverGap(null)
+      }}
+      onDrop={e => {
+        e.preventDefault()
+        handleDropOnGap(gapIndex)
+      }}
+      title="Drop role here"
+    />
+  )
 
   const renderGap = gapIndex => (
     <Fragment key={`gap-${gapIndex}`}>
@@ -228,7 +276,7 @@ export default function TemplateAssigneesWorkflow({
       <div className="taw__head">
         <h2 className="taw__title">Template assignees</h2>
         <p className="taw__sub">
-          Build the flow on the left (Start → Creator → Approval roles → End). Click a role card to assign users on the right.
+          Build the flow on the left (Start → Creator → Approval roles → End). Drag the ⋮ handle to move a role; drop on a blue slot to place it between steps. Click a role card to assign users on the right.
         </p>
       </div>
 
@@ -253,30 +301,23 @@ export default function TemplateAssigneesWorkflow({
                 <div className="taw__start" aria-hidden>
                   Start
                 </div>
+                {renderDropZone(0)}
                 {renderGap(0)}
                 {stages.map((stage, i) => {
                   const colors = getRoleColor(stage.name)
                   const count = (assigneesByLevel[stage.id] || []).length
                   const isSel = selectedId === stage.id
-                  const isDrop = dropTargetId === stage.id && draggingId && draggingId !== stage.id
                   return (
                     <Fragment key={stage.id}>
                       <div className="taw__node-wrap">
                         <div
                           className="taw__drag-hint"
-                        draggable
-                        title="Drag to swap order"
-                        onDragStart={e => {
-                          e.stopPropagation()
-                          setDraggingId(stage.id)
-                          e.dataTransfer.effectAllowed = 'move'
-                        }}
-                        onDragEnd={() => {
-                          setDraggingId(null)
-                          setDropTargetId(null)
-                        }}
-                        aria-hidden
-                      >
+                          draggable
+                          title="Drag to reorder"
+                          onDragStart={e => handleNodeDragStart(e, i)}
+                          onDragEnd={handleNodeDragEnd}
+                          aria-hidden
+                        >
                         ⋮
                         <br />
                         ⋮
@@ -284,18 +325,7 @@ export default function TemplateAssigneesWorkflow({
                       <div
                         role="button"
                         tabIndex={0}
-                        className={`taw__node${i === 0 ? ' taw__node--creator' : ' taw__node--approval'}${isSel ? ' taw__node--selected' : ''}${isDrop ? ' taw__node--drop' : ''}`}
-                        onDragOver={e => {
-                          e.preventDefault()
-                          if (draggingId && draggingId !== stage.id) setDropTargetId(stage.id)
-                        }}
-                        onDragLeave={() => setDropTargetId(null)}
-                        onDrop={e => {
-                          e.preventDefault()
-                          if (draggingId && draggingId !== stage.id) swapNodes(draggingId, stage.id)
-                          setDraggingId(null)
-                          setDropTargetId(null)
-                        }}
+                        className={`taw__node${i === 0 ? ' taw__node--creator' : ' taw__node--approval'}${isSel ? ' taw__node--selected' : ''}${draggingId === stage.id ? ' taw__node--dragging' : ''}`}
                         onClick={() => setSelectedId(stage.id)}
                         onKeyDown={e => {
                           if (e.key === 'Enter' || e.key === ' ') {
@@ -316,6 +346,7 @@ export default function TemplateAssigneesWorkflow({
                         </div>
                       </div>
                     </div>
+                    {renderDropZone(i + 1)}
                     {renderGap(i + 1)}
                   </Fragment>
                 )
