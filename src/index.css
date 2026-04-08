@@ -3565,10 +3565,6 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .kmt-assignee-chip__name {
   font-weight: 600;
 }
-.kmt-assignee-chip__role {
-  font-size: 11px;
-  color: var(--text-muted);
-}
 .kmt-assignee-chip__remove {
   display: inline-flex;
   align-items: center;

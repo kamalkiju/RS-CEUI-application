@@ -396,7 +396,7 @@ export default function KmtTemplateWizard() {
           <div className="kmt-template-editor__section-head">
             <h2 className="kmt-template-editor__section-title">Template assignees</h2>
             <p className="kmt-template-editor__section-sub">
-              For each stage, search the directory by name, email, or role, then add users. Any user can be assigned to any stage—stage names are labels only.
+              For each stage, search the directory by name or email, then add users. Any user can be assigned to any stage—stage names are labels only.
             </p>
           </div>
           <div className="kmt-template-editor__workflow-shell">
@@ -416,7 +416,7 @@ export default function KmtTemplateWizard() {
                         <input
                           type="search"
                           className="kmt-input"
-                          placeholder="Search by name, email, or role…"
+                          placeholder="Search by name or email…"
                           value={q}
                           onChange={e => setStageAssigneeQuery(prev => ({ ...prev, [lvl.id]: e.target.value }))}
                           autoComplete="off"
@@ -438,10 +438,7 @@ export default function KmtTemplateWizard() {
                                   onClick={() => addUserToStage(lvl.id, u.id)}
                                 >
                                   <span className="kmt-stage-assignee-picker__user-name">{u.name}</span>
-                                  <span className="kmt-stage-assignee-picker__user-meta">
-                                    {u.role}
-                                    {u.email ? ` · ${u.email}` : ''}
-                                  </span>
+                                  <span className="kmt-stage-assignee-picker__user-meta">{u.email || '—'}</span>
                                   {already ? <span className="kmt-stage-assignee-picker__badge">Added</span> : <span className="kmt-stage-assignee-picker__hint">Add</span>}
                                 </button>
                               </li>
@@ -468,7 +465,6 @@ export default function KmtTemplateWizard() {
                                 <li key={uid}>
                                   <span className="kmt-assignee-chip">
                                     <span className="kmt-assignee-chip__name">{u.name}</span>
-                                    <span className="kmt-assignee-chip__role">{u.role}</span>
                                     <button
                                       type="button"
                                       className="kmt-assignee-chip__remove"
