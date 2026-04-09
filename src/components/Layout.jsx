@@ -40,11 +40,7 @@ export default function Layout({ children }) {
         onClose={handleClose}
       />
       <div className="main" style={mainStyle}>
-        <AppHeader
-          onMobileMenuClick={handleToggle}
-          isMobile={isMobile}
-          showHeaderBrand={isMobile && !mobileOpen}
-        />
+        <AppHeader onMobileMenuClick={handleToggle} isMobile={isMobile} />
         {children}
       </div>
     </>

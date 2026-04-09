@@ -94,14 +94,6 @@ body {
 .rs-app-brand--sidebar .rs-app-brand__logo {
   height: 1.18em;
 }
-.rs-app-brand--header {
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-}
-.rs-app-brand--header .rs-app-brand__logo {
-  height: 1.22em;
-}
 .rs-app-brand--selector {
   font-size: clamp(1.2rem, 2.6vw, 1.55rem);
   font-weight: 800;
@@ -144,17 +136,6 @@ body {
 .sidebar.collapsed .rs-app-brand__logo {
   height: 28px !important;
   width: auto;
-}
-.app-header-brand {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding-right: 6px;
-}
-@media (max-width: 520px) {
-  .rs-app-brand--header {
-    font-size: 13px;
-  }
 }
 
 .hamburger {

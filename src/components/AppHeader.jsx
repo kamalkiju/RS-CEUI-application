@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useNotifications } from '../context/NotificationContext.jsx'
 import NotificationPanel from './NotificationPanel.jsx'
-import RsAppBrand from './RsAppBrand.jsx'
 
-export default function AppHeader({ onMobileMenuClick, isMobile, showHeaderBrand }) {
+export default function AppHeader({ onMobileMenuClick, isMobile }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { unreadCountForRole } = useNotifications()
@@ -41,12 +40,7 @@ export default function AppHeader({ onMobileMenuClick, isMobile, showHeaderBrand
           </button>
         )}
 
-        {/* RS + app name: sidebar on desktop; on narrow screens only when drawer is closed (avoids double with sidebar) */}
-        {showHeaderBrand && (
-          <div className="app-header-brand">
-            <RsAppBrand appLabel={user?.app === 'RSAUI' ? 'RSAUI' : 'CEUI'} variant="header" />
-          </div>
-        )}
+        {/* App branding (RS + CEUI/RSAUI) lives only in the sidebar to avoid duplicate marks in the top bar. */}
 
         <div className="header-spacer" />
 
