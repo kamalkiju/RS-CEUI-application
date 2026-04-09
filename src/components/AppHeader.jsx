@@ -5,7 +5,7 @@ import { useNotifications } from '../context/NotificationContext.jsx'
 import NotificationPanel from './NotificationPanel.jsx'
 import RsAppBrand from './RsAppBrand.jsx'
 
-export default function AppHeader({ onMobileMenuClick, isMobile }) {
+export default function AppHeader({ onMobileMenuClick, isMobile, showHeaderBrand }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { unreadCountForRole } = useNotifications()
@@ -41,9 +41,12 @@ export default function AppHeader({ onMobileMenuClick, isMobile }) {
           </button>
         )}
 
-        <div className="app-header-brand">
-          <RsAppBrand appLabel={user?.app === 'RSAUI' ? 'RSAUI' : 'CEUI'} variant="header" />
-        </div>
+        {/* RS + app name: sidebar on desktop; on narrow screens only when drawer is closed (avoids double with sidebar) */}
+        {showHeaderBrand && (
+          <div className="app-header-brand">
+            <RsAppBrand appLabel={user?.app === 'RSAUI' ? 'RSAUI' : 'CEUI'} variant="header" />
+          </div>
+        )}
 
         <div className="header-spacer" />
 
