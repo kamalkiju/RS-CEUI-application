@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom'
+import RsAppBrand from '../../components/RsAppBrand.jsx'
 
 const APPS = [
   {
     id: 'CEUI',
-    icon: '🏢',
     title: 'CEUI',
     subtitle: 'Customer Experience UI',
     description: 'Manage customer accounts, service requests and billing operations',
@@ -12,7 +12,6 @@ const APPS = [
   },
   {
     id: 'RSAUI',
-    icon: '🗺️',
     title: 'RSAUI',
     subtitle: 'Residential Service Area UI',
     description: 'Create and manage service area requests, product configurations and approval workflows',
@@ -37,9 +36,8 @@ export default function ApplicationSelector() {
               className="app-select-card"
               onClick={() => navigate(app.to)}
             >
-              <div className="app-select-card__icon" aria-hidden>{app.icon}</div>
               <div className="app-select-card__title-row">
-                <h2>{app.title}</h2>
+                <RsAppBrand appLabel={app.id} variant="selector" />
                 <span>{app.badge}</span>
               </div>
               {app.subtitle ? <h3>{app.subtitle}</h3> : null}

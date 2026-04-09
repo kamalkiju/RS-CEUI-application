@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
+import RsAppBrand from '../components/RsAppBrand.jsx'
 
 const ROLE_CONFIG = {
   POC:  { color: '#1976d2', desc: 'Access to Knowledge Documents, contract management and approvals', path: '/poc' },
@@ -76,13 +77,8 @@ export default function Login() {
           @media(max-width:860px) { .brand-panel { display: none !important; } }
         `}</style>
         <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: 380 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 14, marginBottom: 48 }}>
-            <div style={{ width: 52, height: 52, background: 'linear-gradient(135deg, #1976d2, #4ab3f4)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(25,118,210,.4)' }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-              </svg>
-            </div>
-            <span style={{ fontSize: 34, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>CEUI</span>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 48 }}>
+            <RsAppBrand appLabel="CEUI" variant="login-hero" />
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: 16 }}>Contract &amp; Knowledge<br/>Management Portal</h1>
           <p style={{ fontSize: 15, color: 'rgba(168,196,223,.8)', lineHeight: 1.6, marginBottom: 52 }}>Streamline your residential services contracts, knowledge documents, and team workflows — all in one place.</p>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
+import RsAppBrand from './RsAppBrand.jsx'
 
 const ICON_OVERVIEW = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -213,7 +214,9 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onClose }) {
           <button type="button" className="hamburger" onClick={onToggle} aria-label="Toggle menu">
             <span /><span /><span />
           </button>
-          <span className="sidebar-logo">{user?.app === 'RSAUI' ? 'RSAUI' : 'CEUI'}</span>
+          <div className="sidebar-brand-wrap">
+            <RsAppBrand appLabel={user?.app === 'RSAUI' ? 'RSAUI' : 'CEUI'} variant="sidebar" />
+          </div>
         </div>
 
         <nav className="sidebar-nav">

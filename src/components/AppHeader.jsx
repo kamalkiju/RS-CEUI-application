@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useNotifications } from '../context/NotificationContext.jsx'
 import NotificationPanel from './NotificationPanel.jsx'
+import RsAppBrand from './RsAppBrand.jsx'
 
 export default function AppHeader({ onMobileMenuClick, isMobile }) {
   const { user, logout } = useAuth()
@@ -39,6 +40,10 @@ export default function AppHeader({ onMobileMenuClick, isMobile }) {
             </svg>
           </button>
         )}
+
+        <div className="app-header-brand">
+          <RsAppBrand appLabel={user?.app === 'RSAUI' ? 'RSAUI' : 'CEUI'} variant="header" />
+        </div>
 
         <div className="header-spacer" />
 

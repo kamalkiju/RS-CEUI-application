@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
+import RsAppBrand from '../../components/RsAppBrand.jsx'
 
 const RSAUI_HOME = {
   POC: '/rsaui/poc/document-review',
@@ -72,7 +73,9 @@ export default function RsauiLogin() {
   return (
     <div className="rsaui-login-page">
       <div className="rsaui-login-left">
-        <div className="rsaui-login-brand">RSAUI</div>
+        <div className="rsaui-login-brand">
+          <RsAppBrand appLabel="RSAUI" variant="login" />
+        </div>
         <h1>Residential Service Area Workspace</h1>
         <p>Build, review, and govern service area requests across POC, BUFM and KMT workflows.</p>
         <ul>

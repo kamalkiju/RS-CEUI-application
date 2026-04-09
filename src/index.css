@@ -67,15 +67,95 @@ body {
   padding: 20px 16px;
   border-bottom: 1px solid rgba(255,255,255,.08);
 }
-.sidebar-logo {
+/* Republic Services mark + CEUI / RSAUI — logo scales with label (em) */
+.rs-app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42em;
+  line-height: 1;
+  color: #fff;
+}
+.rs-app-brand__logo {
+  height: 1.12em;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.rs-app-brand__label {
+  font-weight: inherit;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.rs-app-brand--sidebar {
   font-size: 20px;
   font-weight: 800;
+}
+.rs-app-brand--sidebar .rs-app-brand__logo {
+  height: 1.18em;
+}
+.rs-app-brand--header {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.rs-app-brand--header .rs-app-brand__logo {
+  height: 1.22em;
+}
+.rs-app-brand--selector {
+  font-size: clamp(1.2rem, 2.6vw, 1.55rem);
+  font-weight: 800;
   color: #fff;
-  letter-spacing: .5px;
-  white-space: nowrap;
+}
+.rs-app-brand--selector .rs-app-brand__logo {
+  height: 1.08em;
+}
+.rs-app-brand--login-hero {
+  font-size: clamp(28px, 5vw, 34px);
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.03em;
+}
+.rs-app-brand--login-hero .rs-app-brand__logo {
+  height: 1.06em;
+}
+.rs-app-brand--login {
+  font-size: 30px;
+  font-weight: 900;
+  color: #e6f0fa;
+}
+.rs-app-brand--login .rs-app-brand__logo {
+  height: 1.05em;
+}
+.sidebar-brand-wrap {
+  min-width: 0;
+  flex: 1;
   overflow: hidden;
 }
-.sidebar.collapsed .sidebar-logo { display: none; }
+.sidebar.collapsed .sidebar-brand-wrap {
+  flex: 0 0 auto;
+}
+.sidebar.collapsed .rs-app-brand__label {
+  display: none;
+}
+.sidebar.collapsed .rs-app-brand {
+  justify-content: center;
+}
+.sidebar.collapsed .rs-app-brand__logo {
+  height: 28px !important;
+  width: auto;
+}
+.app-header-brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-right: 6px;
+}
+@media (max-width: 520px) {
+  .rs-app-brand--header {
+    font-size: 13px;
+  }
+}
 
 .hamburger {
   background: none;
@@ -4136,14 +4216,16 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   border-color: #378add;
   box-shadow: 0 0 0 3px rgba(55,138,221,.25);
 }
-.app-select-card__icon { font-size: 28px; margin-bottom: 12px; }
 .app-select-card__title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 10px;
 }
-.app-select-card__title-row h2 { font-size: 24px; color: #fff; }
+.app-select-card__title-row .rs-app-brand {
+  min-width: 0;
+}
 .app-select-card__title-row span {
   font-size: 11px;
   font-weight: 700;
@@ -4166,7 +4248,7 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   color: #e6f0fa;
   padding: 56px 60px;
 }
-.rsaui-login-brand { font-size: 30px; font-weight: 900; margin-bottom: 28px; }
+.rsaui-login-brand { margin-bottom: 28px; }
 .rsaui-login-left h1 { font-size: 34px; line-height: 1.2; margin-bottom: 14px; }
 .rsaui-login-left p { color: #9ab4cc; margin-bottom: 22px; max-width: 560px; }
 .rsaui-login-left ul { list-style: none; display: grid; gap: 10px; color: #b7cce1; }
