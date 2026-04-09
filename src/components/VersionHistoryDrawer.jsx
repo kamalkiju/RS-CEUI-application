@@ -1,8 +1,27 @@
+import { useMemo } from 'react'
 import { buildMockVersionHistory } from '../utils/documentVersion.js'
 
-export default function VersionHistoryDrawer({ open, onClose, doc, viewerRole = 'POC' }) {
+export default function VersionHistoryDrawer({
+  open,
+  onClose,
+  doc,
+  viewerRole = 'POC',
+  allDocs = null,
+  onNavigateToDocument,
+}) {
+  const entries = useMemo(
+    () => (doc ? buildMockVersionHistory(doc, viewerRole, allDocs ?? undefined) : []),
+    [doc, viewerRole, allDocs],
+  )
+
   if (!open) return null
-  const entries = doc ? buildMockVersionHistory(doc, viewerRole) : []
+
+  const handleEntryClick = entry => {
+    if (onNavigateToDocument && entry.targetDocId) {
+      onNavigateToDocument(entry.targetDocId)
+    }
+    onClose()
+  }
 
   return (
     <div className="version-history-backdrop" role="presentation" onClick={onClose}>
@@ -17,7 +36,12 @@ export default function VersionHistoryDrawer({ open, onClose, doc, viewerRole = 
         <ul className="version-history-timeline">
           {entries.map((e, i) => (
             <li key={e.id}>
-              <button type="button" className={`version-history-timeline__item version-history-timeline__item--${e.tone}`}>
+              <button
+                type="button"
+                className={`version-history-timeline__item version-history-timeline__item--${e.tone}`}
+                disabled={Boolean(onNavigateToDocument) && !e.targetDocId}
+                onClick={() => handleEntryClick(e)}
+              >
                 <span className="version-history-timeline__dot" />
                 <span className="version-history-timeline__line" aria-hidden={i === entries.length - 1} />
                 <div className="version-history-timeline__body">

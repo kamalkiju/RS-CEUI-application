@@ -1,5 +1,5 @@
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Layout from '../../components/Layout.jsx'
 import { useDocs } from '../../context/DocContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -13,7 +13,12 @@ import DocumentPulseComments from '../../components/DocumentPulseComments.jsx'
 import RejectModal from '../../components/RejectModal.jsx'
 import VersionBadge from '../../components/VersionBadge.jsx'
 import VersionHistoryDrawer from '../../components/VersionHistoryDrawer.jsx'
-import { getCaseStageDisplay, getPreviousVersionLinkLabel, inferDocVersion } from '../../utils/documentVersion.js'
+import {
+  getCaseStageDisplay,
+  getPreviousVersionLinkLabel,
+  inferDocVersion,
+  resolveMockPreviousDocumentId,
+} from '../../utils/documentVersion.js'
 import KmtFormBuilder from './KmtFormBuilder.jsx'
 import { ensureFivePocTabs } from './kmtFormBuilderShared.js'
 import { normalizeTemplateForm } from './pocReferenceFormSeed.js'
@@ -32,7 +37,7 @@ export default function KmtDocumentView() {
   const location = useLocation()
   const kmtEdit = Boolean(location.state?.kmtEdit)
   const { user } = useAuth()
-  const { getDocumentById, updateDoc, countDocumentsByUserId } = useDocs()
+  const { docs, getDocumentById, updateDoc, countDocumentsByUserId } = useDocs()
   const doc = id ? getDocumentById(id) : null
 
   const [activeStep, setActiveStep] = useState(1)
@@ -76,6 +81,19 @@ export default function KmtDocumentView() {
   const totalByUser = doc?.createdByUserId
     ? countDocumentsByUserId(doc.createdByUserId)
     : 0
+
+  const previousVersionDocId = useMemo(
+    () => (doc ? resolveMockPreviousDocumentId(doc, docs) : null),
+    [doc, docs],
+  )
+
+  const openDocumentDetail = useCallback(
+    targetId => {
+      if (!targetId) return
+      navigate(`/kmt/document/${encodeURIComponent(targetId)}`)
+    },
+    [navigate],
+  )
 
   const showReviewActions = doc?.status === 'Pending_KMT'
 
@@ -177,11 +195,18 @@ export default function KmtDocumentView() {
                   <p className="bufm-doc-view__bufm-ok">Approved by BUFM ✔</p>
                 )}
                 <div className="bufm-doc-view__version-links">
-                  <button type="button" className="btn btn-text btn-sm" onClick={() => window.alert('Mock: open previous version (no backend).')}>
+                  <button
+                    type="button"
+                    className="btn btn-text btn-sm"
+                    disabled={!previousVersionDocId}
+                    title={
+                      previousVersionDocId
+                        ? 'Open the earlier submission from the same creator (demo catalog).'
+                        : 'No earlier version is linked for this document in the demo.'
+                    }
+                    onClick={() => previousVersionDocId && openDocumentDetail(previousVersionDocId)}
+                  >
                     {getPreviousVersionLinkLabel(doc)}
-                  </button>
-                  <button type="button" className="btn btn-outline btn-sm" onClick={() => window.alert('Mock compare: diff vs previous version (UI only).')}>
-                    Compare with Previous Version
                   </button>
                   <button type="button" className="btn btn-text btn-sm" onClick={() => setHistoryOpen(true)}>
                     View Version History
@@ -418,6 +443,8 @@ export default function KmtDocumentView() {
           onClose={() => setHistoryOpen(false)}
           doc={doc}
           viewerRole="KMT"
+          allDocs={docs}
+          onNavigateToDocument={openDocumentDetail}
         />
       </div>
     </Layout>

@@ -61,10 +61,31 @@ export function bumpMajorVersion(current) {
 }
 
 /**
- * Mock timeline for Version History drawer (UI only).
+ * Demo helper: pick another document id to treat as "previous version" (same creator, earlier submission).
+ * Optional explicit link: doc.previousVersionDocId
  */
-export function buildMockVersionHistory(doc, viewerRole = 'POC') {
+export function resolveMockPreviousDocumentId(doc, allDocs) {
+  if (!doc || !Array.isArray(allDocs) || !allDocs.length) return null
+  if (doc.previousVersionDocId) return doc.previousVersionDocId
+  const uid = doc.createdByUserId
+  if (!uid) return null
+  const parseTime = d => new Date(d.submittedDate || d.updated || '1970-01-01').getTime()
+  const curT = parseTime(doc)
+  const siblings = allDocs.filter(d => d.id !== doc.id && d.createdByUserId === uid)
+  const older = siblings.filter(s => parseTime(s) < curT)
+  if (!older.length) return null
+  older.sort((a, b) => parseTime(a) - parseTime(b))
+  return older[older.length - 1].id
+}
+
+/**
+ * Mock timeline for Version History drawer (UI only).
+ * When `allDocs` is passed, each entry gets `targetDocId` for navigation (document detail view).
+ */
+export function buildMockVersionHistory(doc, viewerRole = 'POC', allDocs = null) {
   const v = inferDocVersion(doc)
+  const prevId = allDocs ? resolveMockPreviousDocumentId(doc, allDocs) : null
+  const selfId = doc?.id
   const entries = []
   entries.push({
     id: 'h1',
@@ -135,5 +156,9 @@ export function buildMockVersionHistory(doc, viewerRole = 'POC') {
       tone: 'reject',
     })
   }
-  return entries
+  if (!allDocs || !selfId) return entries
+  return entries.map((e, i) => ({
+    ...e,
+    targetDocId: i === 0 ? prevId || selfId : selfId,
+  }))
 }

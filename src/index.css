@@ -4412,6 +4412,14 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   border-color: #b8d4ef;
   box-shadow: var(--shadow);
 }
+.version-history-timeline__item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.version-history-timeline__item:disabled:hover {
+  border-color: var(--border);
+}
 .version-history-timeline__item--ok { border-left: 3px solid var(--success); }
 .version-history-timeline__item--reject { border-left: 3px solid var(--danger); }
 .version-history-timeline__item--pending { border-left: 3px solid var(--warning); }
