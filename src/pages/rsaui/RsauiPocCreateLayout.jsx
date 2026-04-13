@@ -222,6 +222,9 @@ export default function RsauiPocCreateLayout() {
               status={sub.status}
               rejection_comment_BUFM={sub.rejection_comment_BUFM}
               rejection_comment_KMT={sub.rejection_comment_KMT}
+              highlightSections={sub.rejection_highlight_sections || []}
+              highlightFields={sub.rejection_highlight_fields || []}
+              feedbackItems={sub.rejection_feedback_items || []}
             />
           )}
 
@@ -271,6 +274,9 @@ export default function RsauiPocCreateLayout() {
                   status={sub.status}
                   rejection_comment_BUFM={sub.rejection_comment_BUFM}
                   rejection_comment_KMT={sub.rejection_comment_KMT}
+                  highlightSections={sub.rejection_highlight_sections || []}
+                  highlightFields={sub.rejection_highlight_fields || []}
+                  feedbackItems={sub.rejection_feedback_items || []}
                 />
               </div>
             )}

@@ -213,6 +213,33 @@ const INITIAL_SUBMISSIONS = [
     product: { name: 'Cart 95 gal', sku: 'CRT-95', description: 'Standard' },
     rejection_comment_BUFM: '',
     rejection_comment_KMT: '',
+    pocResubmissionNote: 'Aligned division with municipal contract row.',
+    poc_updated_sections: ['Service area details'],
+    poc_updated_fields: ['Division'],
+    reviewAuditTrail: [
+      {
+        at: new Date().toISOString(),
+        role: 'BUFM',
+        action: 'reject',
+        comment: 'Verify division against active contract table before approval.',
+        feedbackItems: [
+          {
+            id: 'fb-rsa-5999-1',
+            scope: 'section',
+            label: 'Service area details',
+            comment: 'Division must match the active contract row.',
+          },
+          {
+            id: 'fb-rsa-5999-2',
+            scope: 'field',
+            label: 'Division',
+            comment: 'Cross-check with GIS / contract master.',
+          },
+        ],
+        highlightSections: ['Service area details'],
+        highlightFields: ['Division'],
+      },
+    ],
     updated: TODAY(),
   },
   {

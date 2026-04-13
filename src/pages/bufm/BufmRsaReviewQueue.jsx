@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useMemo } from 'react'
 import { useRsaUI } from '../../context/RsaUIContext.jsx'
+import ReviewerHighlightBadges from '../../components/ReviewerHighlightBadges.jsx'
 
 function slaBadge(sub) {
   if (sub.bufmSlaExceeded) return { cls: 'bufm-sla--bad', text: '⚠ SLA EXCEEDED' }
@@ -63,6 +64,7 @@ export default function BufmRsaReviewQueue() {
                           POC update
                         </span>
                       )}
+                      <ReviewerHighlightBadges source={sub} variant="rsa" />
                     </td>
                     <td>{sub.requestType || 'Create Service Area'}</td>
                     <td>

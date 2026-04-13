@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { useRsaUI } from '../../context/RsaUIContext.jsx'
+import {
+  buildPocUpdateFlagSets,
+  buildReviewerFlagSets,
+  isFieldFlagged,
+  isSectionFlagged,
+} from '../../utils/reviewFeedback.js'
 
 const SEARCH_ROWS = [
   { name: 'North Residential Zone', polygonId: 'POL-1001', division: 'Division A', type: 'Residential', status: 'Active', lawsonId: 'LAW-10011', effectiveDate: '2025-04-01', expiryDate: '2026-03-31' },
@@ -24,6 +30,15 @@ export default function RsaUIServiceArea() {
   const sa = sub.serviceArea || {}
   const set = patch => patchSubmission(submissionId, { serviceArea: { ...sa, ...patch } })
   const hasSelected = Boolean(sa.name && sa.polygonId)
+
+  const reviewerSets = useMemo(() => buildReviewerFlagSets(sub), [sub])
+  const pocSets = useMemo(() => buildPocUpdateFlagSets(sub), [sub])
+  const secRev = isSectionFlagged('Service area details', reviewerSets.sections)
+  const secPoc = isSectionFlagged('Service area details', pocSets.sections)
+  const fldPolyRev = isFieldFlagged('Polygon ID', reviewerSets.fields)
+  const fldDivRev = isFieldFlagged('Division', reviewerSets.fields)
+  const fldPolyPoc = isFieldFlagged('Polygon ID', pocSets.fields)
+  const fldDivPoc = isFieldFlagged('Division', pocSets.fields)
 
   const results = useMemo(() => {
     return SEARCH_ROWS.filter(r => {
@@ -65,7 +80,9 @@ export default function RsaUIServiceArea() {
   })
 
   return (
-    <div className="rsa-ui-panel rsa-sa-step">
+    <div
+      className={`rsa-ui-panel rsa-sa-step${secRev ? ' rsa-sa-step--reviewer-flag' : ''}${secPoc ? ' rsa-sa-step--poc-update' : ''}`}
+    >
       <h2 className="rsa-ui-panel__title">
         1 · Select service area{isEditDetailsFlow ? ' — edit details' : ''}
       </h2>
@@ -131,7 +148,11 @@ export default function RsaUIServiceArea() {
               </p>
             </div>
           ) : (
-            <div className="rsa-sa-summary-card">
+            <div
+              className={`rsa-sa-summary-card${secRev ? ' rsa-sa-summary-card--reviewer-flag' : ''}${
+                secPoc ? ' rsa-sa-summary-card--poc-update' : ''
+              }`}
+            >
               <div className="rsa-sa-summary-head">
                 <h3 className="rsa-sa-summary-title">Selected service area</h3>
                 {!readOnly && (
@@ -145,11 +166,19 @@ export default function RsaUIServiceArea() {
                   <span className="rsa-sa-summary-label">Service area name</span>
                   <span className="rsa-sa-summary-value">{sa.name}</span>
                 </div>
-                <div className="rsa-sa-summary-cell">
+                <div
+                  className={`rsa-sa-summary-cell${fldPolyRev ? ' rsa-sa-summary-cell--reviewer-flag' : ''}${
+                    fldPolyPoc ? ' rsa-sa-summary-cell--poc-update' : ''
+                  }`}
+                >
                   <span className="rsa-sa-summary-label">Polygon ID</span>
                   <span className="rsa-sa-summary-value">{sa.polygonId}</span>
                 </div>
-                <div className="rsa-sa-summary-cell">
+                <div
+                  className={`rsa-sa-summary-cell${fldDivRev ? ' rsa-sa-summary-cell--reviewer-flag' : ''}${
+                    fldDivPoc ? ' rsa-sa-summary-cell--poc-update' : ''
+                  }`}
+                >
                   <span className="rsa-sa-summary-label">Division</span>
                   <span className="rsa-sa-summary-value">{sa.division}</span>
                 </div>

@@ -2172,6 +2172,36 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   color: #0369a1;
   border-color: #7dd3fc;
 }
+.queue-reviewer-highlight-wrap {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.queue-reviewer-highlight-wrap--stacked {
+  display: flex;
+  margin-left: 0;
+  margin-top: 6px;
+}
+.queue-reviewer-highlight-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #ffedd5;
+  color: #9a3412;
+  border: 1px solid #fdba74;
+  white-space: nowrap;
+}
+.queue-reviewer-highlight-chip--rsa {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fed7aa;
+}
 .rsa-poc-resubmit-note {
   background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-lg);
   padding: 12px 16px; margin-bottom: 12px; font-size: 13px; color: #065f46;
@@ -5434,6 +5464,40 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .rsa-sa-summary-cell { display: flex; flex-direction: column; gap: 4px; }
 .rsa-sa-summary-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; }
 .rsa-sa-summary-value { font-size: 15px; font-weight: 700; color: #0f172a; }
+.rsa-ui-panel.rsa-sa-step--reviewer-flag {
+  border-left: 4px solid #fb923c;
+  padding-left: 12px;
+  margin-left: -4px;
+  border-radius: 8px;
+}
+.rsa-ui-panel.rsa-sa-step--poc-update {
+  box-shadow: inset 4px 0 0 0 #34d399;
+  padding-left: 8px;
+  margin-left: -4px;
+  border-radius: 8px;
+}
+.rsa-sa-summary-card--reviewer-flag {
+  border-color: #fdba74;
+  box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.35);
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.95) 0%, #fff 40%);
+}
+.rsa-sa-summary-card--poc-update {
+  border-color: #6ee7b7;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3);
+  background: linear-gradient(90deg, rgba(236, 253, 245, 0.9) 0%, #fff 35%);
+}
+.rsa-sa-summary-cell--reviewer-flag .rsa-sa-summary-label { color: #9a3412; font-weight: 800; }
+.rsa-sa-summary-cell--reviewer-flag .rsa-sa-summary-value {
+  border-left: 3px solid #fb923c;
+  padding-left: 10px;
+  margin-left: -2px;
+}
+.rsa-sa-summary-cell--poc-update .rsa-sa-summary-label { color: #047857; font-weight: 800; }
+.rsa-sa-summary-cell--poc-update .rsa-sa-summary-value {
+  border-left: 3px solid #34d399;
+  padding-left: 10px;
+  margin-left: -2px;
+}
 .rsa-sa-advanced { margin-top: 16px; border-radius: 12px; border: 1px solid #f1f5f9; padding: 12px 14px; background: #f8fafc; }
 .rsa-sa-advanced summary { cursor: pointer; font-weight: 700; font-size: 13px; color: #475569; }
 .rsa-sa-advanced-fields { margin-top: 14px; }

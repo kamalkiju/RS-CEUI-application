@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMemo } from 'react'
 import { useDocs } from '../../context/DocContext.jsx'
 import VersionBadge from '../../components/VersionBadge.jsx'
+import ReviewerHighlightBadges from '../../components/ReviewerHighlightBadges.jsx'
 import { getDisplayStatus } from '../../utils/documentStatus.js'
 
 export default function BufmReviewQueue() {
@@ -49,6 +50,7 @@ export default function BufmReviewQueue() {
                           POC update
                         </span>
                       )}
+                      <ReviewerHighlightBadges source={doc} />
                     </td>
                     <td><VersionBadge doc={doc} /></td>
                     <td>{areaLabel}</td>

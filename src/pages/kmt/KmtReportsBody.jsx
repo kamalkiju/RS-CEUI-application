@@ -4,6 +4,7 @@ import { useDocs } from '../../context/DocContext.jsx'
 import { useRsaUI } from '../../context/RsaUIContext.jsx'
 import { getDisplayStatus } from '../../utils/documentStatus.js'
 import VersionBadge from '../../components/VersionBadge.jsx'
+import ReviewerHighlightBadges from '../../components/ReviewerHighlightBadges.jsx'
 
 function bufmStatusLabel(doc) {
   const d = getDisplayStatus(doc, 'BUFM')
@@ -149,6 +150,7 @@ export default function KmtReportsBody() {
                               POC update
                             </span>
                           )}
+                          <ReviewerHighlightBadges source={doc} />
                         </td>
                         <td><VersionBadge doc={doc} /></td>
                         <td>{doc.pocName || '—'}</td>
@@ -238,6 +240,7 @@ export default function KmtReportsBody() {
                             POC update
                           </span>
                         )}
+                        <ReviewerHighlightBadges source={sub} variant="rsa" />
                       </td>
                       <td>{sub.pocName || '—'}</td>
                       <td>

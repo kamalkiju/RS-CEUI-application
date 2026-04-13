@@ -180,3 +180,52 @@ export function buildPocUpdateFlagSets(source) {
   addList(source?.poc_updated_fields, fields)
   return { sections, fields }
 }
+
+/**
+ * Human-readable labels + counts for reviewer flags (queues, lists).
+ * If top-level rejection fields were cleared on resubmit, falls back to the latest reject entry in reviewAuditTrail.
+ */
+export function getReviewerHighlightDisplay(source) {
+  const fromDoc = collectReviewerHighlightDisplay(source)
+  if (fromDoc.sectionCount > 0 || fromDoc.fieldCount > 0) return fromDoc
+
+  const trail = source?.reviewAuditTrail
+  if (!Array.isArray(trail) || !trail.length) return fromDoc
+
+  for (let i = trail.length - 1; i >= 0; i--) {
+    const e = trail[i]
+    if (e?.action !== 'reject') continue
+    const merged = collectReviewerHighlightDisplay({
+      rejection_highlight_sections: e.highlightSections,
+      rejection_highlight_fields: e.highlightFields,
+      rejection_feedback_items: e.feedbackItems,
+    })
+    if (merged.sectionCount > 0 || merged.fieldCount > 0) return merged
+  }
+  return fromDoc
+}
+
+function collectReviewerHighlightDisplay(source) {
+  const rs = buildReviewerFlagSets(source || {})
+  const seen = new Set()
+  const labels = []
+  const add = raw => {
+    const t = String(raw ?? '').trim()
+    if (!t) return
+    const k = normalizeLabel(t)
+    if (seen.has(k)) return
+    seen.add(k)
+    labels.push(t)
+  }
+  for (const x of source?.rejection_highlight_sections || []) add(x)
+  for (const x of source?.rejection_highlight_fields || []) add(x)
+  for (const it of source?.rejection_feedback_items || []) {
+    if (it?.label) add(it.label)
+  }
+  return {
+    sectionCount: rs.sections.size,
+    fieldCount: rs.fields.size,
+    labels,
+    tooltip: labels.length ? labels.join(' · ') : '',
+  }
+}

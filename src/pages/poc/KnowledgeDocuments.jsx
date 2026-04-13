@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { useRsaUI } from '../../context/RsaUIContext.jsx'
 import { getDisplayStatus, isRejectedTaskStatus } from '../../utils/documentStatus.js'
 import { bumpMajorVersion, inferDocVersion } from '../../utils/documentVersion.js'
+import ReviewerHighlightBadges from '../../components/ReviewerHighlightBadges.jsx'
 
 const STATUS_ICONS = {
   rejected: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
@@ -46,6 +47,10 @@ export default function KnowledgeDocuments() {
       tabs: ['rejected-tasks'],
       rejection_comment_BUFM: s.rejection_comment_BUFM,
       rejection_comment_KMT: s.rejection_comment_KMT,
+      rejection_highlight_sections: s.rejection_highlight_sections,
+      rejection_highlight_fields: s.rejection_highlight_fields,
+      rejection_feedback_items: s.rejection_feedback_items,
+      reviewAuditTrail: s.reviewAuditTrail,
     }))
 
   const mergedRows = [
@@ -229,6 +234,13 @@ export default function KnowledgeDocuments() {
                         {row.id}
                       </button>
                       <div className="kd-doc-sub">{row.sub}</div>
+                      {(activeTab === 'rejected-tasks' || activeTab === 'approval') && (
+                        <ReviewerHighlightBadges
+                          source={row}
+                          variant={row._kind === 'rsa' ? 'rsa' : 'default'}
+                          stacked
+                        />
+                      )}
                     </td>
                     <td onClick={e => e.stopPropagation()}>{versionNode}</td>
                     <td>{row.area}</td>

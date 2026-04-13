@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Layout from '../../components/Layout.jsx'
 import { useRsaUI, RSA_STATUS } from '../../context/RsaUIContext.jsx'
+import ReviewerHighlightBadges from '../../components/ReviewerHighlightBadges.jsx'
 
 const STATUS_CLASS = {
   [RSA_STATUS.Draft]: 'kd-status draft',
@@ -108,9 +109,9 @@ export default function RsaUIList({ syncTabToUrl = false }) {
   }
 
   const filtered = useMemo(() => {
-    const list = [...submissions]
+    const list = submissions.filter(s => matchesFilter(s, filterId))
     return list.sort((a, b) => String(b.updated).localeCompare(String(a.updated)))
-  }, [submissions])
+  }, [submissions, filterId])
 
   const visibleRows = useMemo(() => filtered.slice(0, 10), [filtered])
 
@@ -306,7 +307,8 @@ export default function RsaUIList({ syncTabToUrl = false }) {
                           <span className={STATUS_CLASS[sub.status] || 'kd-status draft'}>{sub.status?.replace(/_/g, ' ')}</span>
                         </td>
                         <td className="rsa-ui-list-comment" title={comment || undefined}>
-                          {comment ? truncate(comment) : '—'}
+                          <div>{comment ? truncate(comment) : '—'}</div>
+                          <ReviewerHighlightBadges source={sub} variant="rsa" stacked />
                         </td>
                         <td>{sub.updated}</td>
                         <td className="kd-actions rsa-ui-list-actions rsa-ui-list-actions--wrap">
