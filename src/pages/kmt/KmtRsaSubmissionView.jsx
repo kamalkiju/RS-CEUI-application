@@ -370,6 +370,7 @@ export default function KmtRsaSubmissionView() {
         open={rejectOpen}
         title="Reject RSAUI submission"
         roleLabel="KMT"
+        variant="rsa"
         enableAuditTrail
         onClose={() => setRejectOpen(false)}
         onConfirm={payload => {

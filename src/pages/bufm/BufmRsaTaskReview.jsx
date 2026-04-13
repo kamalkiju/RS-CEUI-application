@@ -4,6 +4,7 @@ import Layout from '../../components/Layout.jsx'
 import { useRsaUI, RSA_STATUS } from '../../context/RsaUIContext.jsx'
 import RsaSubmissionDetailView from '../../components/rsa/RsaSubmissionDetailView.jsx'
 import RsaDocumentFullscreenModal from '../../components/rsa/RsaDocumentFullscreenModal.jsx'
+import RejectModal from '../../components/RejectModal.jsx'
 
 const REVIEWERS = ['Robert Chen', 'Maria Wilson', 'Jane Wilson', 'Alex Morgan']
 
@@ -20,7 +21,7 @@ function priorityClass(p) {
 export default function BufmRsaTaskReview() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getSubmission, approveBUFM, releaseBufmToUnclaimed } = useRsaUI()
+  const { getSubmission, approveBUFM, rejectBUFM, releaseBufmToUnclaimed } = useRsaUI()
   const decodedId = id ? decodeURIComponent(id) : ''
   const sub = decodedId ? getSubmission(decodedId) : null
 
@@ -30,6 +31,7 @@ export default function BufmRsaTaskReview() {
   const [releaseTo, setReleaseTo] = useState('')
   const [releaseNote, setReleaseNote] = useState('')
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
+  const [rejectOpen, setRejectOpen] = useState(false)
 
   if (!sub) {
     return (
@@ -180,7 +182,7 @@ export default function BufmRsaTaskReview() {
                   <button type="button" className="btn btn-outline" onClick={() => setReleaseOpen(true)}>
                     Release task
                   </button>
-                  <button type="button" className="btn btn-outline" onClick={() => navigate(`/bufm/reject/${encodeURIComponent(sub.id)}`)}>
+                  <button type="button" className="btn btn-outline" onClick={() => setRejectOpen(true)}>
                     Reject
                   </button>
                   <button type="button" className="btn btn-primary" onClick={handleApproveClick}>
@@ -206,6 +208,20 @@ export default function BufmRsaTaskReview() {
           <RsaSubmissionDetailView {...bufmFullscreenDetailProps} />
         </div>
       </RsaDocumentFullscreenModal>
+
+      <RejectModal
+        open={rejectOpen}
+        title="Reject RSAUI submission"
+        roleLabel="BUFM"
+        variant="rsa"
+        enableAuditTrail
+        onClose={() => setRejectOpen(false)}
+        onConfirm={payload => {
+          rejectBUFM(sub.id, payload)
+          window.alert('✓ Task returned to requestor with your feedback')
+          navigate(`${BUFM_RSA_HOME}/rejected`)
+        }}
+      />
 
       {approveOpen && (
         <div className="rsa-modal-backdrop" role="dialog" aria-modal="true">

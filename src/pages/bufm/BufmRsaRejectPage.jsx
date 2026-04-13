@@ -61,6 +61,7 @@ export default function BufmRsaRejectPage() {
           open={modalOpen}
           title="Reject RSAUI submission"
           roleLabel="BUFM"
+          variant="rsa"
           enableAuditTrail
           onClose={() => {
             setModalOpen(false)

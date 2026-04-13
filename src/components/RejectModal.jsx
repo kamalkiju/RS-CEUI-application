@@ -6,6 +6,9 @@ const emptyRow = () => ({ scope: 'section', label: '', comment: '' })
 /**
  * BUFM / KMT rejection — comment required. Optional structured audit: section/field rows with per-item comments.
  */
+/** CEUI knowledge wizard vs RSAUI service-area submission — adjusts examples and placeholders. */
+const VARIANT = { ceui: 'ceui', rsa: 'rsa' }
+
 export default function RejectModal({
   open,
   title,
@@ -13,6 +16,8 @@ export default function RejectModal({
   onConfirm,
   roleLabel = 'Reviewer',
   enableAuditTrail = false,
+  /** @type {'ceui' | 'rsa'} */
+  variant = VARIANT.ceui,
 }) {
   const [comment, setComment] = useState('')
   const [rows, setRows] = useState([emptyRow()])
@@ -29,6 +34,22 @@ export default function RejectModal({
   }, [open])
 
   if (!open) return null
+
+  const isRsa = variant === VARIANT.rsa
+  const auditHint = isRsa ? (
+    <>
+      <strong>Specific feedback (recommended):</strong> add one row per RSAUI section or field label. Use the same names as on the submission (e.g.{' '}
+      <em>Service area details</em>, <em>Division</em>, <em>Categories</em>, <em>Polygon ID</em>) so the POC view highlights them.
+    </>
+  ) : (
+    <>
+      <strong>Specific feedback (recommended):</strong> add one row per section or field. Use the same names as in the document (e.g. <em>Fees</em>,{' '}
+      <em>Contract effective date</em>) so the POC view can highlight them.
+    </>
+  )
+  const labelPlaceholder = isRsa
+    ? 'e.g. Service area details / Division / Categories'
+    : 'e.g. Fees / Knowledge Area'
 
   const updateRow = (index, patch) => {
     setRows(prev => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)))
@@ -78,7 +99,10 @@ export default function RejectModal({
     <div className="reject-modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="reject-modal reject-modal--wide" role="dialog" aria-labelledby="reject-modal-title">
         <h2 id="reject-modal-title" className="reject-modal__title">{title || 'Reject submission'}</h2>
-        <p className="reject-modal__sub">{roleLabel} — a summary comment is required for the POC to address feedback.</p>
+        <p className="reject-modal__sub">
+          {roleLabel} — a summary comment is required for the POC to address feedback.
+          {isRsa && ' Labels should match the RSAUI read-only detail view (task, requestor, service area, categories).'}
+        </p>
         <label className="reject-modal__label" htmlFor="reject-comment">Summary comment <span className="req">*</span></label>
         <textarea
           id="reject-comment"
@@ -92,9 +116,22 @@ export default function RejectModal({
 
         {enableAuditTrail && (
           <>
-            <p className="reject-modal__audit-hint">
-              <strong>Specific feedback (recommended):</strong> add one row per section or field. Use the same names as in the document (e.g. <em>Fees</em>, <em>Contract effective date</em>) so the POC view can highlight them.
-            </p>
+            <p className="reject-modal__audit-hint">{auditHint}</p>
+            {isRsa && (
+              <datalist id="rsa-reject-labels">
+                <option value="Task details" />
+                <option value="Requestor information" />
+                <option value="Service area details" />
+                <option value="Categories" />
+                <option value="Creator Name" />
+                <option value="Requestor name" />
+                <option value="Service area name" />
+                <option value="Polygon ID" />
+                <option value="Division" />
+                <option value="Effective Date" />
+                <option value="Expiration Date" />
+              </datalist>
+            )}
             <div className="reject-modal__feedback-rows">
               {rows.map((r, i) => (
                 <div key={i} className="reject-modal__feedback-row">
@@ -120,7 +157,8 @@ export default function RejectModal({
                     className="reject-modal__input"
                     value={r.label}
                     onChange={e => updateRow(i, { label: e.target.value })}
-                    placeholder="e.g. Fees / Knowledge Area"
+                    placeholder={labelPlaceholder}
+                    list={isRsa ? 'rsa-reject-labels' : undefined}
                   />
                   <label className="reject-modal__label reject-modal__label--sm" htmlFor={`rf-com-${i}`}>
                     Comment for this item
