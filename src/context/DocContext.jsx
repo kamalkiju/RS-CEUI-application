@@ -192,6 +192,10 @@ const INITIAL_DOCS = [
     pocName: 'Jordan Lee',
     pocEmail: 'jordan.lee@republicservices.com',
     pocRegion: 'Southeast',
+    pocResubmissionNote:
+      'Revised document title and contract dates; clarified payment terms per prior BUFM feedback.',
+    poc_updated_sections: ['Basic Information', 'Payment & Billing Terms'],
+    poc_updated_fields: ['Document title', 'Contract activation date', 'Payment terms'],
   },
   {
     id: 'K-5040',

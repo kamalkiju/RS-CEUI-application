@@ -89,8 +89,8 @@ export default function ReadOnlyFieldsAccordion({
                   label={f.label}
                   value={f.value}
                   multiline={f.multiline}
-                  highlighted={fieldFlags ? fieldFlags(f.label) : false}
-                  pocUpdated={pocFieldFlags ? pocFieldFlags(f.label) : false}
+                  highlighted={sectionFlagged || (fieldFlags ? fieldFlags(f.label) : false)}
+                  pocUpdated={pocSectionFlagged || (pocFieldFlags ? pocFieldFlags(f.label) : false)}
                 />
               </div>
             ))}
