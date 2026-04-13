@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
+import { buildFeedbackItem, buildHighlightsFromFeedbackItems } from '../utils/reviewFeedback.js'
+
+const emptyRow = () => ({ scope: 'section', label: '', comment: '' })
 
 /**
- * BUFM / KMT rejection — comment required. Optional audit trail: sections / fields to highlight for POC.
+ * BUFM / KMT rejection — comment required. Optional structured audit: section/field rows with per-item comments.
  */
 export default function RejectModal({
   open,
@@ -12,20 +15,31 @@ export default function RejectModal({
   enableAuditTrail = false,
 }) {
   const [comment, setComment] = useState('')
-  const [sections, setSections] = useState('')
-  const [fields, setFields] = useState('')
+  const [rows, setRows] = useState([emptyRow()])
   const [err, setErr] = useState(false)
+  const [rowErr, setRowErr] = useState('')
 
   useEffect(() => {
     if (open) {
       setComment('')
-      setSections('')
-      setFields('')
+      setRows([emptyRow()])
       setErr(false)
+      setRowErr('')
     }
   }, [open])
 
   if (!open) return null
+
+  const updateRow = (index, patch) => {
+    setRows(prev => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)))
+    setRowErr('')
+  }
+
+  const addRow = () => setRows(prev => [...prev, emptyRow()])
+  const removeRow = index => {
+    setRows(prev => (prev.length <= 1 ? [emptyRow()] : prev.filter((_, i) => i !== index)))
+    setRowErr('')
+  }
 
   const submit = () => {
     const t = comment.trim()
@@ -33,17 +47,26 @@ export default function RejectModal({
       setErr(true)
       return
     }
+
     if (enableAuditTrail) {
+      const feedbackItems = []
+      for (const r of rows) {
+        const label = r.label.trim()
+        const c = r.comment.trim()
+        if (!label && !c) continue
+        if (!label || !c) {
+          setRowErr('Each started row needs both a label and a comment (or clear the row).')
+          return
+        }
+        const item = buildFeedbackItem(r.scope, label, c)
+        if (item) feedbackItems.push(item)
+      }
+      const { highlightSections, highlightFields } = buildHighlightsFromFeedbackItems(feedbackItems)
       onConfirm({
         comment: t,
-        highlightSections: sections
-          .split(/[,;\n]/)
-          .map(s => s.trim())
-          .filter(Boolean),
-        highlightFields: fields
-          .split(/[,;\n]/)
-          .map(s => s.trim())
-          .filter(Boolean),
+        feedbackItems,
+        highlightSections,
+        highlightFields,
       })
     } else {
       onConfirm(t)
@@ -55,41 +78,68 @@ export default function RejectModal({
     <div className="reject-modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="reject-modal reject-modal--wide" role="dialog" aria-labelledby="reject-modal-title">
         <h2 id="reject-modal-title" className="reject-modal__title">{title || 'Reject submission'}</h2>
-        <p className="reject-modal__sub">{roleLabel} — a comment is required for the POC to address feedback.</p>
-        <label className="reject-modal__label" htmlFor="reject-comment">Comment <span className="req">*</span></label>
+        <p className="reject-modal__sub">{roleLabel} — a summary comment is required for the POC to address feedback.</p>
+        <label className="reject-modal__label" htmlFor="reject-comment">Summary comment <span className="req">*</span></label>
         <textarea
           id="reject-comment"
           className={`reject-modal__textarea${err ? ' reject-modal__textarea--err' : ''}`}
           rows={5}
           value={comment}
           onChange={e => { setComment(e.target.value); setErr(false) }}
-          placeholder="Explain what must change before resubmission…"
+          placeholder="Summarize what must change before resubmission…"
         />
         {err && <p className="reject-modal__err">Please enter a comment.</p>}
 
         {enableAuditTrail && (
           <>
             <p className="reject-modal__audit-hint">
-              Audit trail (optional): list wizard <strong>sections</strong> or <strong>fields</strong> the POC should focus on — shown as highlights when they rework the document.
+              <strong>Specific feedback (recommended):</strong> add one row per section or field. Use the same names as in the document (e.g. <em>Fees</em>, <em>Contract effective date</em>) so the POC view can highlight them.
             </p>
-            <label className="reject-modal__label" htmlFor="reject-sections">Sections to highlight</label>
-            <textarea
-              id="reject-sections"
-              className="reject-modal__textarea reject-modal__textarea--sm"
-              rows={2}
-              value={sections}
-              onChange={e => setSections(e.target.value)}
-              placeholder="e.g. Knowledge Area, Fees — comma or newline separated"
-            />
-            <label className="reject-modal__label" htmlFor="reject-fields">Fields to highlight</label>
-            <textarea
-              id="reject-fields"
-              className="reject-modal__textarea reject-modal__textarea--sm"
-              rows={2}
-              value={fields}
-              onChange={e => setFields(e.target.value)}
-              placeholder="e.g. Contract effective date, Recycling contamination — comma or newline separated"
-            />
+            <div className="reject-modal__feedback-rows">
+              {rows.map((r, i) => (
+                <div key={i} className="reject-modal__feedback-row">
+                  <div className="reject-modal__feedback-row-head">
+                    <select
+                      className="reject-modal__select"
+                      aria-label={`Row ${i + 1} scope`}
+                      value={r.scope}
+                      onChange={e => updateRow(i, { scope: e.target.value })}
+                    >
+                      <option value="section">Section</option>
+                      <option value="field">Field</option>
+                    </select>
+                    <button type="button" className="btn btn-text btn-sm reject-modal__row-remove" onClick={() => removeRow(i)}>
+                      Remove
+                    </button>
+                  </div>
+                  <label className="reject-modal__label reject-modal__label--sm" htmlFor={`rf-label-${i}`}>
+                    Section or field label
+                  </label>
+                  <input
+                    id={`rf-label-${i}`}
+                    className="reject-modal__input"
+                    value={r.label}
+                    onChange={e => updateRow(i, { label: e.target.value })}
+                    placeholder="e.g. Fees / Knowledge Area"
+                  />
+                  <label className="reject-modal__label reject-modal__label--sm" htmlFor={`rf-com-${i}`}>
+                    Comment for this item
+                  </label>
+                  <textarea
+                    id={`rf-com-${i}`}
+                    className="reject-modal__textarea reject-modal__textarea--sm"
+                    rows={2}
+                    value={r.comment}
+                    onChange={e => updateRow(i, { comment: e.target.value })}
+                    placeholder="What to fix here…"
+                  />
+                </div>
+              ))}
+            </div>
+            <button type="button" className="btn btn-outline btn-sm reject-modal__add-row" onClick={addRow}>
+              + Add section / field
+            </button>
+            {rowErr && <p className="reject-modal__err">{rowErr}</p>}
           </>
         )}
 

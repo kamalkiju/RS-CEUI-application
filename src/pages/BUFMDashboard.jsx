@@ -128,9 +128,10 @@ export default function BUFMDashboard() {
         open={!!rejectId}
         title="Reject RSAUI submission"
         roleLabel="BUFM"
+        enableAuditTrail
         onClose={() => setRejectId(null)}
-        onConfirm={(comment) => {
-          if (rejectId) rejectBUFM(rejectId, comment)
+        onConfirm={payload => {
+          if (rejectId) rejectBUFM(rejectId, payload)
         }}
       />
     </Layout>

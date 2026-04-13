@@ -9,6 +9,7 @@ export default function RejectionBanner({
   fallbackNote,
   highlightSections = [],
   highlightFields = [],
+  feedbackItems = [],
 }) {
   const s = String(status ?? '')
   const lower = s.toLowerCase()
@@ -21,8 +22,11 @@ export default function RejectionBanner({
     ? (rejection_comment_KMT || fallbackNote)
     : (rejection_comment_BUFM || fallbackNote)
 
+  const items = Array.isArray(feedbackItems) ? feedbackItems : []
   const sec = Array.isArray(highlightSections) ? highlightSections : []
   const fld = Array.isArray(highlightFields) ? highlightFields : []
+
+  const showLegacyLists = items.length === 0 && (sec.length > 0 || fld.length > 0)
 
   return (
     <div className="rejection-banner" role="status">
@@ -32,9 +36,29 @@ export default function RejectionBanner({
           <span className="rejection-banner__label">Comment:</span> {comment}
         </div>
       )}
-      {(sec.length > 0 || fld.length > 0) && (
+      {items.length > 0 && (
         <div className="rejection-banner__audit">
-          <div className="rejection-banner__audit-title">Reviewer highlights — address these areas</div>
+          <div className="rejection-banner__audit-title">Item-by-item feedback</div>
+          <ul className="rejection-banner__audit-list">
+            {items.map((it, i) => (
+              <li key={it.id || `it-${i}`}>
+                <span className={`rejection-banner__tag${it.scope === 'field' ? ' rejection-banner__tag--field' : ''}`}>
+                  {it.scope === 'field' ? 'Field' : 'Section'}
+                </span>{' '}
+                <strong>{it.label}</strong>
+                {it.comment && (
+                  <span className="rejection-banner__item-comment">{it.comment}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {showLegacyLists && (
+        <div className="rejection-banner__audit">
+          <div className="rejection-banner__audit-title rejection-banner__audit-title--caps">
+            Reviewer highlights — address these areas
+          </div>
           {sec.length > 0 && (
             <ul className="rejection-banner__audit-list">
               {sec.map((x, i) => (

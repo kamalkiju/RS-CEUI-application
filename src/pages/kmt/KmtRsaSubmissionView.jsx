@@ -370,9 +370,10 @@ export default function KmtRsaSubmissionView() {
         open={rejectOpen}
         title="Reject RSAUI submission"
         roleLabel="KMT"
+        enableAuditTrail
         onClose={() => setRejectOpen(false)}
-        onConfirm={comment => {
-          rejectKMT(sub.id, comment)
+        onConfirm={payload => {
+          rejectKMT(sub.id, payload)
           navigate(paths.rejected)
         }}
       />

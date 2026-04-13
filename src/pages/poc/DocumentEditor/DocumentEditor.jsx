@@ -14,6 +14,7 @@ import { useDocs } from '../../../context/DocContext.jsx'
 import { useAuth } from '../../../context/AuthContext.jsx'
 import { getDisplayStatus } from '../../../utils/documentStatus.js'
 import { inferDocVersion, getCaseStageDisplay } from '../../../utils/documentVersion.js'
+import { diffReadOnlySnapshots } from './documentWizardReadOnlyModel.js'
 
 const STEPS = [
   { num: 1, name: 'Knowledge Area',    count: '0/9' },
@@ -94,7 +95,7 @@ export default function DocumentEditor() {
   const navigate  = useNavigate()
   const location  = useLocation()
   const { user } = useAuth()
-  const { updateDoc } = useDocs()
+  const { updateDoc, getDocumentById } = useDocs()
 
   // Document data passed from the list or create flow
   const { doc, mode, previewOnly } = location.state || {}
@@ -153,7 +154,52 @@ export default function DocumentEditor() {
   }
 
   const handleSubmit = () => {
-    if (doc?.id) updateDoc(doc.id, { status: 'pending', tabs: ['approval', 'all'] })
+    if (!doc?.id) return
+    const latest = getDocumentById(doc.id) || doc
+    let pocResubmissionNote = ''
+    if (String(latest.status ?? '').toLowerCase().includes('rejected')) {
+      pocResubmissionNote =
+        window.prompt(
+          'Optional: describe what you changed for BUFM/KMT reviewers (shown on the next review):',
+          '',
+        )?.trim() || ''
+    }
+    const trail = latest.reviewAuditTrail || []
+    const isRejected = String(latest.status ?? '').toLowerCase().includes('rejected')
+    let pocDiff = {}
+    let pocUpdatedSections = []
+    let pocUpdatedFields = []
+    if (isRejected && latest.rejection_readonly_snapshot) {
+      const d = diffReadOnlySnapshots(latest.rejection_readonly_snapshot, latest)
+      pocUpdatedSections = d.sections
+      pocUpdatedFields = d.fields
+      pocDiff = {
+        poc_updated_sections: pocUpdatedSections,
+        poc_updated_fields: pocUpdatedFields,
+        rejection_readonly_snapshot: undefined,
+      }
+    }
+    updateDoc(doc.id, {
+      status: 'pending',
+      tabs: ['approval', 'all'],
+      ...(pocResubmissionNote ? { pocResubmissionNote } : {}),
+      ...pocDiff,
+      ...(isRejected
+        ? {
+            reviewAuditTrail: [
+              ...trail,
+              {
+                at: new Date().toISOString(),
+                role: 'POC',
+                action: 'resubmit',
+                comment: pocResubmissionNote,
+                pocUpdatedSections,
+                pocUpdatedFields,
+              },
+            ],
+          }
+        : {}),
+    })
     setShowSuccess(true)
   }
 
@@ -320,6 +366,7 @@ export default function DocumentEditor() {
             fallbackNote={doc.rejectionNote}
             highlightSections={doc.rejection_highlight_sections || []}
             highlightFields={doc.rejection_highlight_fields || []}
+            feedbackItems={doc.rejection_feedback_items || []}
           />
         </div>
       )}

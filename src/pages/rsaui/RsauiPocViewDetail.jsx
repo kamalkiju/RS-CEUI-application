@@ -62,6 +62,14 @@ export default function RsauiPocViewDetail() {
 
   const doSendForApproval = async () => {
     if (!window.confirm('Send this request for BUFM approval?')) return
+    let pocResubmissionNote = ''
+    if (sub.status === RSA_STATUS.Rejected_BUFM || sub.status === RSA_STATUS.Rejected_KMT) {
+      pocResubmissionNote =
+        window.prompt(
+          'Optional: describe what you changed for BUFM/KMT reviewers (shown on the next review):',
+          '',
+        )?.trim() || ''
+    }
     await submitToBufm(sub.id, {
       serviceArea: sub.serviceArea,
       pricing: sub.pricing,
@@ -70,6 +78,7 @@ export default function RsauiPocViewDetail() {
       requestMeta: sub.requestMeta,
       pocName: sub.pocName || rm.requestorName,
       assignedBufmReviewer: sub.assignedBufmReviewer || rm.assignedBUFM || 'Jane Wilson',
+      ...(pocResubmissionNote ? { pocResubmissionNote } : {}),
     })
     window.alert('✓ Sent for approval')
     navigate('/poc/document-review?tab=awaiting')

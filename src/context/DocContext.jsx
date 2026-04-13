@@ -95,6 +95,20 @@ const INITIAL_DOCS = [
       'Contract renewal dates and city ordinance effective dates are misaligned. Update Article 4 dates and resubmit.',
     rejection_highlight_sections: ['Fees', 'Knowledge Area'],
     rejection_highlight_fields: ['Contract effective date', 'City ordinance reference'],
+    rejection_feedback_items: [
+      {
+        id: 'fb-seed-1',
+        scope: 'section',
+        label: 'Fees',
+        comment: 'Confirm ERF and franchise fee lines match the city fee ordinance table.',
+      },
+      {
+        id: 'fb-seed-2',
+        scope: 'field',
+        label: 'Contract effective date',
+        comment: 'Must align with Article 4 and the city ordinance effective date.',
+      },
+    ],
     rejectionNote:
       'BUFM: Contract renewal dates and city ordinance effective dates are misaligned. Update Article 4 dates and resubmit.',
     createdByUserId: 'poc-user-1',

@@ -1,7 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Layout from '../../components/Layout.jsx'
 import { useRsaUI, RSA_STATUS } from '../../context/RsaUIContext.jsx'
+import RejectModal from '../../components/RejectModal.jsx'
+
 const BUFM_RSA_HOME = '/bufm/document-review/rsaui'
 
 export default function BufmRsaRejectPage() {
@@ -9,8 +11,12 @@ export default function BufmRsaRejectPage() {
   const navigate = useNavigate()
   const { getSubmission, rejectBUFM } = useRsaUI()
   const sub = id ? getSubmission(id) : null
-  const [comment, setComment] = useState('')
-  const [err, setErr] = useState('')
+  const [modalOpen, setModalOpen] = useState(true)
+  const confirmedRef = useRef(false)
+
+  useEffect(() => {
+    confirmedRef.current = false
+  }, [sub?.id])
 
   if (!sub) {
     return (
@@ -34,39 +40,35 @@ export default function BufmRsaRejectPage() {
     )
   }
 
-  const submit = () => {
-    const t = comment.trim()
-    if (t.length < 20) {
-      setErr('Rejection comment is required (minimum 20 characters)')
-      return
-    }
-    setErr('')
-    if (!window.confirm(`Reject and Return to Requestor?\n\n"${sub.serviceArea?.name || sub.id}" will be returned to ${sub.pocName || 'the requestor'} with your rejection note.`)) return
-    rejectBUFM(sub.id, t)
+  const goBack = () => navigate(`/bufm/review/${encodeURIComponent(sub.id)}`)
+
+  const onConfirm = payload => {
+    confirmedRef.current = true
+    rejectBUFM(sub.id, payload)
     window.alert('✓ Task Returned to Requestor')
     navigate(`${BUFM_RSA_HOME}/rejected`)
   }
 
   return (
     <Layout>
-    <div className="bufm-rsa-page bufm-rsa-reject">
-      <button type="button" className="btn btn-text" onClick={() => navigate(`/bufm/review/${encodeURIComponent(sub.id)}`)}>← Back to Review</button>
-      <h1>Reject &amp; Return to Requestor</h1>
-      <div className="rsa-alert rsa-alert--danger">
-        Rejection will be sent to the POC. They can edit and resubmit.
+      <div className="bufm-rsa-page bufm-rsa-reject">
+        <button type="button" className="btn btn-text" onClick={goBack}>← Back to Review</button>
+        <h1>Reject &amp; Return to Requestor</h1>
+        <div className="rsa-alert rsa-alert--danger">
+          Add a summary comment and optional section/field feedback. The POC will see highlights on the submission.
+        </div>
+        <RejectModal
+          open={modalOpen}
+          title="Reject RSAUI submission"
+          roleLabel="BUFM"
+          enableAuditTrail
+          onClose={() => {
+            setModalOpen(false)
+            if (!confirmedRef.current) goBack()
+          }}
+          onConfirm={onConfirm}
+        />
       </div>
-      <label className="rsa-ui-field rsa-ui-field--full">
-        <span>Rejection Comment * (min 20 characters)</span>
-        <textarea rows={6} value={comment} onChange={e => { setComment(e.target.value); setErr('') }} placeholder="Explain what must be corrected…" />
-      </label>
-      {err && <p className="rsa-field-error">{err}</p>}
-      <div className="rsa-step-actions">
-        <button type="button" className="btn btn-outline" onClick={() => navigate(`/bufm/review/${encodeURIComponent(sub.id)}`)}>← Back to Review</button>
-        <button type="button" className="btn btn-primary" disabled={comment.trim().length < 20} onClick={submit}>
-          Reject &amp; Return to Requestor
-        </button>
-      </div>
-    </div>
     </Layout>
   )
 }

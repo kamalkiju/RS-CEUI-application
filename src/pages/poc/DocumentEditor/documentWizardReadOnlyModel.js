@@ -1,3 +1,5 @@
+import { normalizeLabel } from '../../../utils/reviewFeedback.js'
+
 const STEP_HEADINGS = {
   1: {
     title: 'Residential Services Knowledge Area',
@@ -240,4 +242,51 @@ export function getReadOnlyStepSections(doc, step) {
     default:
       return []
   }
+}
+
+/**
+ * Flat snapshot of read-only preview values for diffing after rejection (POC resubmit vs reviewer baseline).
+ */
+export function buildReadOnlyFieldSnapshot(doc) {
+  const entries = []
+  for (let step = 1; step <= 5; step++) {
+    const sections = getReadOnlyStepSections(doc, step)
+    for (const sec of sections) {
+      for (const f of sec.fields || []) {
+        const v = f.value === undefined || f.value === null ? '' : String(f.value)
+        entries.push({
+          step,
+          sectionTitle: sec.title,
+          fieldLabel: f.label,
+          value: v,
+        })
+      }
+    }
+  }
+  return { capturedAt: new Date().toISOString(), entries }
+}
+
+/**
+ * Compare rejection-time snapshot to current doc; returns section titles and field labels that changed.
+ */
+export function diffReadOnlySnapshots(baseline, doc) {
+  if (!baseline?.entries?.length) return { sections: [], fields: [] }
+  const current = buildReadOnlyFieldSnapshot(doc)
+  const map = new Map()
+  for (const e of current.entries) {
+    const key = `${e.step}|${normalizeLabel(e.sectionTitle)}|${normalizeLabel(e.fieldLabel)}`
+    map.set(key, e.value)
+  }
+  const changedSections = new Set()
+  const changedFields = new Set()
+  for (const e of baseline.entries) {
+    const key = `${e.step}|${normalizeLabel(e.sectionTitle)}|${normalizeLabel(e.fieldLabel)}`
+    const prev = e.value === undefined || e.value === null ? '' : String(e.value)
+    const next = map.has(key) ? map.get(key) : ''
+    if (prev !== next) {
+      changedSections.add(e.sectionTitle)
+      changedFields.add(e.fieldLabel)
+    }
+  }
+  return { sections: [...changedSections], fields: [...changedFields] }
 }

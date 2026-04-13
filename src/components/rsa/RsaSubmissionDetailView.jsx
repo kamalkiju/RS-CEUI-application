@@ -1,6 +1,13 @@
-import { Fragment, useMemo, useState, useEffect } from 'react'
+import { Fragment, useMemo, useState, useEffect, useCallback } from 'react'
 import { RSA_STATUS } from '../../context/RsaUIContext.jsx'
 import { mergeProductTabs, productTabKeyOrder } from '../../utils/rsaProductTabs.js'
+import RejectionBanner from '../RejectionBanner.jsx'
+import {
+  buildReviewerFlagSets,
+  isFieldFlagged,
+  isSectionFlagged,
+  lastRejectTrailEntry,
+} from '../../utils/reviewFeedback.js'
 
 function WorkflowTimeline({ sub, sectionClassSuffix = '' }) {
   const poc = sub.pocName || sub.requestMeta?.requestorName || 'POC'
@@ -144,6 +151,9 @@ export default function RsaSubmissionDetailView({
 }) {
   const merged = useMemo(() => mergeProductTabs(sub?.productTabs), [sub?.productTabs])
   const tabKeys = useMemo(() => productTabKeyOrder(merged), [merged])
+  const flagSets = useMemo(() => buildReviewerFlagSets(sub || {}), [sub])
+  const fieldFlags = useCallback(l => isFieldFlagged(l, flagSets.fields), [flagSets.fields])
+  const lastBufmReject = useMemo(() => lastRejectTrailEntry(sub?.reviewAuditTrail, 'BUFM'), [sub?.reviewAuditTrail])
   const [catKey, setCatKey] = useState('solidWaste')
   const [showActiveOnly, setShowActiveOnly] = useState(false)
   const [expanded, setExpanded] = useState({})
@@ -159,7 +169,11 @@ export default function RsaSubmissionDetailView({
   const u = unifiedPanel ? ' rsa-detail-section--unified' : ''
 
   const categoriesBlock = (
-    <section className={`rsa-detail-section rsa-categories-block${u}`}>
+    <section
+      className={`rsa-detail-section rsa-categories-block${u}${
+        isSectionFlagged('Categories', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
+      }`}
+    >
       <div className="rsa-categories-head">
         <h3>Categories</h3>
         <label className="rsa-toggle-active">
@@ -239,54 +253,166 @@ export default function RsaSubmissionDetailView({
           <strong>⚠ EXPIRY WARNING:</strong> {expiryBanner}
         </div>
       )}
-      {rejectionNote && (
-        <div className="rsa-alert rsa-alert--danger rsa-detail-unified-banner">
-          <strong>{rejectionTitle}:</strong> {rejectionNote}
-        </div>
-      )}
+      {sub &&
+        (sub.status === RSA_STATUS.Rejected_BUFM || sub.status === RSA_STATUS.Rejected_KMT) && (
+          <div className="rsa-detail-unified-banner">
+            <RejectionBanner
+              status={sub.status === RSA_STATUS.Rejected_KMT ? 'Rejected_KMT' : 'Rejected_BUFM'}
+              rejection_comment_BUFM={sub.rejection_comment_BUFM}
+              rejection_comment_KMT={sub.rejection_comment_KMT}
+              highlightSections={sub.rejection_highlight_sections || []}
+              highlightFields={sub.rejection_highlight_fields || []}
+              feedbackItems={sub.rejection_feedback_items || []}
+            />
+          </div>
+        )}
+      {sub &&
+        sub.status === RSA_STATUS.Pending_BUFM &&
+        sub.pocResubmissionNote && (
+          <div className="rsa-poc-resubmit-note rsa-detail-unified-banner" role="status">
+            <strong>POC resubmission note</strong>
+            {sub.pocResubmissionNote}
+          </div>
+        )}
+      {sub &&
+        sub.status === RSA_STATUS.Pending_BUFM &&
+        lastBufmReject &&
+        (lastBufmReject.feedbackItems?.length > 0 || lastBufmReject.comment) && (
+          <div className="rsa-reviewer-verify rsa-detail-unified-banner" role="region" aria-label="Prior BUFM feedback">
+            <strong>Verify prior feedback</strong>
+            {lastBufmReject.comment && <p style={{ margin: '0 0 8px' }}>{lastBufmReject.comment}</p>}
+            {lastBufmReject.feedbackItems?.length > 0 && (
+              <ul>
+                {lastBufmReject.feedbackItems.map((it, i) => (
+                  <li key={it.id || i}>
+                    <strong>{it.label}</strong>
+                    {it.comment ? ` — ${it.comment}` : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      {sub &&
+        !(
+          sub.status === RSA_STATUS.Rejected_BUFM || sub.status === RSA_STATUS.Rejected_KMT
+        ) &&
+        rejectionNote && (
+          <div className="rsa-alert rsa-alert--danger rsa-detail-unified-banner">
+            <strong>{rejectionTitle}:</strong> {rejectionNote}
+          </div>
+        )}
 
       {showWorkflowTimeline && <WorkflowTimeline sub={sub} sectionClassSuffix={u} />}
 
-      <section className={`rsa-detail-section${u}`}>
+      <section
+        className={`rsa-detail-section${u}${
+          isSectionFlagged('Task details', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
+        }`}
+      >
         <h3>Task details</h3>
         <div className="rsa-detail-grid rsa-detail-grid--3">
-          <div><span className="rsa-detail-label">Creator Name</span><div className="rsa-detail-value">{creatorName}</div></div>
-          <div><span className="rsa-detail-label">Creator Email</span><div className="rsa-detail-value">{creatorEmail}</div></div>
-          <div><span className="rsa-detail-label">Created Date</span><div className="rsa-detail-value">{sub.updated || '—'}</div></div>
+          <div className={fieldFlags('Creator Name') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Creator Name</span>
+            <div className="rsa-detail-value">{creatorName}</div>
+          </div>
+          <div className={fieldFlags('Creator Email') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Creator Email</span>
+            <div className="rsa-detail-value">{creatorEmail}</div>
+          </div>
+          <div className={fieldFlags('Created Date') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Created Date</span>
+            <div className="rsa-detail-value">{sub.updated || '—'}</div>
+          </div>
         </div>
       </section>
 
-      <section className={`rsa-detail-section${u}`}>
+      <section
+        className={`rsa-detail-section${u}${
+          isSectionFlagged('Requestor information', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
+        }`}
+      >
         <h3>Requestor information</h3>
         <div className="rsa-detail-grid rsa-detail-grid--4">
-          <div><span className="rsa-detail-label">Requestor name</span><div className="rsa-detail-value">{rm.requestorName || sub.pocName || '—'}</div></div>
-          <div><span className="rsa-detail-label">Requestor email</span><div className="rsa-detail-value">{rm.requestorEmail || '—'}</div></div>
-          <div><span className="rsa-detail-label">Requested on behalf of</span><div className="rsa-detail-value">{rm.onBehalfOf || '—'}</div></div>
-          <div><span className="rsa-detail-label">Reason for request</span><div className="rsa-detail-value">{rm.reasonForRequest || '—'}</div></div>
+          <div className={fieldFlags('Requestor name') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Requestor name</span>
+            <div className="rsa-detail-value">{rm.requestorName || sub.pocName || '—'}</div>
+          </div>
+          <div className={fieldFlags('Requestor email') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Requestor email</span>
+            <div className="rsa-detail-value">{rm.requestorEmail || '—'}</div>
+          </div>
+          <div className={fieldFlags('Requested on behalf of') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Requested on behalf of</span>
+            <div className="rsa-detail-value">{rm.onBehalfOf || '—'}</div>
+          </div>
+          <div className={fieldFlags('Reason for request') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Reason for request</span>
+            <div className="rsa-detail-value">{rm.reasonForRequest || '—'}</div>
+          </div>
         </div>
         {rm.comments ? (
-          <p className="rsa-detail-comments"><span className="rsa-detail-label">Comments</span><span className="rsa-detail-comments__text">{rm.comments}</span></p>
+          <p className="rsa-detail-comments">
+            <span className="rsa-detail-label">Comments</span>
+            <span className="rsa-detail-comments__text">{rm.comments}</span>
+          </p>
         ) : null}
       </section>
 
-      <section className={`rsa-detail-section${u}`}>
+      <section
+        className={`rsa-detail-section${u}${
+          isSectionFlagged('Service area details', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
+        }`}
+      >
         <h3>Service area details</h3>
         <div className="rsa-detail-grid rsa-detail-grid--3">
-          <div><span className="rsa-detail-label">Service area name</span><div className="rsa-detail-value">{sa.name || '—'}</div></div>
-          <div><span className="rsa-detail-label">Polygon ID</span><div className="rsa-detail-value">{sa.polygonId || '—'}</div></div>
-          <div><span className="rsa-detail-label">Division</span><div className="rsa-detail-value">{sa.division || '—'}</div></div>
-          <div><span className="rsa-detail-label">Lawson ID</span><div className="rsa-detail-value">{sa.lawsonId || '—'}</div></div>
-          <div><span className="rsa-detail-label">Effective Date</span><div className="rsa-detail-value">{sa.effectiveDate || '—'}</div></div>
-          <div><span className="rsa-detail-label">Expiration Date</span><div className="rsa-detail-value">{sa.expiryDate || '—'}</div></div>
+          <div className={fieldFlags('Service area name') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Service area name</span>
+            <div className="rsa-detail-value">{sa.name || '—'}</div>
+          </div>
+          <div className={fieldFlags('Polygon ID') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Polygon ID</span>
+            <div className="rsa-detail-value">{sa.polygonId || '—'}</div>
+          </div>
+          <div className={fieldFlags('Division') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Division</span>
+            <div className="rsa-detail-value">{sa.division || '—'}</div>
+          </div>
+          <div className={fieldFlags('Lawson ID') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Lawson ID</span>
+            <div className="rsa-detail-value">{sa.lawsonId || '—'}</div>
+          </div>
+          <div className={fieldFlags('Effective Date') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Effective Date</span>
+            <div className="rsa-detail-value">{sa.effectiveDate || '—'}</div>
+          </div>
+          <div className={fieldFlags('Expiration Date') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Expiration Date</span>
+            <div className="rsa-detail-value">{sa.expiryDate || '—'}</div>
+          </div>
         </div>
       </section>
 
       <section className={`rsa-detail-section rsa-detail-section--meta${u}`}>
         <div className="rsa-detail-grid rsa-detail-grid--4">
-          <div><span className="rsa-detail-label">Request ID</span><div className="rsa-detail-value"><code>{sub.id}</code></div></div>
-          <div><span className="rsa-detail-label">Request Type</span><div className="rsa-detail-value">{sub.requestType || 'Create Service Area'}</div></div>
-          <div><span className="rsa-detail-label">Version</span><div className="rsa-detail-value">{sub.version || 'v1.0'}</div></div>
-          <div><span className="rsa-detail-label">Status</span><div className="rsa-detail-value">{sub.status?.replace(/_/g, ' ') || '—'}</div></div>
+          <div className={fieldFlags('Request ID') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Request ID</span>
+            <div className="rsa-detail-value">
+              <code>{sub.id}</code>
+            </div>
+          </div>
+          <div className={fieldFlags('Request Type') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Request Type</span>
+            <div className="rsa-detail-value">{sub.requestType || 'Create Service Area'}</div>
+          </div>
+          <div className={fieldFlags('Version') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Version</span>
+            <div className="rsa-detail-value">{sub.version || 'v1.0'}</div>
+          </div>
+          <div className={fieldFlags('Status') ? 'rsa-detail-flag-cell' : undefined}>
+            <span className="rsa-detail-label">Status</span>
+            <div className="rsa-detail-value">{sub.status?.replace(/_/g, ' ') || '—'}</div>
+          </div>
         </div>
       </section>
 

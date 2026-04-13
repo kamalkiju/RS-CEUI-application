@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react'
 import { simulatePostRsaUI } from '../api/rsaUI.js'
 import { getPublishedServiceAreasUrl } from '../api/serviceAreas.js'
+import { normalizeRejectPayload } from '../utils/reviewFeedback.js'
 
 export const RSA_STATUS = {
   Draft: 'Draft',
@@ -233,6 +234,46 @@ const INITIAL_SUBMISSIONS = [
     product: { name: 'Residential Cart 95', sku: 'CRT-95-G', description: 'Standard rollout' },
     rejection_comment_BUFM: 'Division code must match active municipal contract table.',
     rejection_comment_KMT: '',
+    rejection_highlight_sections: ['Service area details'],
+    rejection_highlight_fields: ['Division', 'Polygon ID'],
+    rejection_feedback_items: [
+      {
+        id: 'fb-rsa-6000-1',
+        scope: 'section',
+        label: 'Service area details',
+        comment: 'Division must match the active contract row in the municipal table.',
+      },
+      {
+        id: 'fb-rsa-6000-2',
+        scope: 'field',
+        label: 'Polygon ID',
+        comment: 'Cross-check polygon against GIS export for Division D-220.',
+      },
+    ],
+    reviewAuditTrail: [
+      {
+        at: new Date().toISOString(),
+        role: 'BUFM',
+        action: 'reject',
+        comment: 'Division code must match active municipal contract table.',
+        feedbackItems: [
+          {
+            id: 'fb-rsa-6000-1',
+            scope: 'section',
+            label: 'Service area details',
+            comment: 'Division must match the active contract row in the municipal table.',
+          },
+          {
+            id: 'fb-rsa-6000-2',
+            scope: 'field',
+            label: 'Polygon ID',
+            comment: 'Cross-check polygon against GIS export for Division D-220.',
+          },
+        ],
+        highlightSections: ['Service area details'],
+        highlightFields: ['Division', 'Polygon ID'],
+      },
+    ],
     updated: TODAY(),
   },
   {
@@ -509,7 +550,25 @@ export function RsaUIProvider({ children }) {
       prev.map(s => {
         if (s.id !== id) return s
         const next = { ...s, ...data, status: RSA_STATUS.Pending_BUFM, updated: TODAY() }
-        if (s.status === RSA_STATUS.Rejected_BUFM) next.rejection_comment_BUFM = ''
+        if (s.status === RSA_STATUS.Rejected_BUFM) {
+          next.rejection_comment_BUFM = ''
+          delete next.rejection_feedback_items
+          delete next.rejection_highlight_sections
+          delete next.rejection_highlight_fields
+          const trail = s.reviewAuditTrail || []
+          const note = typeof data?.pocResubmissionNote === 'string' ? data.pocResubmissionNote.trim() : ''
+          next.reviewAuditTrail = [
+            ...trail,
+            {
+              at: new Date().toISOString(),
+              role: 'POC',
+              action: 'resubmit',
+              comment: note,
+            },
+          ]
+          if (note) next.pocResubmissionNote = note
+          else delete next.pocResubmissionNote
+        }
         return next
       })
     )
@@ -523,13 +582,34 @@ export function RsaUIProvider({ children }) {
     })
   }, [])
 
-  const rejectBUFM = useCallback((id, rejection_comment_BUFM) => {
+  const rejectBUFM = useCallback((id, payload) => {
+    const p = normalizeRejectPayload(payload, 'BUFM')
     setSubmissions(prev =>
-      prev.map(s =>
-        s.id === id && s.status === RSA_STATUS.Pending_BUFM
-          ? { ...s, status: RSA_STATUS.Rejected_BUFM, rejection_comment_BUFM, updated: TODAY() }
-          : s
-      )
+      prev.map(s => {
+        if (s.id !== id || s.status !== RSA_STATUS.Pending_BUFM) return s
+        const trail = s.reviewAuditTrail || []
+        return {
+          ...s,
+          status: RSA_STATUS.Rejected_BUFM,
+          rejection_comment_BUFM: p.comment,
+          rejection_feedback_items: p.feedbackItems,
+          rejection_highlight_sections: p.highlightSections,
+          rejection_highlight_fields: p.highlightFields,
+          reviewAuditTrail: [
+            ...trail,
+            {
+              at: new Date().toISOString(),
+              role: 'BUFM',
+              action: 'reject',
+              comment: p.comment,
+              feedbackItems: p.feedbackItems,
+              highlightSections: p.highlightSections,
+              highlightFields: p.highlightFields,
+            },
+          ],
+          updated: TODAY(),
+        }
+      })
     )
   }, [])
 
@@ -554,13 +634,34 @@ export function RsaUIProvider({ children }) {
     }
   }, [])
 
-  const rejectKMT = useCallback((id, rejection_comment_KMT) => {
+  const rejectKMT = useCallback((id, payload) => {
+    const p = normalizeRejectPayload(payload, 'KMT')
     setSubmissions(prev =>
-      prev.map(s =>
-        s.id === id && s.status === RSA_STATUS.Pending_KMT
-          ? { ...s, status: RSA_STATUS.Rejected_KMT, rejection_comment_KMT, updated: TODAY() }
-          : s
-      )
+      prev.map(s => {
+        if (s.id !== id || s.status !== RSA_STATUS.Pending_KMT) return s
+        const trail = s.reviewAuditTrail || []
+        return {
+          ...s,
+          status: RSA_STATUS.Rejected_KMT,
+          rejection_comment_KMT: p.comment,
+          rejection_feedback_items: p.feedbackItems,
+          rejection_highlight_sections: p.highlightSections,
+          rejection_highlight_fields: p.highlightFields,
+          reviewAuditTrail: [
+            ...trail,
+            {
+              at: new Date().toISOString(),
+              role: 'KMT',
+              action: 'reject',
+              comment: p.comment,
+              feedbackItems: p.feedbackItems,
+              highlightSections: p.highlightSections,
+              highlightFields: p.highlightFields,
+            },
+          ],
+          updated: TODAY(),
+        }
+      })
     )
   }, [])
 
