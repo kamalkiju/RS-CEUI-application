@@ -1,7 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import TextFieldView from './TextFieldView.jsx'
 import RejectionBanner from '../../../components/RejectionBanner.jsx'
-import { getReadOnlyStepHeading, getReadOnlyStepSections } from './documentWizardReadOnlyModel.js'
+import {
+  getReadOnlyStepHeading,
+  getReadOnlyStepSections,
+  getStepsTouchedByPocUpdates,
+} from './documentWizardReadOnlyModel.js'
 import {
   buildPocUpdateFlagSets,
   buildReviewerFlagSets,
@@ -41,13 +45,27 @@ function ReadOnlyAccordion({ id, title, badge, openIds, onToggle, children, sect
 export default function DocumentReadOnlySteps({ doc, step }) {
   const { title, subtitle } = getReadOnlyStepHeading(step)
   const sections = getReadOnlyStepSections(doc, step)
-  const { sections: secSet, fields: fldSet } = useMemo(() => buildReviewerFlagSets(doc), [doc])
+  const reviewerSets = useMemo(() => buildReviewerFlagSets(doc), [doc])
+  const { sections: secSet, fields: fldSet } = reviewerSets
   const pocSets = useMemo(() => buildPocUpdateFlagSets(doc), [doc])
-  const wholeStepReviewer = useMemo(
-    () => isReviewerHighlightingWholeStep(step, secSet),
-    [step, secSet],
+  const reviewerStepHits = useMemo(() => {
+    const rs = buildReviewerFlagSets(doc)
+    return getStepsTouchedByPocUpdates(doc, Array.from(rs.sections), Array.from(rs.fields))
+  }, [doc])
+  const pocStepHits = useMemo(
+    () => getStepsTouchedByPocUpdates(doc, doc?.poc_updated_sections || [], doc?.poc_updated_fields || []),
+    [doc],
   )
-  const wholeStepPoc = useMemo(() => isReviewerHighlightingWholeStep(step, pocSets.sections), [step, pocSets.sections])
+  const wholeStepReviewer = useMemo(
+    () =>
+      reviewerStepHits.has(step) || isReviewerHighlightingWholeStep(step, secSet),
+    [step, secSet, reviewerStepHits],
+  )
+  const wholeStepPoc = useMemo(
+    () =>
+      pocStepHits.has(step) || isReviewerHighlightingWholeStep(step, pocSets.sections),
+    [step, pocSets.sections, pocStepHits],
+  )
   const [openIds, setOpenIds] = useState(() => sections.map((_, i) => `rs-${step}-${i}`))
 
   useEffect(() => {

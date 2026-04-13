@@ -57,9 +57,15 @@ export default function BufmDocumentView() {
     () => getStepsTouchedByPocUpdates(doc, doc.poc_updated_sections || [], doc.poc_updated_fields || []),
     [doc],
   )
+  const reviewerStepsWithHits = useMemo(() => {
+    const rs = buildReviewerFlagSets(doc)
+    return getStepsTouchedByPocUpdates(doc, Array.from(rs.sections), Array.from(rs.fields))
+  }, [doc])
   const wholeStepReviewer = useMemo(
-    () => isReviewerHighlightingWholeStep(activeStep, reviewerSets.sections),
-    [activeStep, reviewerSets.sections],
+    () =>
+      reviewerStepsWithHits.has(activeStep) ||
+      isReviewerHighlightingWholeStep(activeStep, reviewerSets.sections),
+    [activeStep, reviewerSets.sections, reviewerStepsWithHits],
   )
   const wholeStepPoc = useMemo(
     () =>
@@ -257,7 +263,9 @@ export default function BufmDocumentView() {
           <div className="bufm-doc-view__stepper-bar">
             <nav className="bufm-stepper bufm-stepper--doc-view" aria-label="Document steps">
               {STEPPER_STEPS.map(s => {
-                const tabRev = isReviewerHighlightingWholeStep(s.n, reviewerSets.sections)
+                const tabRev =
+                  isReviewerHighlightingWholeStep(s.n, reviewerSets.sections) ||
+                  reviewerStepsWithHits.has(s.n)
                 const tabPoc =
                   isReviewerHighlightingWholeStep(s.n, pocSets.sections) || pocStepsWithUpdates.has(s.n)
                 return (

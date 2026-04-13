@@ -14,11 +14,13 @@ import { useDocs } from '../../../context/DocContext.jsx'
 import { useAuth } from '../../../context/AuthContext.jsx'
 import { getDisplayStatus } from '../../../utils/documentStatus.js'
 import { inferDocVersion, getCaseStageDisplay } from '../../../utils/documentVersion.js'
-import { diffReadOnlySnapshots } from './documentWizardReadOnlyModel.js'
+import { diffReadOnlySnapshots, getStepsTouchedByPocUpdates } from './documentWizardReadOnlyModel.js'
 import {
   buildPocUpdateFlagSets,
   buildReviewerFlagSets,
+  isFieldFlagged,
   isReviewerHighlightingWholeStep,
+  isSectionFlagged,
 } from '../../../utils/reviewFeedback.js'
 
 const STEPS = [
@@ -107,6 +109,33 @@ export default function DocumentEditor() {
   const liveDoc = doc?.id ? getDocumentById(doc.id) : doc
   const reviewerSets = useMemo(() => buildReviewerFlagSets(liveDoc || {}), [liveDoc])
   const pocSets = useMemo(() => buildPocUpdateFlagSets(liveDoc || {}), [liveDoc])
+  const reviewerStepsWithHits = useMemo(() => {
+    const rs = buildReviewerFlagSets(liveDoc || {})
+    return getStepsTouchedByPocUpdates(liveDoc || {}, Array.from(rs.sections), Array.from(rs.fields))
+  }, [liveDoc])
+  const pocStepsWithHits = useMemo(
+    () =>
+      getStepsTouchedByPocUpdates(
+        liveDoc || {},
+        liveDoc?.poc_updated_sections || [],
+        liveDoc?.poc_updated_fields || [],
+      ),
+    [liveDoc],
+  )
+  const editReviewHighlight = useMemo(() => {
+    if (!liveDoc) return null
+    const rs = buildReviewerFlagSets(liveDoc)
+    const ps = buildPocUpdateFlagSets(liveDoc)
+    const hasRev = rs.sections.size > 0 || rs.fields.size > 0
+    const hasPoc = ps.sections.size > 0 || ps.fields.size > 0
+    if (!hasRev && !hasPoc) return null
+    return {
+      revSec: t => isSectionFlagged(t, rs.sections),
+      revFld: l => isFieldFlagged(l, rs.fields),
+      pocSec: t => isSectionFlagged(t, ps.sections),
+      pocFld: l => isFieldFlagged(l, ps.fields),
+    }
+  }, [liveDoc])
   const isNew = mode === 'create' || !doc
   const isRework = mode === 'rework'
   const lockApproved = doc?.status === 'approved' && !isNew
@@ -382,8 +411,12 @@ export default function DocumentEditor() {
       {/* Step wizard: same five tabs in view and edit */}
       <div className="step-wizard">
         {STEPS.map(s => {
-          const tabRev = isReviewerHighlightingWholeStep(s.num, reviewerSets.sections)
-          const tabPoc = isReviewerHighlightingWholeStep(s.num, pocSets.sections)
+          const tabRev =
+            reviewerStepsWithHits.has(s.num) ||
+            isReviewerHighlightingWholeStep(s.num, reviewerSets.sections)
+          const tabPoc =
+            pocStepsWithHits.has(s.num) ||
+            isReviewerHighlightingWholeStep(s.num, pocSets.sections)
           return (
           <div
             key={s.num}
@@ -406,7 +439,21 @@ export default function DocumentEditor() {
         <DocumentReadOnlySteps doc={doc} step={currentStep} />
       ) : (
         <>
-      {currentStep === 1 && <KnowledgeArea    onNext={() => goStep(2)} onCountChange={(d,t) => updateStepCount(1, d, t)} />}
+      {currentStep === 1 && (
+        <KnowledgeArea
+          onNext={() => goStep(2)}
+          onCountChange={(d, t) => updateStepCount(1, d, t)}
+          reviewHighlight={!inViewMode ? editReviewHighlight : null}
+          stepHighlight={{
+            reviewer:
+              reviewerStepsWithHits.has(1) ||
+              isReviewerHighlightingWholeStep(1, reviewerSets.sections),
+            poc:
+              pocStepsWithHits.has(1) ||
+              isReviewerHighlightingWholeStep(1, pocSets.sections),
+          }}
+        />
+      )}
       {currentStep === 2 && <ServiceCategories onPrev={() => goStep(1)} onNext={() => goStep(3)} onCountChange={(d,t) => updateStepCount(2, d, t)} />}
       {currentStep === 3 && <Offerings         onPrev={() => goStep(2)} onNext={() => goStep(4)} onCountChange={(d,t) => updateStepCount(3, d, t)} />}
       {currentStep === 4 && <ExtraPickup       onPrev={() => goStep(3)} onNext={() => goStep(5)} onCountChange={(d,t) => updateStepCount(4, d, t)} />}

@@ -1928,6 +1928,50 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35);
   background: linear-gradient(90deg, rgba(236, 253, 245, 0.85) 0%, #fff 35%);
 }
+
+/* Edit wizard (POC): same reviewer / POC visual language as read-only */
+.document-editor-step .section-heading--reviewer-flag {
+  color: #c2410c;
+  border-left: 4px solid #fb923c;
+  padding-left: 12px;
+  margin-left: -4px;
+}
+.document-editor-step .section-heading--poc-update {
+  color: #047857;
+  border-left: 4px solid #34d399;
+  padding-left: 12px;
+  margin-left: -4px;
+}
+.document-editor-step .card.reviewer-flag-section {
+  border-color: #fdba74;
+  border-width: 2px;
+  box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.35);
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.95) 0%, #fff 40%);
+}
+.document-editor-step .card.poc-update-section {
+  border-color: #6ee7b7;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35);
+  background: linear-gradient(90deg, rgba(236, 253, 245, 0.85) 0%, #fff 35%);
+}
+.document-editor-step .field.field--reviewer-flag {
+  padding-left: 10px;
+  margin-left: -2px;
+  border-left: 3px solid #fb923c;
+}
+.document-editor-step .field.field--reviewer-flag > label {
+  color: #9a3412;
+  font-weight: 800;
+}
+.document-editor-step .field.field--poc-update {
+  padding-left: 10px;
+  margin-left: -2px;
+  border-left: 3px solid #34d399;
+}
+.document-editor-step .field.field--poc-update > label {
+  color: #047857;
+  font-weight: 800;
+}
+
 .text-field-view--poc-update .text-field-view__label { color: #047857; font-weight: 800; }
 .text-field-view--poc-update .text-field-view__value {
   border-left: 3px solid #34d399;

@@ -44,10 +44,12 @@ function RadioPills({ name, options, value, onChange }) {
   )
 }
 
-function Accordion({ id, title, badge, headerExtra, openIds, onToggle, children }) {
+function Accordion({ id, title, badge, headerExtra, openIds, onToggle, children, sectionReviewerFlag, sectionPocFlag }) {
   const isOpen = openIds.includes(id)
+  const rev = sectionReviewerFlag ? ' reviewer-flag-section' : ''
+  const poc = sectionPocFlag ? ' poc-update-section' : ''
   return (
-    <div className={`card${isOpen ? ' open' : ''}`}>
+    <div className={`card${isOpen ? ' open' : ''}${rev}${poc}`}>
       <div className="card-header" onClick={() => onToggle(id)}>
         <span className="card-title">{title}</span>
         {badge && <span className="badge badge-req">{badge}</span>}
@@ -62,7 +64,15 @@ function Accordion({ id, title, badge, headerExtra, openIds, onToggle, children 
   )
 }
 
-export default function KnowledgeArea({ onNext, onCountChange }) {
+function fieldCx(reviewHighlight, label) {
+  if (!reviewHighlight) return 'field'
+  let c = 'field'
+  if (reviewHighlight.revFld(label)) c += ' field--reviewer-flag'
+  if (reviewHighlight.pocFld(label)) c += ' field--poc-update'
+  return c
+}
+
+export default function KnowledgeArea({ onNext, onCountChange, reviewHighlight = null, stepHighlight = null }) {
   const [openSections, setOpenSections] = useState(['s1','s2','s3','s4','s5','s6','s7','s8','s9'])
   const [completedSections, setCompletedSections] = useState(new Set())
   const [locations, setLocations] = useState([
@@ -114,26 +124,60 @@ export default function KnowledgeArea({ onNext, onCountChange }) {
 
   const delRow = (arr, setArr, idx) => setArr(prev => prev.filter((_, i) => i !== idx))
 
+  const rh = reviewHighlight
+  const sec = title => ({
+    sectionReviewerFlag: rh?.revSec?.(title),
+    sectionPocFlag: rh?.pocSec?.(title),
+  })
+
   return (
-    <main className="content">
-      <h2 className="section-heading">Residential Services Knowledge Area</h2>
+    <main className="content document-editor-step">
+      <h2
+        className={`section-heading${stepHighlight?.reviewer ? ' section-heading--reviewer-flag' : ''}${
+          stepHighlight?.poc ? ' section-heading--poc-update' : ''
+        }`}
+      >
+        Residential Services Knowledge Area
+      </h2>
       <p className="section-subtitle">Complete all required fields and expand sections to view more details</p>
 
       {/* ① Basic Information */}
-      <Accordion id="s1" title="Basic Information" badge="Required" openIds={openSections} onToggle={toggle}>
+      <Accordion
+        id="s1"
+        title="Basic Information"
+        badge="Required"
+        openIds={openSections}
+        onToggle={toggle}
+        {...sec('Basic Information')}
+      >
         <div className="form-grid col-1" style={{ marginBottom: 14 }}>
-          <div className="field"><label>Document Title <span className="req">*</span></label><input type="text" placeholder="e.g. DIV 993 MUNI – City of Shelbyville, KY"/></div>
+          <div className={fieldCx(rh, 'Document title')}>
+            <label>Document Title <span className="req">*</span></label>
+            <input type="text" placeholder="e.g. DIV 993 MUNI – City of Shelbyville, KY" />
+          </div>
         </div>
         <div className="form-grid col-4">
-          <div className="field"><label>Contract Activation Date <span className="req">*</span></label><input type="date"/></div>
-          <div className="field"><label>Contract Expiration Date</label><input type="date"/></div>
-          <div className="field"><label>Document Review Date</label><input type="date"/></div>
-          <div className="field"><label>Review Notes</label><input type="text" placeholder="e.g. Annual review scheduled"/></div>
+          <div className={fieldCx(rh, 'Contract activation date')}>
+            <label>Contract Activation Date <span className="req">*</span></label>
+            <input type="date" />
+          </div>
+          <div className={fieldCx(rh, 'Contract expiration date')}>
+            <label>Contract Expiration Date</label>
+            <input type="date" />
+          </div>
+          <div className={fieldCx(rh, 'Document review date')}>
+            <label>Document Review Date</label>
+            <input type="date" />
+          </div>
+          <div className={fieldCx(rh, 'Review notes')}>
+            <label>Review Notes</label>
+            <input type="text" placeholder="e.g. Annual review scheduled" />
+          </div>
         </div>
       </Accordion>
 
       {/* ② Contract Information */}
-      <Accordion id="s2" title="Contract Information" openIds={openSections} onToggle={toggle}>
+      <Accordion id="s2" title="Contract Information" openIds={openSections} onToggle={toggle} {...sec('Contract Information')}>
         <div className="form-grid col-2">
           <div className="field"><label>Contract Title</label><input type="text" placeholder="Enter contract title"/></div>
           <div className="field"><label>Contact Phone Number</label><input type="tel" placeholder="(000) 000-0000"/></div>
@@ -144,9 +188,12 @@ export default function KnowledgeArea({ onNext, onCountChange }) {
 
       {/* ③ Location & Servicing Division */}
       <Accordion
-        id="s3" title="Location & Servicing Division"
+        id="s3"
+        title="Location & Servicing Division"
         badge={`${locations.length} location${locations.length !== 1 ? 's' : ''}`}
-        openIds={openSections} onToggle={toggle}
+        openIds={openSections}
+        onToggle={toggle}
+        {...sec('Location & Servicing Division')}
         headerExtra={
           <button className="add-row-btn" style={{ marginRight: 10, padding: '5px 12px', fontSize: 12 }} onClick={addLocation}>
             <PlusSvg /> Add Location
@@ -192,7 +239,14 @@ export default function KnowledgeArea({ onNext, onCountChange }) {
       </Accordion>
 
       {/* ④ Service Details & Contract Numbers */}
-      <Accordion id="s4" title="Service Details & Contract Numbers" badge={`${contracts.length} contract${contracts.length !== 1 ? 's' : ''}`} openIds={openSections} onToggle={toggle}>
+      <Accordion
+        id="s4"
+        title="Service Details & Contract Numbers"
+        badge={`${contracts.length} contract${contracts.length !== 1 ? 's' : ''}`}
+        openIds={openSections}
+        onToggle={toggle}
+        {...sec('Service Details & Contract Numbers')}
+      >
         <div className="sub-label">Contract Entries</div>
         <div className="dyn-table-wrap">
           <table className="dyn-table">
@@ -227,7 +281,7 @@ export default function KnowledgeArea({ onNext, onCountChange }) {
       </Accordion>
 
       {/* ⑤ Payment & Billing Terms */}
-      <Accordion id="s5" title="Payment & Billing Terms" openIds={openSections} onToggle={toggle}>
+      <Accordion id="s5" title="Payment & Billing Terms" openIds={openSections} onToggle={toggle} {...sec('Payment & Billing Terms')}>
         <div className="form-grid col-1" style={{ marginBottom: 14 }}>
           <div className="field"><label>Payment Terms</label><textarea rows={2} placeholder="Describe payment terms…"></textarea></div>
         </div>
@@ -257,7 +311,7 @@ export default function KnowledgeArea({ onNext, onCountChange }) {
       </Accordion>
 
       {/* ⑥ InfoPro Codes & References */}
-      <Accordion id="s6" title="InfoPro Codes & References" openIds={openSections} onToggle={toggle}>
+      <Accordion id="s6" title="InfoPro Codes & References" openIds={openSections} onToggle={toggle} {...sec('InfoPro Codes & References')}>
         <div className="sub-label">Territory Code</div>
         <div className="form-grid col-2" style={{ marginBottom: 16 }}>
           <div className="field"><label>Code</label><input type="text" placeholder="TER-KY-09"/></div>
@@ -274,7 +328,7 @@ export default function KnowledgeArea({ onNext, onCountChange }) {
       </Accordion>
 
       {/* ⑦ Service Owner Responsibilities */}
-      <Accordion id="s7" title="Service Owner Responsibilities" openIds={openSections} onToggle={toggle}>
+      <Accordion id="s7" title="Service Owner Responsibilities" openIds={openSections} onToggle={toggle} {...sec('Service Owner Responsibilities')}>
         <div style={{ overflowX: 'auto' }}>
           <table className="owner-table">
             <thead>
@@ -308,7 +362,7 @@ export default function KnowledgeArea({ onNext, onCountChange }) {
       </Accordion>
 
       {/* ⑧ Setup, Cancellation & Process Notes */}
-      <Accordion id="s8" title="Setup, Cancellation & Process Notes" openIds={openSections} onToggle={toggle}>
+      <Accordion id="s8" title="Setup, Cancellation & Process Notes" openIds={openSections} onToggle={toggle} {...sec('Setup, Cancellation & Process Notes')}>
         <div className="form-grid col-2">
           <div className="field"><label>Setup Notes</label><textarea rows={3} placeholder="Describe the setup process…"></textarea></div>
           <div className="field"><label>Cancellation Notes</label><textarea rows={3} placeholder="Describe the cancellation process…"></textarea></div>
@@ -318,7 +372,7 @@ export default function KnowledgeArea({ onNext, onCountChange }) {
       </Accordion>
 
       {/* ⑨ Additional Services & Options */}
-      <Accordion id="s9" title="Additional Services & Options" openIds={openSections} onToggle={toggle}>
+      <Accordion id="s9" title="Additional Services & Options" openIds={openSections} onToggle={toggle} {...sec('Additional Services & Options')}>
         <div className="sub-label">Service Options</div>
         {Object.entries(options).map(([label, val]) => (
           <div key={label} className="option-row">
