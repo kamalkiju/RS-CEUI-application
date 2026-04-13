@@ -318,6 +318,8 @@ export default function DocumentEditor() {
             rejection_comment_BUFM={doc.rejection_comment_BUFM}
             rejection_comment_KMT={doc.rejection_comment_KMT}
             fallbackNote={doc.rejectionNote}
+            highlightSections={doc.rejection_highlight_sections || []}
+            highlightFields={doc.rejection_highlight_fields || []}
           />
         </div>
       )}

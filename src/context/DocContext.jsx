@@ -93,6 +93,8 @@ const INITIAL_DOCS = [
     areas: [{ name: 'Muni - Port Orange, FL - Area 1', id: '1616386', type: 'Resi Trash' }],
     rejection_comment_BUFM:
       'Contract renewal dates and city ordinance effective dates are misaligned. Update Article 4 dates and resubmit.',
+    rejection_highlight_sections: ['Fees', 'Knowledge Area'],
+    rejection_highlight_fields: ['Contract effective date', 'City ordinance reference'],
     rejectionNote:
       'BUFM: Contract renewal dates and city ordinance effective dates are misaligned. Update Article 4 dates and resubmit.',
     createdByUserId: 'poc-user-1',
@@ -273,6 +275,22 @@ const INITIAL_DOCS = [
     pocRegion: 'Central Florida',
   },
   ...buildKmtReportSeedDocs(),
+  ...Array.from({ length: 12 }, (_, i) => ({
+    id: `K-610${i}`,
+    sub: `DIV ${880 + i} COMM – CEUI knowledge queue ${i + 1}`,
+    area: `Metro Zone ${(i % 4) + 1}, FL`,
+    market: i % 2 === 0 ? 'Commercial' : 'Residential',
+    lob: i % 2 === 0 ? 'Commercial' : 'Residential',
+    status: 'Pending_BUFM',
+    updated: '2024-03-22',
+    submittedDate: '2024-03-20',
+    tabs: ['approval', 'all'],
+    areas: [{ name: `Service Area ${i + 1}`, id: String(1617000 + i), type: 'Resi Trash' }],
+    createdByUserId: `poc-user-${(i % 4) + 1}`,
+    pocName: ['Jordan Lee', 'Sam Rivera', 'Alex Morgan', 'Chris Park'][i % 4],
+    pocEmail: ['jordan.lee@republicservices.com', 'sam.rivera@republicservices.com', 'alex.morgan@republicservices.com', 'chris.park@republicservices.com'][i % 4],
+    pocRegion: ['Southeast', 'Central Florida', 'Gulf Coast', 'Northeast'][i % 4],
+  })),
 ]
 
 const DocContext = createContext(null)

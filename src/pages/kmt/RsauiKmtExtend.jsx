@@ -28,7 +28,7 @@ export default function RsauiKmtExtend() {
         <div className="bufm-rsa-page kmt-extend-page">
           <div className="kmt-extend-page__card">
             <p>Extend expiry is only available for published service areas.</p>
-            <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/review')}>
+            <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/rsaui/review')}>
               Back
             </button>
           </div>
@@ -64,7 +64,7 @@ export default function RsauiKmtExtend() {
     window.alert(
       `✓ Expiry Extended\n\n"${sub.offeringExpiryLabel || 'Offering'}" for "${sub.serviceArea?.name}" updated to ${newExpiry}.\nThe POC has been notified.`,
     )
-    navigate('/kmt/document-review/review')
+    navigate('/kmt/document-review/rsaui/review')
   }
 
   return (

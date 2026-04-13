@@ -245,7 +245,7 @@ export default function RsaUIList({ syncTabToUrl = false }) {
       <main className="kd-main rsa-ui-list-page">
         <div className="kd-page-header">
           <div>
-            <h1 className="kd-page-title">{syncTabToUrl ? 'Document Review' : 'Service area requests'}</h1>
+            <h1 className="kd-page-title">{syncTabToUrl ? 'RSAUI Documents' : 'Service area requests'}</h1>
             <p className="kd-page-sub">
               {syncTabToUrl
                 ? 'Drafts, approval pipeline, rejections, approved service areas, and expiry queue.'

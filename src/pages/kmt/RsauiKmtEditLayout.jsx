@@ -25,7 +25,7 @@ export default function RsauiKmtEditLayout() {
   const location = useLocation()
   const submissionId = sp.get('submission') || ''
   const fromQueue = sp.get('from') === 'approved' ? 'approved' : 'review'
-  const backToList = `/kmt/document-review/${fromQueue}`
+  const backToList = `/kmt/document-review/rsaui/${fromQueue}`
 
   const { getSubmission, patchSubmission, removeSubmission } = useRsaUI()
   const [saving, setSaving] = useState(false)
@@ -38,11 +38,11 @@ export default function RsauiKmtEditLayout() {
 
   useEffect(() => {
     if (!submissionId) {
-      navigate('/kmt/document-review/review', { replace: true })
+      navigate('/kmt/document-review/rsaui/review', { replace: true })
       return
     }
     if (!sub) {
-      navigate('/kmt/document-review/review', { replace: true })
+      navigate('/kmt/document-review/rsaui/review', { replace: true })
       return
     }
     if (sub.status !== RSA_STATUS.Pending_KMT && sub.status !== RSA_STATUS.Published) {
@@ -91,7 +91,7 @@ export default function RsauiKmtEditLayout() {
     if (!submissionId || !sub || sub.status !== RSA_STATUS.Draft) return
     if (!window.confirm(`Delete draft ${submissionId}? This cannot be undone.`)) return
     removeSubmission(submissionId)
-    navigate('/kmt/document-review/review')
+    navigate('/kmt/document-review/rsaui/review')
   }
 
   const goStep = delta => {

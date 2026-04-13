@@ -49,7 +49,7 @@ export default function BufmDocumentView() {
       <Layout>
         <div className="bufm-doc-view bufm-doc-view--missing">
           <p>Document not found.</p>
-          <button type="button" className="btn btn-outline" onClick={() => navigate('/bufm/document-review/review')}>
+          <button type="button" className="btn btn-outline" onClick={() => navigate('/bufm/document-review/ceui/review')}>
             Back to review queue
           </button>
         </div>
@@ -58,6 +58,7 @@ export default function BufmDocumentView() {
   }
 
   const serviceAreaLabel = doc.area || doc.areas?.[0]?.name || '—'
+  const viewerName = user?.name || 'BUFM Reviewer'
 
   const handleApprove = () => {
     const today = new Date().toISOString().slice(0, 10)
@@ -67,21 +68,37 @@ export default function BufmDocumentView() {
       bufmApproveDate: today,
       tabs: Array.from(new Set([...(doc.tabs || []), 'approval', 'all'])),
     })
-    navigate('/bufm/document-review/review')
+    navigate('/bufm/document-review/ceui/review')
   }
 
-  const handleRejectConfirm = (comment) => {
+  const handleRejectConfirm = payload => {
+    const comment = typeof payload === 'string' ? payload : payload.comment
+    const highlightSections = typeof payload === 'object' && payload.highlightSections ? payload.highlightSections : []
+    const highlightFields = typeof payload === 'object' && payload.highlightFields ? payload.highlightFields : []
     const today = new Date().toISOString().slice(0, 10)
+    const trail = doc.reviewAuditTrail || []
     updateDoc(doc.id, {
       status: 'Rejected_BUFM',
       rejection_comment_BUFM: comment,
+      rejection_highlight_sections: highlightSections,
+      rejection_highlight_fields: highlightFields,
       bufmRejectDate: today,
+      reviewAuditTrail: [
+        ...trail,
+        {
+          at: new Date().toISOString(),
+          role: 'BUFM',
+          reviewer: viewerName,
+          action: 'reject',
+          comment,
+          highlightSections,
+          highlightFields,
+        },
+      ],
       tabs: Array.from(new Set([...(doc.tabs || []), 'rejected-tasks', 'all'])),
     })
-    navigate('/bufm/document-review/rejected')
+    navigate('/bufm/document-review/ceui/rejected')
   }
-
-  const viewerName = user?.name || 'BUFM Reviewer'
 
   return (
     <Layout>
@@ -206,6 +223,7 @@ export default function BufmDocumentView() {
           open={rejectOpen}
           title="Reject document"
           roleLabel="BUFM"
+          enableAuditTrail
           onClose={() => setRejectOpen(false)}
           onConfirm={handleRejectConfirm}
         />

@@ -34,7 +34,7 @@ function KmtWizardFinalize({ submissionId, sub, tabSuffix, wizardBase, kmtReturn
       persistNote()
       approveKMT(submissionId)
       window.alert('✓ Published successfully')
-      navigate('/kmt/document-review/approved')
+      navigate('/kmt/document-review/rsaui/approved')
     } finally {
       setSaving(false)
     }
@@ -54,7 +54,7 @@ function KmtWizardFinalize({ submissionId, sub, tabSuffix, wizardBase, kmtReturn
         requestMeta: { ...(cur.requestMeta || {}), kmtPublishNote: kmtNote },
       })
       window.alert('✓ Changes saved')
-      navigate(kmtReturnPath || '/kmt/document-review/approved')
+      navigate(kmtReturnPath || '/kmt/document-review/rsaui/approved')
     } finally {
       setSaving(false)
     }

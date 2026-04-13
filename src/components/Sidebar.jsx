@@ -47,13 +47,6 @@ const ICON_DOC = (
   </svg>
 )
 
-const ICON_SERVICE = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-)
-
 const ICON_DELEGATION = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="8" cy="8" r="3" />
@@ -63,11 +56,10 @@ const ICON_DELEGATION = (
   </svg>
 )
 
-/** POC: knowledge list, RSA-style review & create service, settings */
+/** POC: knowledge list, RSAUI documents (service-area requests), settings */
 const NAV_ITEMS_POC = [
   { label: 'Knowledge Documents', path: '/poc', icon: ICON_DOC },
-  { label: 'Document Review', path: '/poc/document-review', icon: ICON_REPORT },
-  { label: 'Create service area', path: '/poc/service-area', icon: ICON_SERVICE },
+  { label: 'RSAUI Documents', path: '/poc/document-review', icon: ICON_REPORT },
   { label: 'Settings', path: '/poc/settings', icon: ICON_SETTINGS },
 ]
 

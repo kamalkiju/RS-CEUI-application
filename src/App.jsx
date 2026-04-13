@@ -27,7 +27,7 @@ import RsauiPocSubmit from './pages/rsaui/RsauiPocSubmit.jsx'
 import RsauiPocViewDetail from './pages/rsaui/RsauiPocViewDetail.jsx'
 import BUFMDashboard from './pages/BUFMDashboard.jsx'
 import KMTDashboard from './pages/KMTDashboard.jsx'
-import KmtReportsShell from './pages/kmt/KmtReportsShell.jsx'
+import KmtDocumentReviewLayout from './pages/kmt/KmtDocumentReviewLayout.jsx'
 import KmtReportsBody from './pages/kmt/KmtReportsBody.jsx'
 import KmtDocumentView from './pages/kmt/KmtDocumentView.jsx'
 import KmtRsaSubmissionView from './pages/kmt/KmtRsaSubmissionView.jsx'
@@ -38,7 +38,6 @@ import KmtSettingsPage from './pages/kmt/KmtSettingsPage.jsx'
 import KmtTemplateView from './pages/kmt/KmtTemplateView.jsx'
 import KmtTemplateWizard from './pages/kmt/KmtTemplateWizard.jsx'
 import DocumentReviewRedirect from './components/DocumentReviewRedirect.jsx'
-import ApplicationSelector from './pages/landing/ApplicationSelector.jsx'
 import LegacyRsauiRedirect from './components/LegacyRsauiRedirect.jsx'
 import BufmRsaReviewQueue from './pages/bufm/BufmRsaReviewQueue.jsx'
 import BufmRsaUnclaimedQueue from './pages/bufm/BufmRsaUnclaimedQueue.jsx'
@@ -62,7 +61,7 @@ export default function App() {
               <KmtUsersProvider>
                 <BrowserRouter>
                   <Routes>
-                    <Route path="/" element={<ApplicationSelector />} />
+                    <Route path="/" element={<Navigate to="/login" replace />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/ceui/login" element={<Navigate to="/login" replace />} />
                     <Route path="/rsaui/login" element={<Navigate to="/login" replace />} />
@@ -114,11 +113,11 @@ export default function App() {
                     {/* KMT — templates, combined document review, RSA tools */}
                     <Route path="/kmt" element={<ProtectedRoute role="KMT" />}>
                       <Route index element={<KMTDashboard />} />
-                      <Route path="document-review" element={<KmtReportsShell />}>
-                        <Route index element={<Navigate to="review" replace />} />
-                        <Route path=":queue" element={<KmtReportsBody />} />
+                      <Route path="document-review" element={<KmtDocumentReviewLayout />}>
+                        <Route index element={<Navigate to="ceui/review" replace />} />
+                        <Route path=":stream/:queue" element={<KmtReportsBody />} />
                       </Route>
-                      <Route path="reports/*" element={<DocumentReviewRedirect fromPrefix="/kmt/reports" toPrefix="/kmt/document-review" />} />
+                      <Route path="reports/*" element={<DocumentReviewRedirect fromPrefix="/kmt/reports" toPrefix="/kmt/document-review/ceui" />} />
                       <Route path="document/:id" element={<KmtDocumentView />} />
                       <Route path="rsaui-submission/:id" element={<KmtRsaSubmissionView />} />
                       <Route path="documents/new" element={<KmtTemplateWizard />} />

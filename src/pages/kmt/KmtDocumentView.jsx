@@ -106,7 +106,7 @@ export default function KmtDocumentView() {
       <Layout>
         <div className="bufm-doc-view bufm-doc-view--missing">
           <p>Document not found.</p>
-          <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/review')}>
+          <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/ceui/review')}>
             Back to review queue
           </button>
         </div>
@@ -119,6 +119,8 @@ export default function KmtDocumentView() {
       ? (basicSaName.trim() || basicArea.trim() || doc.area || doc.areas?.[0]?.name || '—')
       : (doc.area || doc.areas?.[0]?.name || '—')
 
+  const viewerName = user?.name || 'KMT Reviewer'
+
   const handleApprove = () => {
     const today = new Date().toISOString().slice(0, 10)
     updateDoc(doc.id, {
@@ -127,21 +129,37 @@ export default function KmtDocumentView() {
       kmtApproveDate: today,
       tabs: Array.from(new Set([...(doc.tabs || []), 'all'])),
     })
-    navigate('/kmt/document-review/approved')
+    navigate('/kmt/document-review/ceui/approved')
   }
 
-  const handleRejectConfirm = (comment) => {
+  const handleRejectConfirm = payload => {
+    const comment = typeof payload === 'string' ? payload : payload.comment
+    const highlightSections = typeof payload === 'object' && payload.highlightSections ? payload.highlightSections : []
+    const highlightFields = typeof payload === 'object' && payload.highlightFields ? payload.highlightFields : []
     const today = new Date().toISOString().slice(0, 10)
+    const trail = doc.reviewAuditTrail || []
     updateDoc(doc.id, {
       status: 'Rejected_KMT',
       rejection_comment_KMT: comment,
+      rejection_highlight_sections: highlightSections,
+      rejection_highlight_fields: highlightFields,
       kmtRejectDate: today,
+      reviewAuditTrail: [
+        ...trail,
+        {
+          at: new Date().toISOString(),
+          role: 'KMT',
+          reviewer: viewerName,
+          action: 'reject',
+          comment,
+          highlightSections,
+          highlightFields,
+        },
+      ],
       tabs: Array.from(new Set([...(doc.tabs || []), 'rejected-tasks', 'all'])),
     })
-    navigate('/kmt/document-review/rejected')
+    navigate('/kmt/document-review/ceui/rejected')
   }
-
-  const viewerName = user?.name || 'KMT Reviewer'
 
   const saveKmtEditorialNote = () => {
     updateDoc(doc.id, { kmtEditorialNote: kmtNote.trim() })
@@ -434,6 +452,7 @@ export default function KmtDocumentView() {
           open={rejectOpen}
           title="Reject document"
           roleLabel="KMT"
+          enableAuditTrail
           onClose={() => setRejectOpen(false)}
           onConfirm={handleRejectConfirm}
         />

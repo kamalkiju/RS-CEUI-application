@@ -28,7 +28,7 @@ export default function RsauiKmtEscalate() {
   if (!sub) {
     return (
       <Layout>
-        <div className="bufm-rsa-page"><p>Not found.</p><button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/review')}>Back</button></div>
+        <div className="bufm-rsa-page"><p>Not found.</p><button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/rsaui/review')}>Back</button></div>
       </Layout>
     )
   }
@@ -38,7 +38,7 @@ export default function RsauiKmtEscalate() {
       <Layout>
         <div className="bufm-rsa-page">
           <p>Escalation applies to requests in BUFM review.</p>
-          <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/review')}>Back</button>
+          <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/rsaui/review')}>Back</button>
         </div>
       </Layout>
     )
@@ -66,7 +66,7 @@ export default function RsauiKmtEscalate() {
     setKmtEscalation(sub.id, { level, reason: reason.trim() })
     setConfirmOpen(false)
     window.alert('✓ Escalation sent successfully')
-    navigate('/kmt/document-review/review')
+    navigate('/kmt/document-review/rsaui/review')
   }
 
   return (

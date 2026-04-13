@@ -98,7 +98,7 @@ const BUFM_SEED = [
     documentName: 'City Waste Policy',
     timestamp: new Date(Date.now() - 2400000).toISOString(),
     isRead: false,
-    ctaAction: { label: 'Review Now', path: '/bufm/document-review/review' },
+    ctaAction: { label: 'Review Now', path: '/bufm/document-review/ceui/review' },
   },
   {
     id: 'bufm-2',
@@ -110,7 +110,7 @@ const BUFM_SEED = [
     documentName: 'Bulk Pickup Rules',
     timestamp: new Date(Date.now() - 3600000).toISOString(),
     isRead: false,
-    ctaAction: { label: 'Open Review', path: '/bufm/document-review/review' },
+    ctaAction: { label: 'Open Review', path: '/bufm/document-review/ceui/review' },
   },
   {
     id: 'bufm-3',
@@ -122,7 +122,7 @@ const BUFM_SEED = [
     documentName: 'Port Orange Contract',
     timestamp: new Date(Date.now() - 43200000).toISOString(),
     isRead: true,
-    ctaAction: { label: 'Review Again', path: '/bufm/document-review/review' },
+    ctaAction: { label: 'Review Again', path: '/bufm/document-review/ceui/review' },
   },
   {
     id: 'bufm-4',
@@ -134,7 +134,7 @@ const BUFM_SEED = [
     documentName: 'Recycling Standards',
     timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
     isRead: true,
-    ctaAction: { label: 'View Timeline', path: '/bufm/document-review/approved' },
+    ctaAction: { label: 'View Timeline', path: '/bufm/document-review/ceui/approved' },
   },
   {
     id: 'bufm-5',
@@ -161,7 +161,7 @@ const KMT_SEED = [
     documentName: 'Commercial Policy',
     timestamp: new Date(Date.now() - 1200000).toISOString(),
     isRead: false,
-    ctaAction: { label: 'Open Approval', path: '/kmt/document-review/review' },
+    ctaAction: { label: 'Open Approval', path: '/kmt/document-review/ceui/review' },
   },
   {
     id: 'kmt-2',
@@ -173,7 +173,7 @@ const KMT_SEED = [
     documentName: 'Metro Commercial Waste',
     timestamp: new Date(Date.now() - 4800000).toISOString(),
     isRead: false,
-    ctaAction: { label: 'Open Document', path: '/kmt/document-review/review' },
+    ctaAction: { label: 'Open Document', path: '/kmt/document-review/ceui/review' },
   },
   {
     id: 'kmt-3',
@@ -185,7 +185,7 @@ const KMT_SEED = [
     documentName: 'Service Pricing',
     timestamp: new Date(Date.now() - 86400000 * 3).toISOString(),
     isRead: true,
-    ctaAction: { label: 'View History', path: '/kmt/document-review/rejected' },
+    ctaAction: { label: 'View History', path: '/kmt/document-review/ceui/rejected' },
   },
   {
     id: 'kmt-4',
@@ -197,7 +197,7 @@ const KMT_SEED = [
     documentName: 'Ocala Services',
     timestamp: new Date(Date.now() - 86400000 * 5).toISOString(),
     isRead: true,
-    ctaAction: { label: 'View Document', path: '/kmt/document-review/approved' },
+    ctaAction: { label: 'View Document', path: '/kmt/document-review/ceui/approved' },
   },
   {
     id: 'kmt-5',

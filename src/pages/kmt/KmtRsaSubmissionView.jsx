@@ -14,9 +14,9 @@ export default function KmtRsaSubmissionView() {
 
   const paths = useMemo(
     () => ({
-      review: '/kmt/document-review/review',
-      approved: '/kmt/document-review/approved',
-      rejected: '/kmt/document-review/rejected',
+      review: '/kmt/document-review/rsaui/review',
+      approved: '/kmt/document-review/rsaui/approved',
+      rejected: '/kmt/document-review/rsaui/rejected',
     }),
     [],
   )

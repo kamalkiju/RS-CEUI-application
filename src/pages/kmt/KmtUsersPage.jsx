@@ -14,6 +14,7 @@ const emptyForm = () => ({
   role: 'POC',
   region: '',
   title: '',
+  workspace: 'CEUI',
 })
 
 export default function KmtUsersPage() {
@@ -51,7 +52,8 @@ export default function KmtUsersPage() {
         u.email.toLowerCase().includes(q) ||
         u.role.toLowerCase().includes(q) ||
         u.region.toLowerCase().includes(q) ||
-        u.title.toLowerCase().includes(q),
+        u.title.toLowerCase().includes(q) ||
+        (u.workspace || '').toLowerCase().includes(q),
     )
   }, [enriched, search])
 
@@ -71,6 +73,7 @@ export default function KmtUsersPage() {
       role: u.role,
       region: u.region,
       title: u.title,
+      workspace: u.workspace || 'CEUI',
     })
     setEditUserId(u.id)
     setModal('edit')
@@ -81,6 +84,7 @@ export default function KmtUsersPage() {
     if (modal === 'add') {
       addUser({
         ...form,
+        workspace: form.workspace || 'CEUI',
         id: `user-${Date.now()}`,
         status: 'Active',
       })
@@ -96,7 +100,7 @@ export default function KmtUsersPage() {
         <div className="kmt-users-directory__head">
           <div>
             <h1 className="kmt-page__title">Users</h1>
-            <p className="kmt-page__sub">Directory — POC, BUFM, and KMT. Add, edit, or remove users.</p>
+            <p className="kmt-page__sub">Directory — POC, BUFM, and KMT. Users are tagged <strong>CEUI</strong> (knowledge) or <strong>RSAUI</strong> (service-area workflows).</p>
           </div>
           <button type="button" className="btn btn-primary" onClick={openAdd}>
             Add user
@@ -119,6 +123,7 @@ export default function KmtUsersPage() {
             <thead>
               <tr>
                 <th>User name</th>
+                <th>Workspace</th>
                 <th>Role</th>
                 <th>Email</th>
                 <th>Status</th>
@@ -129,6 +134,11 @@ export default function KmtUsersPage() {
               {filtered.map(u => (
                 <tr key={u.id}>
                   <td>{u.name}</td>
+                  <td>
+                    <span className={`workspace-pill workspace-pill--${(u.workspace || 'CEUI').toLowerCase()}`}>
+                      {u.workspace || 'CEUI'}
+                    </span>
+                  </td>
                   <td>{u.role}</td>
                   <td>{u.email}</td>
                   <td>{u.status}</td>
@@ -248,6 +258,13 @@ export default function KmtUsersPage() {
                 <label className="kmt-field">
                   <span>Region</span>
                   <input className="kmt-input" value={form.region} onChange={e => setForm(f => ({ ...f, region: e.target.value }))} />
+                </label>
+                <label className="kmt-field">
+                  <span>Workspace</span>
+                  <select className="kmt-input" value={form.workspace} onChange={e => setForm(f => ({ ...f, workspace: e.target.value }))}>
+                    <option value="CEUI">CEUI — Knowledge documents</option>
+                    <option value="RSAUI">RSAUI — Service-area requests</option>
+                  </select>
                 </label>
               </div>
               <div className="confirm-modal__actions">

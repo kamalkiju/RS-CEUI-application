@@ -7,5 +7,5 @@ export default function RsauiKmtEditIndex() {
     const q = new URLSearchParams(sp)
     return <Navigate to={`/kmt/edit/select?${q.toString()}`} replace />
   }
-  return <Navigate to="/kmt/document-review/review" replace />
+  return <Navigate to="/kmt/document-review/rsaui/review" replace />
 }

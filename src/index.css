@@ -1850,6 +1850,25 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .rejection-banner__title { font-size: 14px; font-weight: 800; color: #9a3412; margin-bottom: 6px; }
 .rejection-banner__comment { font-size: 13px; color: var(--text-primary); line-height: 1.5; }
 .rejection-banner__label { font-weight: 700; color: var(--text-secondary); }
+.rejection-banner__audit { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #fdba74; }
+.rejection-banner__audit-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #9a3412; margin-bottom: 8px; }
+.rejection-banner__audit-list { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-primary); line-height: 1.45; }
+.rejection-banner__audit-list li { margin-bottom: 4px; }
+.rejection-banner__tag { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: #ffedd5; color: #9a3412; margin-right: 6px; }
+.rejection-banner__tag--field { background: #dbeafe; color: #1e40af; }
+.reject-modal--wide { max-width: 520px; }
+.reject-modal__textarea--sm { min-height: 52px; }
+.reject-modal__audit-hint { font-size: 12px; color: var(--text-muted); margin: 12px 0 8px; line-height: 1.45; }
+.workspace-pill {
+  display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+  padding: 4px 10px; border-radius: 999px;
+}
+.workspace-pill--ceui { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+.workspace-pill--rsaui { background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+.bufm-users-page__section-title {
+  font-size: 15px; font-weight: 800; color: var(--text-primary); margin: 28px 0 12px;
+}
+.kmt-reports__body-outlet { flex: 1; width: 100%; }
 
 .doc-editor-rejection-wrap { padding-top: 12px !important; padding-bottom: 0 !important; max-width: 100%; }
 
