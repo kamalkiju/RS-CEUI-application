@@ -80,7 +80,7 @@ export default function KmtDocumentView() {
     setBasicSaId(a0?.id != null ? String(a0.id) : '')
     setBasicSaType(a0?.type || '')
     setDocForm(normalizeTemplateForm(doc.form || {}))
-  }, [doc.id])
+  }, [doc?.id])
 
   const disp = useMemo(() => (doc ? getDisplayStatus(doc, 'KMT') : null), [doc])
   const headerStatusLabel =

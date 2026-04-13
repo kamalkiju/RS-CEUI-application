@@ -102,12 +102,11 @@ export default function DocumentEditor() {
   const { user } = useAuth()
   const { updateDoc, getDocumentById } = useDocs()
 
+  // Document data passed from the list or create flow (must be before liveDoc — avoids TDZ crash / white screen)
+  const { doc, mode, previewOnly } = location.state || {}
   const liveDoc = doc?.id ? getDocumentById(doc.id) : doc
   const reviewerSets = useMemo(() => buildReviewerFlagSets(liveDoc || {}), [liveDoc])
   const pocSets = useMemo(() => buildPocUpdateFlagSets(liveDoc || {}), [liveDoc])
-
-  // Document data passed from the list or create flow
-  const { doc, mode, previewOnly } = location.state || {}
   const isNew = mode === 'create' || !doc
   const isRework = mode === 'rework'
   const lockApproved = doc?.status === 'approved' && !isNew
