@@ -1978,6 +1978,10 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   padding-left: 10px;
   margin-left: -2px;
 }
+.text-field-view--poc-update .text-field-view__value--multiline {
+  border-left: 4px solid #34d399;
+  padding-left: 12px;
+}
 .read-only-acc--poc-update {
   border-color: #6ee7b7;
   box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3);
@@ -4235,6 +4239,28 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
+}
+.kmt-doc-view__poc-review-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  border: 1px solid #6ee7b7;
+  background: linear-gradient(90deg, rgba(236, 253, 245, 0.95) 0%, #fff 55%);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.kmt-doc-view__poc-review-hint__text {
+  flex: 1;
+  min-width: 220px;
+  line-height: 1.45;
+}
+.kmt-doc-view__poc-review-hint__text strong {
+  color: #047857;
 }
 .kmt-doc-kmt-edit__section {
   margin-bottom: 24px !important;

@@ -137,6 +137,12 @@ export default function KmtDocumentView() {
 
   const showReviewActions = doc?.status === 'Pending_KMT'
 
+  const hasPocUpdatesForReview = Boolean(
+    doc?.poc_updated_sections?.length ||
+      doc?.poc_updated_fields?.length ||
+      doc?.pocResubmissionNote?.trim?.(),
+  )
+
   const pulseRevision = doc
     ? `${doc.updated}|${(doc.pulseComments || []).length}`
     : '0'
@@ -383,17 +389,13 @@ export default function KmtDocumentView() {
             </section>
           </div>
 
-          {!kmtEdit &&
-            showReviewActions &&
-            (doc.poc_updated_sections?.length > 0 ||
-              doc.poc_updated_fields?.length > 0 ||
-              doc.pocResubmissionNote?.trim?.()) && (
-              <PocUpdateSummaryBanner
-                sections={doc.poc_updated_sections || []}
-                fields={doc.poc_updated_fields || []}
-                resubmissionNote={doc.pocResubmissionNote}
-              />
-            )}
+          {showReviewActions && hasPocUpdatesForReview && (
+            <PocUpdateSummaryBanner
+              sections={doc.poc_updated_sections || []}
+              fields={doc.poc_updated_fields || []}
+              resubmissionNote={doc.pocResubmissionNote}
+            />
+          )}
 
           {!kmtEdit && (
             <div className="bufm-doc-view__stepper-bar">
@@ -424,6 +426,26 @@ export default function KmtDocumentView() {
             {kmtEdit && (
               <div className="kmt-doc-view__kmt-edit-banner" role="status">
                 KMT edit mode — header and POC details above; update catalog fields in the form builder below. Use <strong>Publish</strong> or <strong>Reject</strong> in the header when this document is pending KMT.
+              </div>
+            )}
+
+            {kmtEdit && showReviewActions && hasPocUpdatesForReview && (
+              <div className="kmt-doc-view__poc-review-hint" role="region" aria-label="POC change highlights">
+                <div className="kmt-doc-view__poc-review-hint__text">
+                  <strong>Section and field highlights</strong> for POC updates are shown in the read-only document steps (not in the form builder). Open document review to see green highlights on updated areas.
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() =>
+                    navigate(`/kmt/document/${encodeURIComponent(doc.id)}`, {
+                      state: { kmtEdit: false },
+                      replace: true,
+                    })
+                  }
+                >
+                  Show document review (highlights)
+                </button>
               </div>
             )}
 

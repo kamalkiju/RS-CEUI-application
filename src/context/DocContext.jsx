@@ -233,6 +233,10 @@ const INITIAL_DOCS = [
     pocName: 'Jordan Lee',
     pocEmail: 'jordan.lee@republicservices.com',
     pocRegion: 'Southeast',
+    pocResubmissionNote:
+      'Adjusted primary offering wording and fee line items per prior KMT comments; rates cross-checked with regional schedule.',
+    poc_updated_sections: ['Configured offerings', 'Standard fees (selected)'],
+    poc_updated_fields: ['Primary offering', 'Active fee set'],
   },
   {
     id: 'K-5051',
