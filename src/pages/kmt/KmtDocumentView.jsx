@@ -28,6 +28,7 @@ import {
   isReviewerHighlightingWholeStep,
   isSectionFlagged,
   lastRejectTrailEntry,
+  normalizeLabel,
 } from '../../utils/reviewFeedback.js'
 import KmtFormBuilder from './KmtFormBuilder.jsx'
 import { ensureFivePocTabs } from './kmtFormBuilderShared.js'
@@ -52,6 +53,7 @@ export default function KmtDocumentView() {
 
   const [activeStep, setActiveStep] = useState(1)
   const [rejectOpen, setRejectOpen] = useState(false)
+  const [rejectPicks, setRejectPicks] = useState([])
   const [historyOpen, setHistoryOpen] = useState(false)
   const [kmtNote, setKmtNote] = useState('')
   const [basicSub, setBasicSub] = useState('')
@@ -146,6 +148,18 @@ export default function KmtDocumentView() {
 
   const viewerName = user?.name || 'KMT Reviewer'
 
+  const toggleRejectPick = (scope, label) => {
+    setRejectPicks(prev => {
+      const i = prev.findIndex(
+        p => p.scope === scope && normalizeLabel(p.label) === normalizeLabel(label),
+      )
+      if (i >= 0) return prev.filter((_, j) => j !== i)
+      return [...prev, { scope, label }]
+    })
+  }
+  const isRejectPick = (scope, label) =>
+    rejectPicks.some(p => p.scope === scope && normalizeLabel(p.label) === normalizeLabel(label))
+
   const handleApprove = () => {
     const today = new Date().toISOString().slice(0, 10)
     updateDoc(doc.id, {
@@ -195,6 +209,7 @@ export default function KmtDocumentView() {
       ],
       tabs: Array.from(new Set([...(doc.tabs || []), 'rejected-tasks', 'all'])),
     })
+    setRejectPicks([])
     navigate('/kmt/document-review/ceui/rejected')
   }
 
@@ -289,6 +304,11 @@ export default function KmtDocumentView() {
                   <span className="bufm-doc-view__review-version">Reviewing {inferDocVersion(doc)}</span>
                 </div>
               </div>
+              {showReviewActions && rejectPicks.length > 0 && (
+                <div className="reviewer-pick-hint" role="status">
+                  <strong>{rejectPicks.length}</strong> item{rejectPicks.length === 1 ? '' : 's'} flagged on the document — click <strong>Reject</strong> to add comments for each row and return to the POC.
+                </div>
+              )}
               {showReviewActions && (
                 <div className="bufm-doc-view__header-actions">
                   <button type="button" className="btn btn-primary" onClick={handleApprove}>
@@ -405,6 +425,11 @@ export default function KmtDocumentView() {
                         pocSectionFlagged={wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)}
                         fieldFlags={label => isFieldFlagged(label, reviewerSets.fields)}
                         pocFieldFlags={label => isFieldFlagged(label, pocSets.fields)}
+                        flagPickerMode={showReviewActions}
+                        sectionPickActive={isRejectPick('section', sec.title)}
+                        onFlagSection={() => toggleRejectPick('section', sec.title)}
+                        onFlagField={fld => toggleRejectPick('field', fld)}
+                        fieldPickActive={lbl => isRejectPick('field', lbl)}
                       />
                     ))}
                   </div>
@@ -533,7 +558,9 @@ export default function KmtDocumentView() {
           open={rejectOpen}
           title="Reject document"
           roleLabel="KMT"
+          variant="ceui"
           enableAuditTrail
+          initialFeedbackRows={rejectPicks}
           onClose={() => setRejectOpen(false)}
           onConfirm={handleRejectConfirm}
         />

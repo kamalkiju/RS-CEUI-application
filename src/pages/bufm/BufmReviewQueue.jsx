@@ -36,9 +36,20 @@ export default function BufmReviewQueue() {
               {rows.map(doc => {
                 const disp = getDisplayStatus(doc, 'BUFM')
                 const areaLabel = doc.area || doc.areas?.[0]?.name || '—'
+                const pocUpdate =
+                  (doc.poc_updated_sections?.length > 0 ||
+                    doc.poc_updated_fields?.length > 0 ||
+                    Boolean(doc.pocResubmissionNote?.trim?.()))
                 return (
                   <tr key={doc.id}>
-                    <td><strong>{doc.sub || doc.id}</strong></td>
+                    <td>
+                      <strong>{doc.sub || doc.id}</strong>
+                      {pocUpdate && (
+                        <span className="queue-poc-update-badge" style={{ marginLeft: 8 }} title="POC updated fields or sections since rejection">
+                          POC update
+                        </span>
+                      )}
+                    </td>
                     <td><VersionBadge doc={doc} /></td>
                     <td>{areaLabel}</td>
                     <td>{doc.pocName || '—'}</td>

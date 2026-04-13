@@ -49,9 +49,21 @@ export default function BufmRsaReviewQueue() {
             <tbody>
               {rows.map(sub => {
                 const sla = slaBadge(sub)
+                const pocUpdate = Boolean(sub.pocResubmissionNote?.trim?.())
                 return (
                   <tr key={sub.id}>
-                    <td><strong>{sub.serviceArea?.name || sub.id}</strong></td>
+                    <td>
+                      <strong>{sub.serviceArea?.name || sub.id}</strong>
+                      {pocUpdate && (
+                        <span
+                          className="queue-poc-update-badge queue-poc-update-badge--rsa"
+                          style={{ marginLeft: 8 }}
+                          title="POC resubmitted with a note for reviewers"
+                        >
+                          POC update
+                        </span>
+                      )}
+                    </td>
                     <td>{sub.requestType || 'Create Service Area'}</td>
                     <td>
                       <span className={`bufm-pri ${priorityPill(sub.bufmPriority)}`}>{sub.bufmPriority || 'Medium'}</span>

@@ -7,6 +7,7 @@ import {
   isFieldFlagged,
   isSectionFlagged,
   lastRejectTrailEntry,
+  normalizeLabel,
 } from '../../utils/reviewFeedback.js'
 
 function WorkflowTimeline({ sub, sectionClassSuffix = '' }) {
@@ -130,6 +131,43 @@ function OfferingReadTable({ title, rows, isPrimary, expanded, setExpanded, show
   )
 }
 
+function RsaSectionTitle({ title, flagPickerMode, onToggleRejectPick, isRejectPick }) {
+  if (!flagPickerMode || !onToggleRejectPick) return <h3>{title}</h3>
+  const on = isRejectPick('section', title)
+  return (
+    <div className="rsa-detail-section-head">
+      <h3>{title}</h3>
+      <button
+        type="button"
+        className={`rsa-flag-pick${on ? ' rsa-flag-pick--on' : ''}`}
+        onClick={() => onToggleRejectPick('section', title)}
+        aria-pressed={on}
+      >
+        Flag
+      </button>
+    </div>
+  )
+}
+
+function RsaFlagFieldWrap({ label, flagPickerMode, onToggleRejectPick, isRejectPick, fieldFlags, children }) {
+  const flagged = fieldFlags(label)
+  return (
+    <div className={`rsa-detail-cell-wrap${isRejectPick('field', label) ? ' rsa-detail-cell-wrap--pick' : ''}`}>
+      {flagPickerMode && onToggleRejectPick && (
+        <button
+          type="button"
+          className={`rsa-flag-pick rsa-flag-pick--field${isRejectPick('field', label) ? ' rsa-flag-pick--on' : ''}`}
+          onClick={() => onToggleRejectPick('field', label)}
+          aria-pressed={isRejectPick('field', label)}
+        >
+          Flag
+        </button>
+      )}
+      <div className={flagged ? 'rsa-detail-flag-cell' : undefined}>{children}</div>
+    </div>
+  )
+}
+
 /**
  * Read-only detail layout per RSAUI prompt §4E (Task, Requestor, Service Area, Categories).
  */
@@ -148,11 +186,22 @@ export default function RsaSubmissionDetailView({
   unifiedPanel = false,
   /** Section dividers only; parent supplies outer card (BUFM summary). */
   unifiedEmbedded = false,
+  /** BUFM/KMT: flag sections or fields before opening Reject (same pattern as CEUI). */
+  flagPickerMode = false,
+  rejectPicks = [],
+  onToggleRejectPick = null,
 }) {
   const merged = useMemo(() => mergeProductTabs(sub?.productTabs), [sub?.productTabs])
   const tabKeys = useMemo(() => productTabKeyOrder(merged), [merged])
   const flagSets = useMemo(() => buildReviewerFlagSets(sub || {}), [sub])
   const fieldFlags = useCallback(l => isFieldFlagged(l, flagSets.fields), [flagSets.fields])
+  const isRejectPick = useCallback(
+    (scope, label) =>
+      (rejectPicks || []).some(
+        p => p.scope === scope && normalizeLabel(p.label) === normalizeLabel(label),
+      ),
+    [rejectPicks],
+  )
   const lastBufmReject = useMemo(() => lastRejectTrailEntry(sub?.reviewAuditTrail, 'BUFM'), [sub?.reviewAuditTrail])
   const [catKey, setCatKey] = useState('solidWaste')
   const [showActiveOnly, setShowActiveOnly] = useState(false)
@@ -175,7 +224,19 @@ export default function RsaSubmissionDetailView({
       }`}
     >
       <div className="rsa-categories-head">
-        <h3>Categories</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <h3>Categories</h3>
+          {flagPickerMode && onToggleRejectPick && (
+            <button
+              type="button"
+              className={`rsa-flag-pick${isRejectPick('section', 'Categories') ? ' rsa-flag-pick--on' : ''}`}
+              onClick={() => onToggleRejectPick('section', 'Categories')}
+              aria-pressed={isRejectPick('section', 'Categories')}
+            >
+              Flag
+            </button>
+          )}
+        </div>
         <label className="rsa-toggle-active">
           <input type="checkbox" checked={showActiveOnly} onChange={e => setShowActiveOnly(e.target.checked)} />
           Show Active Offerings
@@ -310,20 +371,49 @@ export default function RsaSubmissionDetailView({
           isSectionFlagged('Task details', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
         }`}
       >
-        <h3>Task details</h3>
+        <RsaSectionTitle
+          title="Task details"
+          flagPickerMode={flagPickerMode}
+          onToggleRejectPick={onToggleRejectPick}
+          isRejectPick={isRejectPick}
+        />
         <div className="rsa-detail-grid rsa-detail-grid--3">
-          <div className={fieldFlags('Creator Name') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Creator Name</span>
-            <div className="rsa-detail-value">{creatorName}</div>
-          </div>
-          <div className={fieldFlags('Creator Email') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Creator Email</span>
-            <div className="rsa-detail-value">{creatorEmail}</div>
-          </div>
-          <div className={fieldFlags('Created Date') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Created Date</span>
-            <div className="rsa-detail-value">{sub.updated || '—'}</div>
-          </div>
+          <RsaFlagFieldWrap
+            label="Creator Name"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Creator Name</span>
+              <div className="rsa-detail-value">{creatorName}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Creator Email"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Creator Email</span>
+              <div className="rsa-detail-value">{creatorEmail}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Created Date"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Created Date</span>
+              <div className="rsa-detail-value">{sub.updated || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
         </div>
       </section>
 
@@ -332,24 +422,61 @@ export default function RsaSubmissionDetailView({
           isSectionFlagged('Requestor information', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
         }`}
       >
-        <h3>Requestor information</h3>
+        <RsaSectionTitle
+          title="Requestor information"
+          flagPickerMode={flagPickerMode}
+          onToggleRejectPick={onToggleRejectPick}
+          isRejectPick={isRejectPick}
+        />
         <div className="rsa-detail-grid rsa-detail-grid--4">
-          <div className={fieldFlags('Requestor name') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Requestor name</span>
-            <div className="rsa-detail-value">{rm.requestorName || sub.pocName || '—'}</div>
-          </div>
-          <div className={fieldFlags('Requestor email') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Requestor email</span>
-            <div className="rsa-detail-value">{rm.requestorEmail || '—'}</div>
-          </div>
-          <div className={fieldFlags('Requested on behalf of') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Requested on behalf of</span>
-            <div className="rsa-detail-value">{rm.onBehalfOf || '—'}</div>
-          </div>
-          <div className={fieldFlags('Reason for request') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Reason for request</span>
-            <div className="rsa-detail-value">{rm.reasonForRequest || '—'}</div>
-          </div>
+          <RsaFlagFieldWrap
+            label="Requestor name"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Requestor name</span>
+              <div className="rsa-detail-value">{rm.requestorName || sub.pocName || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Requestor email"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Requestor email</span>
+              <div className="rsa-detail-value">{rm.requestorEmail || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Requested on behalf of"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Requested on behalf of</span>
+              <div className="rsa-detail-value">{rm.onBehalfOf || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Reason for request"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Reason for request</span>
+              <div className="rsa-detail-value">{rm.reasonForRequest || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
         </div>
         {rm.comments ? (
           <p className="rsa-detail-comments">
@@ -364,55 +491,140 @@ export default function RsaSubmissionDetailView({
           isSectionFlagged('Service area details', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
         }`}
       >
-        <h3>Service area details</h3>
+        <RsaSectionTitle
+          title="Service area details"
+          flagPickerMode={flagPickerMode}
+          onToggleRejectPick={onToggleRejectPick}
+          isRejectPick={isRejectPick}
+        />
         <div className="rsa-detail-grid rsa-detail-grid--3">
-          <div className={fieldFlags('Service area name') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Service area name</span>
-            <div className="rsa-detail-value">{sa.name || '—'}</div>
-          </div>
-          <div className={fieldFlags('Polygon ID') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Polygon ID</span>
-            <div className="rsa-detail-value">{sa.polygonId || '—'}</div>
-          </div>
-          <div className={fieldFlags('Division') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Division</span>
-            <div className="rsa-detail-value">{sa.division || '—'}</div>
-          </div>
-          <div className={fieldFlags('Lawson ID') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Lawson ID</span>
-            <div className="rsa-detail-value">{sa.lawsonId || '—'}</div>
-          </div>
-          <div className={fieldFlags('Effective Date') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Effective Date</span>
-            <div className="rsa-detail-value">{sa.effectiveDate || '—'}</div>
-          </div>
-          <div className={fieldFlags('Expiration Date') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Expiration Date</span>
-            <div className="rsa-detail-value">{sa.expiryDate || '—'}</div>
-          </div>
+          <RsaFlagFieldWrap
+            label="Service area name"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Service area name</span>
+              <div className="rsa-detail-value">{sa.name || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Polygon ID"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Polygon ID</span>
+              <div className="rsa-detail-value">{sa.polygonId || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Division"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Division</span>
+              <div className="rsa-detail-value">{sa.division || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Lawson ID"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Lawson ID</span>
+              <div className="rsa-detail-value">{sa.lawsonId || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Effective Date"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Effective Date</span>
+              <div className="rsa-detail-value">{sa.effectiveDate || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Expiration Date"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Expiration Date</span>
+              <div className="rsa-detail-value">{sa.expiryDate || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
         </div>
       </section>
 
       <section className={`rsa-detail-section rsa-detail-section--meta${u}`}>
         <div className="rsa-detail-grid rsa-detail-grid--4">
-          <div className={fieldFlags('Request ID') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Request ID</span>
-            <div className="rsa-detail-value">
-              <code>{sub.id}</code>
-            </div>
-          </div>
-          <div className={fieldFlags('Request Type') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Request Type</span>
-            <div className="rsa-detail-value">{sub.requestType || 'Create Service Area'}</div>
-          </div>
-          <div className={fieldFlags('Version') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Version</span>
-            <div className="rsa-detail-value">{sub.version || 'v1.0'}</div>
-          </div>
-          <div className={fieldFlags('Status') ? 'rsa-detail-flag-cell' : undefined}>
-            <span className="rsa-detail-label">Status</span>
-            <div className="rsa-detail-value">{sub.status?.replace(/_/g, ' ') || '—'}</div>
-          </div>
+          <RsaFlagFieldWrap
+            label="Request ID"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Request ID</span>
+              <div className="rsa-detail-value">
+                <code>{sub.id}</code>
+              </div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Request Type"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Request Type</span>
+              <div className="rsa-detail-value">{sub.requestType || 'Create Service Area'}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Version"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Version</span>
+              <div className="rsa-detail-value">{sub.version || 'v1.0'}</div>
+            </>
+          </RsaFlagFieldWrap>
+          <RsaFlagFieldWrap
+            label="Status"
+            flagPickerMode={flagPickerMode}
+            onToggleRejectPick={onToggleRejectPick}
+            isRejectPick={isRejectPick}
+            fieldFlags={fieldFlags}
+          >
+            <>
+              <span className="rsa-detail-label">Status</span>
+              <div className="rsa-detail-value">{sub.status?.replace(/_/g, ' ') || '—'}</div>
+            </>
+          </RsaFlagFieldWrap>
         </div>
       </section>
 

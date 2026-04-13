@@ -1,5 +1,6 @@
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
+import { normalizeLabel } from '../../utils/reviewFeedback.js'
 import Layout from '../../components/Layout.jsx'
 import { useRsaUI } from '../../context/RsaUIContext.jsx'
 import RejectModal from '../../components/RejectModal.jsx'
@@ -23,10 +24,29 @@ export default function KmtRsaSubmissionView() {
   const decodedId = id ? decodeURIComponent(id) : ''
   const sub = decodedId ? getSubmission(decodedId) : null
   const [rejectOpen, setRejectOpen] = useState(false)
+  const [rejectPicks, setRejectPicks] = useState([])
   const [draft, setDraft] = useState(null)
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
 
   const canPublish = sub?.status === RSA_STATUS.Pending_KMT
+
+  const toggleRejectPick = (scope, label) => {
+    setRejectPicks(prev => {
+      const i = prev.findIndex(
+        p => p.scope === scope && normalizeLabel(p.label) === normalizeLabel(label),
+      )
+      if (i >= 0) return prev.filter((_, j) => j !== i)
+      return [...prev, { scope, label }]
+    })
+  }
+
+  const rsaKmtFlagProps = canPublish
+    ? {
+        flagPickerMode: true,
+        rejectPicks,
+        onToggleRejectPick: toggleRejectPick,
+      }
+    : {}
   const canKmtFieldEdit =
     sub?.status === RSA_STATUS.Pending_KMT || sub?.status === RSA_STATUS.Published
   const showKmtFieldEditor =
@@ -106,6 +126,7 @@ export default function KmtRsaSubmissionView() {
     showWorkflowTimeline: false,
     rejectionNote,
     rejectionTitle: sub.status === RSA_STATUS.Rejected_KMT ? 'KMT rejection' : 'BUFM rejection',
+    ...rsaKmtFlagProps,
   }
 
   const fullscreenDetailProps = {
@@ -159,6 +180,12 @@ export default function KmtRsaSubmissionView() {
             )}
           </div>
         </header>
+
+        {canPublish && rejectPicks.length > 0 && (
+          <div className="reviewer-pick-hint" role="status" style={{ margin: '0 0 12px' }}>
+            <strong>{rejectPicks.length}</strong> item{rejectPicks.length === 1 ? '' : 's'} flagged — open <strong>Reject</strong> to add comments for each row.
+          </div>
+        )}
 
         {showKmtFieldEditor && (
           <div className="kmt-doc-view__kmt-edit-banner" role="status">
@@ -372,9 +399,11 @@ export default function KmtRsaSubmissionView() {
         roleLabel="KMT"
         variant="rsa"
         enableAuditTrail
+        initialFeedbackRows={rejectPicks}
         onClose={() => setRejectOpen(false)}
         onConfirm={payload => {
           rejectKMT(sub.id, payload)
+          setRejectPicks([])
           navigate(paths.rejected)
         }}
       />

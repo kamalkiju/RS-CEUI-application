@@ -134,10 +134,21 @@ export default function KmtReportsBody() {
                     const disp = getDisplayStatus(doc, 'KMT')
                     const stLabel = kmtKnowledgeStatusLabel(doc, resolvedQueue)
                     const showReason = resolvedQueue === 'rejected' && doc.rejection_comment_KMT
+                    const pocUpdate =
+                      resolvedQueue === 'review' &&
+                      doc.status === 'Pending_KMT' &&
+                      (doc.poc_updated_sections?.length > 0 ||
+                        doc.poc_updated_fields?.length > 0 ||
+                        Boolean(doc.pocResubmissionNote?.trim?.()))
                     return (
                       <tr key={doc.id}>
                         <td>
                           <strong>{doc.sub || doc.id}</strong>
+                          {pocUpdate && (
+                            <span className="queue-poc-update-badge" style={{ marginLeft: 8 }} title="POC updated since last rejection">
+                              POC update
+                            </span>
+                          )}
                         </td>
                         <td><VersionBadge doc={doc} /></td>
                         <td>{doc.pocName || '—'}</td>
@@ -209,10 +220,24 @@ export default function KmtReportsBody() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rsaFiltered.map(sub => (
+                  {rsaFiltered.map(sub => {
+                    const pocUpdate =
+                      resolvedQueue === 'review' &&
+                      sub.status === RSA_STATUS.Pending_KMT &&
+                      Boolean(sub.pocResubmissionNote?.trim?.())
+                    return (
                     <tr key={sub.id}>
                       <td>
                         <strong>{sub.serviceArea?.name || sub.id}</strong>
+                        {pocUpdate && (
+                          <span
+                            className="queue-poc-update-badge queue-poc-update-badge--rsa"
+                            style={{ marginLeft: 8 }}
+                            title="POC resubmitted with a note for reviewers"
+                          >
+                            POC update
+                          </span>
+                        )}
                       </td>
                       <td>{sub.pocName || '—'}</td>
                       <td>
@@ -247,7 +272,8 @@ export default function KmtReportsBody() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             ) : (

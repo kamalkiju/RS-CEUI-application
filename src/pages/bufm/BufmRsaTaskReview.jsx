@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import { normalizeLabel } from '../../utils/reviewFeedback.js'
 import Layout from '../../components/Layout.jsx'
 import { useRsaUI, RSA_STATUS } from '../../context/RsaUIContext.jsx'
 import RsaSubmissionDetailView from '../../components/rsa/RsaSubmissionDetailView.jsx'
@@ -32,6 +33,17 @@ export default function BufmRsaTaskReview() {
   const [releaseNote, setReleaseNote] = useState('')
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
+  const [rejectPicks, setRejectPicks] = useState([])
+
+  const toggleRejectPick = (scope, label) => {
+    setRejectPicks(prev => {
+      const i = prev.findIndex(
+        p => p.scope === scope && normalizeLabel(p.label) === normalizeLabel(label),
+      )
+      if (i >= 0) return prev.filter((_, j) => j !== i)
+      return [...prev, { scope, label }]
+    })
+  }
 
   if (!sub) {
     return (
@@ -89,6 +101,12 @@ export default function BufmRsaTaskReview() {
     ? '⚠ SLA exceeded'
     : `⏱ ${sub.bufmSlaHoursRemaining ?? '—'}h remaining`
 
+  const rsaFlagDetailProps = {
+    flagPickerMode: canAct,
+    rejectPicks,
+    onToggleRejectPick: toggleRejectPick,
+  }
+
   const bufmFullscreenDetailProps = {
     submission: sub,
     creatorName: sub.pocName || sub.requestMeta?.requestorName || '—',
@@ -97,6 +115,7 @@ export default function BufmRsaTaskReview() {
     showWorkflowTimeline: false,
     rejectionNote: sub.rejection_comment_BUFM || undefined,
     rejectionTitle: 'BUFM note',
+    ...rsaFlagDetailProps,
   }
 
   return (
@@ -152,6 +171,11 @@ export default function BufmRsaTaskReview() {
           <div className="bufm-rsa-summary-divider" aria-hidden />
 
           <div className="bufm-rsa-review__detail rsa-detail-view-wrap">
+            {canAct && rejectPicks.length > 0 && (
+              <div className="reviewer-pick-hint" role="status" style={{ marginBottom: 12 }}>
+                <strong>{rejectPicks.length}</strong> item{rejectPicks.length === 1 ? '' : 's'} flagged — open <strong>Reject</strong> to add comments for each row.
+              </div>
+            )}
             <RsaSubmissionDetailView
               submission={sub}
               creatorName={sub.pocName || sub.requestMeta?.requestorName || '—'}
@@ -161,6 +185,7 @@ export default function BufmRsaTaskReview() {
               unifiedPanel
               unifiedEmbedded
               showWorkflowTimeline={false}
+              {...rsaFlagDetailProps}
             />
           </div>
 
@@ -215,9 +240,11 @@ export default function BufmRsaTaskReview() {
         roleLabel="BUFM"
         variant="rsa"
         enableAuditTrail
+        initialFeedbackRows={rejectPicks}
         onClose={() => setRejectOpen(false)}
         onConfirm={payload => {
           rejectBUFM(sub.id, payload)
+          setRejectPicks([])
           window.alert('✓ Task returned to requestor with your feedback')
           navigate(`${BUFM_RSA_HOME}/rejected`)
         }}

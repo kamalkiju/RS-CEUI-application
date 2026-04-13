@@ -18,20 +18,35 @@ export default function RejectModal({
   enableAuditTrail = false,
   /** @type {'ceui' | 'rsa'} */
   variant = VARIANT.ceui,
+  /** Pre-fill audit rows from on-document picks: { scope, label } */
+  initialFeedbackRows = null,
 }) {
   const [comment, setComment] = useState('')
   const [rows, setRows] = useState([emptyRow()])
   const [err, setErr] = useState(false)
   const [rowErr, setRowErr] = useState('')
 
+  const initialKey =
+    initialFeedbackRows && initialFeedbackRows.length
+      ? JSON.stringify(initialFeedbackRows.map(r => ({ scope: r.scope, label: r.label })))
+      : ''
+
   useEffect(() => {
-    if (open) {
-      setComment('')
+    if (!open) return
+    setComment('')
+    setErr(false)
+    setRowErr('')
+    if (enableAuditTrail && initialFeedbackRows?.length) {
+      const seeded = initialFeedbackRows.map(r => ({
+        scope: r.scope === 'field' ? 'field' : 'section',
+        label: String(r.label || '').trim(),
+        comment: String(r.comment || '').trim(),
+      }))
+      setRows([...seeded, emptyRow()])
+    } else {
       setRows([emptyRow()])
-      setErr(false)
-      setRowErr('')
     }
-  }, [open])
+  }, [open, enableAuditTrail, initialKey])
 
   if (!open) return null
 

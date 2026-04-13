@@ -505,6 +505,22 @@ body {
 .step-name { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
 .step.active .step-name { color: var(--accent); }
 .step-count { display: none; }
+.step.step--reviewer-flag:not(.active)::after { background: rgba(251, 146, 60, 0.45); }
+.step.step--reviewer-flag:not(.active) .step-num {
+  background: rgba(255, 247, 237, 0.95);
+  color: #c2410c;
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.55);
+}
+.step.step--reviewer-flag:not(.active) .step-name { color: #c2410c; }
+.step.step--poc-update:not(.active)::after { background: rgba(16, 185, 129, 0.4); }
+.step.step--poc-update:not(.active) .step-num {
+  background: rgba(236, 253, 245, 0.95);
+  color: #047857;
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.45);
+}
+.step.step--poc-update:not(.active) .step-name { color: #047857; }
+.step.active.step--reviewer-flag .step-num { box-shadow: inset 0 0 0 2px rgba(251, 146, 60, 0.5); }
+.step.active.step--poc-update .step-num { box-shadow: inset 0 0 0 2px rgba(16, 185, 129, 0.45); }
 
 /* ─── CONTENT ────────────────────────────────────── */
 .content { padding: 28px 24px; flex: 1; }
@@ -1945,6 +1961,17 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   border-color: #6ee7b7;
   background: rgba(236, 253, 245, 0.65);
 }
+.reviewer-pick-hint {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 520px;
+}
 .poc-update-summary {
   margin: 0 0 12px;
   padding: 12px 16px;
@@ -1980,7 +2007,74 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   color: #1e40af;
 }
 .rsa-detail-section--reviewer-flag { border-left: 4px solid #fb923c; padding-left: 12px; margin-left: -4px; }
+.rsa-detail-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rsa-detail-section-head h3 { margin: 0; }
+.rsa-flag-pick {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.rsa-flag-pick:hover { border-color: var(--accent); color: var(--accent); }
+.rsa-flag-pick--on {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.35);
+}
+.rsa-flag-pick--field { padding: 4px 8px; font-size: 10px; }
+.rsa-detail-cell-wrap {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.rsa-detail-cell-wrap .rsa-detail-flag-cell,
+.rsa-detail-cell-wrap > div:not(.rsa-flag-pick) { flex: 1; min-width: 0; }
+.rsa-detail-cell-wrap--pick {
+  padding: 6px 8px;
+  margin: -4px -6px;
+  border-radius: 8px;
+  background: rgba(239, 246, 255, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.35);
+}
+.rsa-categories-head .rsa-flag-pick { margin-left: auto; }
 .rsa-detail-flag-cell { outline: 1px dashed rgba(251, 146, 60, 0.85); border-radius: 6px; padding: 6px 4px; background: rgba(255, 247, 237, 0.5); }
+.queue-poc-update-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  white-space: nowrap;
+}
+.queue-poc-update-badge--rsa {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #7dd3fc;
+}
 .rsa-poc-resubmit-note {
   background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-lg);
   padding: 12px 16px; margin-bottom: 12px; font-size: 13px; color: #065f46;
@@ -2205,9 +2299,65 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .read-only-acc {
   border: 1px solid var(--border); border-radius: var(--radius-lg); background: #fff; overflow: hidden;
 }
+.read-only-acc__header-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+}
 .read-only-acc__header {
-  width: 100%; display: flex; align-items: center; gap: 10px; padding: 14px 16px;
-  background: #f8fafc; border: none; cursor: pointer; font-family: inherit; text-align: left;
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+  background: transparent; border: none; cursor: pointer; font-family: inherit; text-align: left;
+}
+.read-only-acc__pick-btn {
+  flex-shrink: 0;
+  align-self: stretch;
+  padding: 0 14px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.read-only-acc__pick-btn:hover { background: #f1f5f9; color: var(--accent); }
+.read-only-acc__pick-btn--on {
+  background: #eff6ff;
+  color: #1d4ed8;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.35);
+}
+.read-only-acc__pick-btn--field {
+  padding: 4px 8px;
+  align-self: flex-start;
+  margin-top: 2px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+.read-only-acc__field-wrap {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.read-only-acc__field-wrap .text-field-view { flex: 1; min-width: 0; }
+.read-only-acc__field-wrap--pick {
+  padding: 8px 10px;
+  margin: -4px -6px;
+  border-radius: var(--radius);
+  background: rgba(239, 246, 255, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.35);
+}
+.read-only-acc--pick-active {
+  box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.45);
 }
 .read-only-acc__title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .read-only-acc__badge {

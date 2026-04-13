@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Layout from '../../../components/Layout.jsx'
 import KnowledgeArea from './steps/KnowledgeArea.jsx'
@@ -15,6 +15,11 @@ import { useAuth } from '../../../context/AuthContext.jsx'
 import { getDisplayStatus } from '../../../utils/documentStatus.js'
 import { inferDocVersion, getCaseStageDisplay } from '../../../utils/documentVersion.js'
 import { diffReadOnlySnapshots } from './documentWizardReadOnlyModel.js'
+import {
+  buildPocUpdateFlagSets,
+  buildReviewerFlagSets,
+  isReviewerHighlightingWholeStep,
+} from '../../../utils/reviewFeedback.js'
 
 const STEPS = [
   { num: 1, name: 'Knowledge Area',    count: '0/9' },
@@ -96,6 +101,10 @@ export default function DocumentEditor() {
   const location  = useLocation()
   const { user } = useAuth()
   const { updateDoc, getDocumentById } = useDocs()
+
+  const liveDoc = doc?.id ? getDocumentById(doc.id) : doc
+  const reviewerSets = useMemo(() => buildReviewerFlagSets(liveDoc || {}), [liveDoc])
+  const pocSets = useMemo(() => buildPocUpdateFlagSets(liveDoc || {}), [liveDoc])
 
   // Document data passed from the list or create flow
   const { doc, mode, previewOnly } = location.state || {}
@@ -373,10 +382,13 @@ export default function DocumentEditor() {
 
       {/* Step wizard: same five tabs in view and edit */}
       <div className="step-wizard">
-        {STEPS.map(s => (
+        {STEPS.map(s => {
+          const tabRev = isReviewerHighlightingWholeStep(s.num, reviewerSets.sections)
+          const tabPoc = isReviewerHighlightingWholeStep(s.num, pocSets.sections)
+          return (
           <div
             key={s.num}
-            className={`step${currentStep === s.num ? ' active' : ''}`}
+            className={`step${currentStep === s.num ? ' active' : ''}${tabRev ? ' step--reviewer-flag' : ''}${tabPoc ? ' step--poc-update' : ''}`}
             onClick={() => goStep(s.num)}
             role="button"
             tabIndex={0}
@@ -387,7 +399,8 @@ export default function DocumentEditor() {
               <div className="step-name">{s.name}</div>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {inViewMode ? (
