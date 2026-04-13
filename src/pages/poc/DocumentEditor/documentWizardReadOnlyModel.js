@@ -290,3 +290,25 @@ export function diffReadOnlySnapshots(baseline, doc) {
   }
   return { sections: [...changedSections], fields: [...changedFields] }
 }
+
+/**
+ * Wizard step numbers (1–5) that contain at least one POC-updated section or field label.
+ * Used so BUFM/KMT steppers highlight the right tabs (not only whole-step aliases).
+ */
+export function getStepsTouchedByPocUpdates(doc, sectionTitles = [], fieldLabels = []) {
+  const steps = new Set()
+  if (!doc) return steps
+  const secWanted = new Set((sectionTitles || []).map(s => normalizeLabel(s)).filter(Boolean))
+  const fieldWanted = new Set((fieldLabels || []).map(s => normalizeLabel(s)).filter(Boolean))
+  if (!secWanted.size && !fieldWanted.size) return steps
+  for (let step = 1; step <= 5; step++) {
+    const secs = getReadOnlyStepSections(doc, step)
+    for (const sec of secs) {
+      if (secWanted.has(normalizeLabel(sec.title))) steps.add(step)
+      for (const f of sec.fields || []) {
+        if (fieldWanted.has(normalizeLabel(f.label))) steps.add(step)
+      }
+    }
+  }
+  return steps
+}

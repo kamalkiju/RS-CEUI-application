@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback } from 'react'
 import { simulatePostRsaUI } from '../api/rsaUI.js'
 import { getPublishedServiceAreasUrl } from '../api/serviceAreas.js'
 import { normalizeRejectPayload } from '../utils/reviewFeedback.js'
+import { buildRsaSubmissionSnapshot, diffRsaSubmissionSnapshots } from '../utils/rsaSubmissionSnapshot.js'
 
 export const RSA_STATUS = {
   Draft: 'Draft',
@@ -550,11 +551,30 @@ export function RsaUIProvider({ children }) {
       prev.map(s => {
         if (s.id !== id) return s
         const next = { ...s, ...data, status: RSA_STATUS.Pending_BUFM, updated: TODAY() }
-        if (s.status === RSA_STATUS.Rejected_BUFM) {
-          next.rejection_comment_BUFM = ''
-          delete next.rejection_feedback_items
-          delete next.rejection_highlight_sections
-          delete next.rejection_highlight_fields
+        const fromBufmRej = s.status === RSA_STATUS.Rejected_BUFM
+        const fromKmtRej = s.status === RSA_STATUS.Rejected_KMT
+        if (fromBufmRej || fromKmtRej) {
+          if (fromBufmRej) {
+            next.rejection_comment_BUFM = ''
+            delete next.rejection_feedback_items
+            delete next.rejection_highlight_sections
+            delete next.rejection_highlight_fields
+          }
+          if (fromKmtRej) {
+            next.rejection_comment_KMT = ''
+            delete next.rejection_feedback_items
+            delete next.rejection_highlight_sections
+            delete next.rejection_highlight_fields
+          }
+          const diff =
+            s.rejection_readonly_snapshot?.entries?.length
+              ? diffRsaSubmissionSnapshots(s.rejection_readonly_snapshot, next)
+              : { sections: [], fields: [] }
+          if (diff.sections.length) next.poc_updated_sections = diff.sections
+          else delete next.poc_updated_sections
+          if (diff.fields.length) next.poc_updated_fields = diff.fields
+          else delete next.poc_updated_fields
+          delete next.rejection_readonly_snapshot
           const trail = s.reviewAuditTrail || []
           const note = typeof data?.pocResubmissionNote === 'string' ? data.pocResubmissionNote.trim() : ''
           next.reviewAuditTrail = [
@@ -564,6 +584,8 @@ export function RsaUIProvider({ children }) {
               role: 'POC',
               action: 'resubmit',
               comment: note,
+              pocUpdatedSections: diff.sections,
+              pocUpdatedFields: diff.fields,
             },
           ]
           if (note) next.pocResubmissionNote = note
@@ -578,7 +600,19 @@ export function RsaUIProvider({ children }) {
     setSubmissions(prev => {
       const sub = prev.find(s => s.id === id)
       if (!sub || sub.status !== RSA_STATUS.Pending_BUFM) return prev
-      return prev.map(s => s.id === id ? { ...s, status: RSA_STATUS.Pending_KMT, updated: TODAY() } : s)
+      return prev.map(s =>
+        s.id === id
+          ? {
+              ...s,
+              status: RSA_STATUS.Pending_KMT,
+              updated: TODAY(),
+              poc_updated_sections: undefined,
+              poc_updated_fields: undefined,
+              pocResubmissionNote: undefined,
+              rejection_readonly_snapshot: undefined,
+            }
+          : s,
+      )
     })
   }, [])
 
@@ -595,6 +629,7 @@ export function RsaUIProvider({ children }) {
           rejection_feedback_items: p.feedbackItems,
           rejection_highlight_sections: p.highlightSections,
           rejection_highlight_fields: p.highlightFields,
+          rejection_readonly_snapshot: buildRsaSubmissionSnapshot(s),
           reviewAuditTrail: [
             ...trail,
             {
@@ -620,7 +655,17 @@ export function RsaUIProvider({ children }) {
       if (!sub || sub.status !== RSA_STATUS.Pending_KMT) return prev
       published = buildPublishedAreaFromSubmission(sub)
       return prev.map(s =>
-        s.id === id ? { ...s, status: RSA_STATUS.Published, updated: TODAY() } : s
+        s.id === id
+          ? {
+              ...s,
+              status: RSA_STATUS.Published,
+              updated: TODAY(),
+              poc_updated_sections: undefined,
+              poc_updated_fields: undefined,
+              pocResubmissionNote: undefined,
+              rejection_readonly_snapshot: undefined,
+            }
+          : s,
       )
     })
     if (published) {
@@ -647,6 +692,7 @@ export function RsaUIProvider({ children }) {
           rejection_feedback_items: p.feedbackItems,
           rejection_highlight_sections: p.highlightSections,
           rejection_highlight_fields: p.highlightFields,
+          rejection_readonly_snapshot: buildRsaSubmissionSnapshot(s),
           reviewAuditTrail: [
             ...trail,
             {

@@ -2,7 +2,9 @@ import { Fragment, useMemo, useState, useEffect, useCallback } from 'react'
 import { RSA_STATUS } from '../../context/RsaUIContext.jsx'
 import { mergeProductTabs, productTabKeyOrder } from '../../utils/rsaProductTabs.js'
 import RejectionBanner from '../RejectionBanner.jsx'
+import PocUpdateSummaryBanner from '../PocUpdateSummaryBanner.jsx'
 import {
+  buildPocUpdateFlagSets,
   buildReviewerFlagSets,
   isFieldFlagged,
   isSectionFlagged,
@@ -149,8 +151,10 @@ function RsaSectionTitle({ title, flagPickerMode, onToggleRejectPick, isRejectPi
   )
 }
 
-function RsaFlagFieldWrap({ label, flagPickerMode, onToggleRejectPick, isRejectPick, fieldFlags, children }) {
+function RsaFlagFieldWrap({ label, flagPickerMode, onToggleRejectPick, isRejectPick, fieldFlags, pocFieldFlags, children }) {
   const flagged = fieldFlags(label)
+  const poc = pocFieldFlags ? pocFieldFlags(label) : false
+  const cellClass = [flagged ? 'rsa-detail-flag-cell' : '', poc ? 'rsa-detail-poc-cell' : ''].filter(Boolean).join(' ') || undefined
   return (
     <div className={`rsa-detail-cell-wrap${isRejectPick('field', label) ? ' rsa-detail-cell-wrap--pick' : ''}`}>
       {flagPickerMode && onToggleRejectPick && (
@@ -163,7 +167,7 @@ function RsaFlagFieldWrap({ label, flagPickerMode, onToggleRejectPick, isRejectP
           Flag
         </button>
       )}
-      <div className={flagged ? 'rsa-detail-flag-cell' : undefined}>{children}</div>
+      <div className={cellClass}>{children}</div>
     </div>
   )
 }
@@ -194,7 +198,9 @@ export default function RsaSubmissionDetailView({
   const merged = useMemo(() => mergeProductTabs(sub?.productTabs), [sub?.productTabs])
   const tabKeys = useMemo(() => productTabKeyOrder(merged), [merged])
   const flagSets = useMemo(() => buildReviewerFlagSets(sub || {}), [sub])
+  const pocSets = useMemo(() => buildPocUpdateFlagSets(sub || {}), [sub])
   const fieldFlags = useCallback(l => isFieldFlagged(l, flagSets.fields), [flagSets.fields])
+  const pocFieldFlags = useCallback(l => isFieldFlagged(l, pocSets.fields), [pocSets.fields])
   const isRejectPick = useCallback(
     (scope, label) =>
       (rejectPicks || []).some(
@@ -221,7 +227,7 @@ export default function RsaSubmissionDetailView({
     <section
       className={`rsa-detail-section rsa-categories-block${u}${
         isSectionFlagged('Categories', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
-      }`}
+      }${isSectionFlagged('Categories', pocSets.sections) ? ' rsa-detail-section--poc-update' : ''}`}
     >
       <div className="rsa-categories-head">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -329,14 +335,6 @@ export default function RsaSubmissionDetailView({
         )}
       {sub &&
         sub.status === RSA_STATUS.Pending_BUFM &&
-        sub.pocResubmissionNote && (
-          <div className="rsa-poc-resubmit-note rsa-detail-unified-banner" role="status">
-            <strong>POC resubmission note</strong>
-            {sub.pocResubmissionNote}
-          </div>
-        )}
-      {sub &&
-        sub.status === RSA_STATUS.Pending_BUFM &&
         lastBufmReject &&
         (lastBufmReject.feedbackItems?.length > 0 || lastBufmReject.comment) && (
           <div className="rsa-reviewer-verify rsa-detail-unified-banner" role="region" aria-label="Prior BUFM feedback">
@@ -364,12 +362,26 @@ export default function RsaSubmissionDetailView({
           </div>
         )}
 
+      {sub &&
+        (sub.status === RSA_STATUS.Pending_BUFM || sub.status === RSA_STATUS.Pending_KMT) &&
+        (sub.poc_updated_sections?.length > 0 ||
+          sub.poc_updated_fields?.length > 0 ||
+          sub.pocResubmissionNote?.trim?.()) && (
+          <div className="rsa-detail-unified-banner">
+            <PocUpdateSummaryBanner
+              sections={sub.poc_updated_sections || []}
+              fields={sub.poc_updated_fields || []}
+              resubmissionNote={sub.pocResubmissionNote}
+            />
+          </div>
+        )}
+
       {showWorkflowTimeline && <WorkflowTimeline sub={sub} sectionClassSuffix={u} />}
 
       <section
         className={`rsa-detail-section${u}${
           isSectionFlagged('Task details', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
-        }`}
+        }${isSectionFlagged('Task details', pocSets.sections) ? ' rsa-detail-section--poc-update' : ''}`}
       >
         <RsaSectionTitle
           title="Task details"
@@ -384,6 +396,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Creator Name</span>
@@ -396,6 +409,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Creator Email</span>
@@ -408,6 +422,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Created Date</span>
@@ -420,7 +435,7 @@ export default function RsaSubmissionDetailView({
       <section
         className={`rsa-detail-section${u}${
           isSectionFlagged('Requestor information', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
-        }`}
+        }${isSectionFlagged('Requestor information', pocSets.sections) ? ' rsa-detail-section--poc-update' : ''}`}
       >
         <RsaSectionTitle
           title="Requestor information"
@@ -435,6 +450,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Requestor name</span>
@@ -447,6 +463,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Requestor email</span>
@@ -459,6 +476,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Requested on behalf of</span>
@@ -471,6 +489,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Reason for request</span>
@@ -489,7 +508,7 @@ export default function RsaSubmissionDetailView({
       <section
         className={`rsa-detail-section${u}${
           isSectionFlagged('Service area details', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
-        }`}
+        }${isSectionFlagged('Service area details', pocSets.sections) ? ' rsa-detail-section--poc-update' : ''}`}
       >
         <RsaSectionTitle
           title="Service area details"
@@ -504,6 +523,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Service area name</span>
@@ -516,6 +536,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Polygon ID</span>
@@ -528,6 +549,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Division</span>
@@ -540,6 +562,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Lawson ID</span>
@@ -552,6 +575,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Effective Date</span>
@@ -564,6 +588,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Expiration Date</span>
@@ -573,7 +598,11 @@ export default function RsaSubmissionDetailView({
         </div>
       </section>
 
-      <section className={`rsa-detail-section rsa-detail-section--meta${u}`}>
+      <section
+        className={`rsa-detail-section rsa-detail-section--meta${u}${
+          isSectionFlagged('Request metadata', flagSets.sections) ? ' rsa-detail-section--reviewer-flag' : ''
+        }${isSectionFlagged('Request metadata', pocSets.sections) ? ' rsa-detail-section--poc-update' : ''}`}
+      >
         <div className="rsa-detail-grid rsa-detail-grid--4">
           <RsaFlagFieldWrap
             label="Request ID"
@@ -581,6 +610,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Request ID</span>
@@ -595,6 +625,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Request Type</span>
@@ -607,6 +638,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Version</span>
@@ -619,6 +651,7 @@ export default function RsaSubmissionDetailView({
             onToggleRejectPick={onToggleRejectPick}
             isRejectPick={isRejectPick}
             fieldFlags={fieldFlags}
+            pocFieldFlags={pocFieldFlags}
           >
             <>
               <span className="rsa-detail-label">Status</span>

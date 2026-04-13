@@ -2006,6 +2006,59 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   background: #bfdbfe;
   color: #1e40af;
 }
+.poc-update-summary__counts {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #065f46;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.poc-update-summary__count-chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #6ee7b7;
+  color: #047857;
+}
+.poc-update-summary__count-total {
+  font-weight: 600;
+  color: #0f766e;
+}
+.poc-update-summary__note {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(5, 95, 70, 0.25);
+  font-size: 13px;
+  color: #065f46;
+}
+.poc-update-summary__note p {
+  margin: 6px 0 0;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.rsa-detail-section--poc-update {
+  border-left: 4px solid #34d399;
+  padding-left: 12px;
+  margin-left: -4px;
+  background: linear-gradient(90deg, rgba(236, 253, 245, 0.55) 0%, transparent 42%);
+}
+.rsa-detail-poc-cell {
+  border-left: 3px solid #34d399;
+  padding-left: 10px;
+  border-radius: 6px;
+  background: rgba(236, 253, 245, 0.45);
+}
+.rsa-detail-flag-cell.rsa-detail-poc-cell {
+  border-left: 3px solid #34d399;
+  outline: 1px dashed rgba(251, 146, 60, 0.65);
+}
 .rsa-detail-section--reviewer-flag { border-left: 4px solid #fb923c; padding-left: 12px; margin-left: -4px; }
 .rsa-detail-section-head {
   display: flex;

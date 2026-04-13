@@ -8,6 +8,7 @@ import {
   buildReadOnlyFieldSnapshot,
   getReadOnlyStepHeading,
   getReadOnlyStepSections,
+  getStepsTouchedByPocUpdates,
 } from '../poc/DocumentEditor/documentWizardReadOnlyModel.js'
 import ReadOnlyFieldsAccordion from '../../components/ReadOnlyFieldsAccordion.jsx'
 import DocumentPulseComments from '../../components/DocumentPulseComments.jsx'
@@ -52,13 +53,19 @@ export default function BufmDocumentView() {
 
   const reviewerSets = useMemo(() => buildReviewerFlagSets(doc), [doc])
   const pocSets = useMemo(() => buildPocUpdateFlagSets(doc), [doc])
+  const pocStepsWithUpdates = useMemo(
+    () => getStepsTouchedByPocUpdates(doc, doc.poc_updated_sections || [], doc.poc_updated_fields || []),
+    [doc],
+  )
   const wholeStepReviewer = useMemo(
     () => isReviewerHighlightingWholeStep(activeStep, reviewerSets.sections),
     [activeStep, reviewerSets.sections],
   )
   const wholeStepPoc = useMemo(
-    () => isReviewerHighlightingWholeStep(activeStep, pocSets.sections),
-    [activeStep, pocSets.sections],
+    () =>
+      pocStepsWithUpdates.has(activeStep) ||
+      isReviewerHighlightingWholeStep(activeStep, pocSets.sections),
+    [activeStep, pocSets.sections, pocStepsWithUpdates],
   )
   const lastBufmReject = useMemo(
     () => lastRejectTrailEntry(doc?.reviewAuditTrail, 'BUFM'),
@@ -236,15 +243,23 @@ export default function BufmDocumentView() {
             </header>
           </div>
 
-          {showReviewActions && (doc.poc_updated_sections?.length > 0 || doc.poc_updated_fields?.length > 0) && (
-            <PocUpdateSummaryBanner sections={doc.poc_updated_sections || []} fields={doc.poc_updated_fields || []} />
-          )}
+          {showReviewActions &&
+            (doc.poc_updated_sections?.length > 0 ||
+              doc.poc_updated_fields?.length > 0 ||
+              doc.pocResubmissionNote?.trim?.()) && (
+              <PocUpdateSummaryBanner
+                sections={doc.poc_updated_sections || []}
+                fields={doc.poc_updated_fields || []}
+                resubmissionNote={doc.pocResubmissionNote}
+              />
+            )}
 
           <div className="bufm-doc-view__stepper-bar">
             <nav className="bufm-stepper bufm-stepper--doc-view" aria-label="Document steps">
               {STEPPER_STEPS.map(s => {
                 const tabRev = isReviewerHighlightingWholeStep(s.n, reviewerSets.sections)
-                const tabPoc = isReviewerHighlightingWholeStep(s.n, pocSets.sections)
+                const tabPoc =
+                  isReviewerHighlightingWholeStep(s.n, pocSets.sections) || pocStepsWithUpdates.has(s.n)
                 return (
                   <button
                     key={s.n}
