@@ -1,11 +1,13 @@
 /**
- * RSAUI API — wire fetch() when backend exists.
+ * Service-area submission API — wire fetch() when backend exists.
+ * Legacy name kept for existing imports.
  */
 
-export const RSAUI_POST_PATH = '/rsaui'
+export const SERVICE_AREA_POST_PATH = '/api/ceui/service-area'
+export const RSAUI_POST_PATH = SERVICE_AREA_POST_PATH
 
 export function buildRsaUIPayload(body) {
-  return { url: RSAUI_POST_PATH, method: 'POST', body }
+  return { url: SERVICE_AREA_POST_PATH, method: 'POST', body }
 }
 
 /** Dev-only: last POST payload for inspection */
@@ -17,7 +19,7 @@ export function getLastRsaUIPost() {
 export function simulatePostRsaUI(payload) {
   lastPostPayload = { ...payload, _at: new Date().toISOString() }
   if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
-    console.info('[RSAUI POST]', RSAUI_POST_PATH, payload)
+    console.info('[service-area POST]', SERVICE_AREA_POST_PATH, payload)
   }
   return Promise.resolve({ ok: true, id: payload.id })
 }

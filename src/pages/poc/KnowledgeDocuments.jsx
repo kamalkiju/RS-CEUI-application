@@ -73,7 +73,7 @@ export default function KnowledgeDocuments() {
   const goEditor = (row, state) => {
     if (row._kind === 'rsa') {
       const m = state?.mode || 'edit'
-      navigate(`/rsaui/service-area?submission=${encodeURIComponent(row.id)}&mode=${m}`)
+      navigate(`/poc/service-area?submission=${encodeURIComponent(row.id)}&mode=${m}`)
       return
     }
     navigate('/poc/editor', { state: { doc: row, ...state } })

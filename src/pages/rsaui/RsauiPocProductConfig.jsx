@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import RsaSubmissionDetailView from '../../components/rsa/RsaSubmissionDetailView.jsx'
 import { mergeProductTabs, productTabKeyOrder, RSA_CORE_TAB_KEYS } from '../../utils/rsaProductTabs.js'
 
-const BASE = '/rsaui/poc/create'
+const BASE = '/poc/service-area'
 
 const OFFERING_NAMES = [
   '95 Ga Cart Solid Waste Service',

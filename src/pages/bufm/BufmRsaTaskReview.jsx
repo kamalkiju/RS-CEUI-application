@@ -2,11 +2,13 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import Layout from '../../components/Layout.jsx'
 import { useRsaUI, RSA_STATUS } from '../../context/RsaUIContext.jsx'
-import { useAuth } from '../../context/AuthContext.jsx'
 import RsaSubmissionDetailView from '../../components/rsa/RsaSubmissionDetailView.jsx'
 import RsaDocumentFullscreenModal from '../../components/rsa/RsaDocumentFullscreenModal.jsx'
 
 const REVIEWERS = ['Robert Chen', 'Maria Wilson', 'Jane Wilson', 'Alex Morgan']
+
+/** RSA service-area review stream under unified BUFM document review */
+const BUFM_RSA_HOME = '/bufm/document-review/rsaui'
 
 function priorityClass(p) {
   const x = String(p || 'medium').toLowerCase()
@@ -18,9 +20,7 @@ function priorityClass(p) {
 export default function BufmRsaTaskReview() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
   const { getSubmission, approveBUFM, releaseBufmToUnclaimed } = useRsaUI()
-  const base = user?.app === 'RSAUI' ? '/rsaui/bufm' : '/bufm'
   const decodedId = id ? decodeURIComponent(id) : ''
   const sub = decodedId ? getSubmission(decodedId) : null
 
@@ -36,7 +36,7 @@ export default function BufmRsaTaskReview() {
       <Layout>
         <div className="bufm-rsa-page">
           <p>Request not found.</p>
-          <button type="button" className="btn btn-outline" onClick={() => navigate(`${base}/document-review/review`)}>Back</button>
+          <button type="button" className="btn btn-outline" onClick={() => navigate(`${BUFM_RSA_HOME}/review`)}>Back</button>
         </div>
       </Layout>
     )
@@ -54,7 +54,7 @@ export default function BufmRsaTaskReview() {
     if (!window.confirm(`Approve this Request?\n\n"${sub.serviceArea?.name || sub.id}" will be marked as approved and the requestor (${sub.pocName || 'POC'}) will be notified.`)) return
     approveBUFM(sub.id)
     window.alert('✓ Task Approved Successfully')
-    navigate(`${base}/document-review/approved`)
+    navigate(`${BUFM_RSA_HOME}/approved`)
   }
 
   const approveWithSlaNote = () => {
@@ -65,7 +65,7 @@ export default function BufmRsaTaskReview() {
     approveBUFM(sub.id)
     setApproveOpen(false)
     window.alert('✓ Task Approved Successfully')
-    navigate(`${base}/document-review/approved`)
+    navigate(`${BUFM_RSA_HOME}/approved`)
   }
 
   const doRelease = () => {
@@ -80,7 +80,7 @@ export default function BufmRsaTaskReview() {
     releaseBufmToUnclaimed(sub.id, { releaseNote })
     setReleaseOpen(false)
     window.alert('✓ Task Released Successfully')
-    navigate(`${base}/document-review/unclaimed`)
+    navigate(`${BUFM_RSA_HOME}/unclaimed`)
   }
 
   const slaLabel = slaExceeded
@@ -180,7 +180,7 @@ export default function BufmRsaTaskReview() {
                   <button type="button" className="btn btn-outline" onClick={() => setReleaseOpen(true)}>
                     Release task
                   </button>
-                  <button type="button" className="btn btn-outline" onClick={() => navigate(`${base}/reject/${encodeURIComponent(sub.id)}`)}>
+                  <button type="button" className="btn btn-outline" onClick={() => navigate(`/bufm/reject/${encodeURIComponent(sub.id)}`)}>
                     Reject
                   </button>
                   <button type="button" className="btn btn-primary" onClick={handleApproveClick}>

@@ -52,7 +52,7 @@ export default function BufmRsaApprovedList() {
                     <button
                       type="button"
                       className="btn btn-primary bufm-table__view"
-                      onClick={() => navigate(`/rsaui/bufm/review/${encodeURIComponent(sub.id)}`)}
+                      onClick={() => navigate(`/bufm/review/${encodeURIComponent(sub.id)}`)}
                     >
                       View Details →
                     </button>

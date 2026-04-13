@@ -5,9 +5,9 @@ import { useRsaUI, RSA_STATUS } from '../../context/RsaUIContext.jsx'
 import RejectionBanner from '../../components/RejectionBanner.jsx'
 
 const TABS = [
-  { to: '/rsaui/service-area', label: '1. Select Area', end: false },
-  { to: '/rsaui/products', label: '2. Product Config', end: false },
-  { to: '/rsaui/pricing', label: '3. Review', end: false },
+  { to: '/poc/service-area/select', label: '1. Select Area', end: false },
+  { to: '/poc/service-area/configure', label: '2. Product Config', end: false },
+  { to: '/poc/service-area/review', label: '3. Review', end: false },
 ]
 
 const STEP_PATHS = TABS.map(t => t.to)
@@ -91,7 +91,7 @@ export default function RsaUILayout() {
         pricing: current.pricing,
         product: current.product,
       })
-      navigate('/rsaui')
+      navigate('/poc/document-review')
     } finally {
       setSaving(false)
     }
@@ -106,7 +106,7 @@ export default function RsaUILayout() {
     if (!submissionId || !sub || sub.status !== RSA_STATUS.Draft) return
     if (!window.confirm(`Delete draft ${submissionId}? This cannot be undone.`)) return
     removeSubmission(submissionId)
-    navigate('/rsaui')
+    navigate('/poc/document-review')
   }
 
   const tabClass = ({ isActive }) => `rsa-ui-tab${isActive ? ' rsa-ui-tab--active' : ''}`
@@ -115,7 +115,7 @@ export default function RsaUILayout() {
     <Layout>
       <main className="rsa-ui-flow">
         <div className="rsa-ui-flow__head">
-          <button type="button" className="back-btn rsa-ui-back" onClick={() => navigate('/rsaui')} aria-label="Back to list">
+          <button type="button" className="back-btn rsa-ui-back" onClick={() => navigate('/poc/document-review')} aria-label="Back to list">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <div>

@@ -1,25 +1,57 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import Layout from '../../components/Layout.jsx'
 
-const TABS = [
-  { path: 'review', label: 'Review Queue' },
-  { path: 'approved', label: 'Approved' },
-  { path: 'rejected', label: 'Rejected' },
-  { path: 'unclaimed', label: 'Unclaimed Tasks' },
+const CEUI_TABS = [
+  { path: 'ceui/review', label: 'Review Queue' },
+  { path: 'ceui/approved', label: 'Approved' },
+  { path: 'ceui/rejected', label: 'Rejected' },
+  { path: 'ceui/unclaimed', label: 'Unclaimed Tasks' },
+]
+
+const RSAUI_TABS = [
+  { path: 'rsaui/review', label: 'Review Queue' },
+  { path: 'rsaui/approved', label: 'Approved' },
+  { path: 'rsaui/rejected', label: 'Rejected' },
+  { path: 'rsaui/unclaimed', label: 'Unclaimed Tasks' },
 ]
 
 export default function BufmReportsLayout() {
+  const { pathname } = useLocation()
+  const isRsauiStream = pathname.includes('/document-review/rsaui/')
+  const stream = isRsauiStream ? 'rsaui' : 'ceui'
+  const subTabs = stream === 'rsaui' ? RSAUI_TABS : CEUI_TABS
+
   return (
     <Layout>
       <div className="bufm-reports-page">
         <div className="bufm-reports-page__head">
           <h1 className="bufm-reports-page__title">Document Review</h1>
           <p className="bufm-reports-page__sub">
-            Knowledge documents — review queue, approved, and rejected (BUFM).
+            CEUI knowledge documents and RSAUI service-area requests — choose a stream, then a queue.
           </p>
         </div>
+
+        <nav className="bufm-reports-page__streams" aria-label="Document source">
+          <NavLink
+            to="ceui/review"
+            className={() =>
+              `bufm-reports-page__stream${!isRsauiStream ? ' bufm-reports-page__stream--active' : ''}`
+            }
+          >
+            CEUI documents
+          </NavLink>
+          <NavLink
+            to="rsaui/review"
+            className={() =>
+              `bufm-reports-page__stream${isRsauiStream ? ' bufm-reports-page__stream--active' : ''}`
+            }
+          >
+            RSAUI service areas
+          </NavLink>
+        </nav>
+
         <nav className="bufm-reports-page__tabs" aria-label="Document review views">
-          {TABS.map(t => (
+          {subTabs.map(t => (
             <NavLink
               key={t.path}
               to={t.path}

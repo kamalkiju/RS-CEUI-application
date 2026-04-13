@@ -2,7 +2,7 @@ import { useOutletContext, useNavigate } from 'react-router-dom'
 import { useRsaUI } from '../../context/RsaUIContext.jsx'
 import RsaUIServiceArea from './RsaUIServiceArea.jsx'
 
-const BASE = '/rsaui/poc/create'
+const BASE = '/poc/service-area'
 
 export default function RsauiPocSelectStep() {
   const { submissionId, readOnly, tabSuffix, wizardBase = BASE } = useOutletContext()

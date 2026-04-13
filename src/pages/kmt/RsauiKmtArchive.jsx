@@ -17,7 +17,7 @@ export default function RsauiKmtArchive() {
       <Layout>
         <div className="bufm-rsa-page">
           <p>Archive is only available for published service areas.</p>
-          <button type="button" className="btn btn-outline" onClick={() => navigate('/rsaui/kmt/document-review/expiry')}>Back</button>
+          <button type="button" className="btn btn-outline" onClick={() => navigate('/kmt/document-review/review')}>Back</button>
         </div>
       </Layout>
     )
@@ -28,7 +28,7 @@ export default function RsauiKmtArchive() {
       <Layout>
         <div className="bufm-rsa-page">
           <p>Already Archived — this record was archived on {sub.updated}.</p>
-          <button type="button" className="btn btn-primary" onClick={() => navigate('/rsaui/kmt/document-review/expiry')}>OK</button>
+          <button type="button" className="btn btn-primary" onClick={() => navigate('/kmt/document-review/review')}>OK</button>
         </div>
       </Layout>
     )
@@ -48,7 +48,7 @@ export default function RsauiKmtArchive() {
     if (!window.confirm(`Archive Service Area?\n\n"${name}" will be permanently archived. All offerings will be set to Inactive.\n\nThis action CANNOT be undone.`)) return
     archiveSubmission(sub.id, { reason: reason.trim() })
     window.alert('✓ Service Area Archived')
-    navigate('/rsaui/kmt/document-review/expiry')
+    navigate('/kmt/document-review/review')
   }
 
   return (

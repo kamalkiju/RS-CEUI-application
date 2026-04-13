@@ -12,7 +12,6 @@ export default function BufmRsaUnclaimedQueue() {
   const { getBufmUnclaimed, claimBufmTask } = useRsaUI()
   const { user } = useAuth()
   const navigate = useNavigate()
-  const base = user?.app === 'RSAUI' ? '/rsaui/bufm' : '/bufm'
   const rows = useMemo(() => getBufmUnclaimed().slice(0, 10), [getBufmUnclaimed])
 
   const claim = sub => {
@@ -20,7 +19,7 @@ export default function BufmRsaUnclaimedQueue() {
     const name = user?.name || user?.email || 'Reviewer'
     claimBufmTask(sub.id, name)
     window.alert('✓ Task Claimed Successfully')
-    navigate(`${base}/review/${encodeURIComponent(sub.id)}`)
+    navigate(`/bufm/review/${encodeURIComponent(sub.id)}`)
   }
 
   return (

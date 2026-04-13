@@ -39,17 +39,13 @@ import KmtTemplateView from './pages/kmt/KmtTemplateView.jsx'
 import KmtTemplateWizard from './pages/kmt/KmtTemplateWizard.jsx'
 import DocumentReviewRedirect from './components/DocumentReviewRedirect.jsx'
 import ApplicationSelector from './pages/landing/ApplicationSelector.jsx'
-import RsauiLogin from './pages/auth/RsauiLogin.jsx'
-import RsauiRoleSelect from './pages/auth/RsauiRoleSelect.jsx'
-import CeuiComingSoon from './pages/auth/CeuiComingSoon.jsx'
+import LegacyRsauiRedirect from './components/LegacyRsauiRedirect.jsx'
 import BufmRsaReviewQueue from './pages/bufm/BufmRsaReviewQueue.jsx'
 import BufmRsaUnclaimedQueue from './pages/bufm/BufmRsaUnclaimedQueue.jsx'
 import BufmRsaApprovedList from './pages/bufm/BufmRsaApprovedList.jsx'
 import BufmRsaRejectedList from './pages/bufm/BufmRsaRejectedList.jsx'
 import BufmRsaTaskReview from './pages/bufm/BufmRsaTaskReview.jsx'
 import BufmRsaRejectPage from './pages/bufm/BufmRsaRejectPage.jsx'
-import KmtRsaShell from './pages/kmt/KmtRsaShell.jsx'
-import KmtRsaBody from './pages/kmt/KmtRsaBody.jsx'
 import RsauiKmtEscalate from './pages/kmt/RsauiKmtEscalate.jsx'
 import RsauiKmtExtend from './pages/kmt/RsauiKmtExtend.jsx'
 import RsauiKmtArchive from './pages/kmt/RsauiKmtArchive.jsx'
@@ -59,133 +55,102 @@ import RsauiKmtEditIndex from './pages/kmt/RsauiKmtEditIndex.jsx'
 export default function App() {
   return (
     <NotificationProvider>
-    <AuthProvider>
-      <DocProvider>
-        <RsaUIProvider>
-        <KmtTemplateProvider>
-        <KmtUsersProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<ApplicationSelector />} />
-            <Route path="/ceui/login" element={<CeuiComingSoon />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/rsaui/login" element={<RsauiLogin />} />
-            <Route path="/rsaui/role-select" element={<RsauiRoleSelect />} />
-            {/* POC Routes */}
-            <Route path="/poc" element={<ProtectedRoute role="POC" app="CEUI" />}>
-              <Route index element={<KnowledgeDocuments />} />
-              <Route path="create" element={<CreateDocument />} />
-              <Route path="editor" element={<DocumentEditor />} />
-            </Route>
+      <AuthProvider>
+        <DocProvider>
+          <RsaUIProvider>
+            <KmtTemplateProvider>
+              <KmtUsersProvider>
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<ApplicationSelector />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/ceui/login" element={<Navigate to="/login" replace />} />
+                    <Route path="/rsaui/login" element={<Navigate to="/login" replace />} />
 
-            <Route path="/rsaui" element={<ProtectedRoute role="POC" app="RSAUI" />}>
-              <Route index element={<Navigate to="/rsaui/poc/document-review" replace />} />
-              <Route path="service-area" element={<Navigate to="/rsaui/poc/create/select" replace />} />
-              <Route path="pricing" element={<Navigate to="/rsaui/poc/create/review" replace />} />
-              <Route path="products" element={<Navigate to="/rsaui/poc/create/configure" replace />} />
-            </Route>
+                    {/* POC — Knowledge docs + RSA service-area workflows (unified CEUI) */}
+                    <Route path="/poc" element={<ProtectedRoute role="POC" />}>
+                      <Route index element={<KnowledgeDocuments />} />
+                      <Route path="create" element={<CreateDocument />} />
+                      <Route path="editor" element={<DocumentEditor />} />
+                      <Route path="document-review" element={<RsaUIList syncTabToUrl />} />
+                      <Route path="settings" element={<BufmSimplePage title="POC Settings" />} />
+                      <Route path="service-area" element={<RsauiPocCreateLayout />}>
+                        <Route index element={<RsauiPocCreateIndex />} />
+                        <Route path="view" element={<RsauiPocViewDetail />} />
+                        <Route path="select" element={<RsauiPocSelectStep />} />
+                        <Route path="configure" element={<RsauiPocProductConfig />} />
+                        <Route path="review" element={<RsauiPocReviewSummary />} />
+                        <Route path="submit" element={<RsauiPocSubmit />} />
+                      </Route>
+                    </Route>
 
-            <Route path="/rsaui/poc" element={<ProtectedRoute role="POC" app="RSAUI" />}>
-              <Route path="dashboard" element={<Navigate to="/rsaui/poc/document-review" replace />} />
-              <Route path="document-review" element={<RsaUIList syncTabToUrl />} />
-              <Route path="create" element={<RsauiPocCreateLayout />}>
-                <Route index element={<RsauiPocCreateIndex />} />
-                <Route path="view" element={<RsauiPocViewDetail />} />
-                <Route path="select" element={<RsauiPocSelectStep />} />
-                <Route path="configure" element={<RsauiPocProductConfig />} />
-                <Route path="review" element={<RsauiPocReviewSummary />} />
-                <Route path="submit" element={<RsauiPocSubmit />} />
-              </Route>
-              <Route path="settings" element={<BufmSimplePage title="POC Settings" />} />
-            </Route>
+                    {/* BUFM — CEUI + RSAUI document review streams */}
+                    <Route path="/bufm" element={<ProtectedRoute role="BUFM" />}>
+                      <Route index element={<BUFMDashboard />} />
+                      <Route path="dashboard" element={<Navigate to="/bufm" replace />} />
+                      <Route path="review/:id" element={<BufmRsaTaskReview />} />
+                      <Route path="reject/:id" element={<BufmRsaRejectPage />} />
+                      <Route path="document-review" element={<BufmReportsLayout />}>
+                        <Route index element={<Navigate to="ceui/review" replace />} />
+                        <Route path="ceui/review" element={<BufmReviewQueue />} />
+                        <Route path="ceui/approved" element={<BufmDocumentList mode="approved" />} />
+                        <Route path="ceui/rejected" element={<BufmDocumentList mode="rejected" />} />
+                        <Route path="ceui/unclaimed" element={<BufmRsaUnclaimedQueue />} />
+                        <Route path="rsaui/review" element={<BufmRsaReviewQueue />} />
+                        <Route path="rsaui/approved" element={<BufmRsaApprovedList />} />
+                        <Route path="rsaui/rejected" element={<BufmRsaRejectedList />} />
+                        <Route path="rsaui/unclaimed" element={<BufmRsaUnclaimedQueue />} />
+                      </Route>
+                      <Route
+                        path="reports/*"
+                        element={<DocumentReviewRedirect fromPrefix="/bufm/reports" toPrefix="/bufm/document-review/ceui" />}
+                      />
+                      <Route path="document/:id" element={<BufmDocumentView />} />
+                      <Route path="users/:userId/documents" element={<BufmUserDocuments />} />
+                      <Route path="users" element={<BufmUsersPage />} />
+                      <Route path="settings" element={<BufmSimplePage title="BUFM Settings" />} />
+                    </Route>
 
-            <Route path="/rsaui/bufm" element={<ProtectedRoute role="BUFM" app="RSAUI" />}>
-              <Route path="dashboard" element={<BUFMDashboard />} />
-              <Route path="review/:id" element={<BufmRsaTaskReview />} />
-              <Route path="reject/:id" element={<BufmRsaRejectPage />} />
-              <Route path="document-review" element={<BufmReportsLayout />}>
-                <Route index element={<Navigate to="review" replace />} />
-                <Route path="review" element={<BufmRsaReviewQueue />} />
-                <Route path="approved" element={<BufmRsaApprovedList />} />
-                <Route path="rejected" element={<BufmRsaRejectedList />} />
-                <Route path="unclaimed" element={<BufmRsaUnclaimedQueue />} />
-              </Route>
-              <Route path="settings" element={<BufmSimplePage title="BUFM Settings" />} />
-            </Route>
+                    {/* KMT — templates, combined document review, RSA tools */}
+                    <Route path="/kmt" element={<ProtectedRoute role="KMT" />}>
+                      <Route index element={<KMTDashboard />} />
+                      <Route path="document-review" element={<KmtReportsShell />}>
+                        <Route index element={<Navigate to="review" replace />} />
+                        <Route path=":queue" element={<KmtReportsBody />} />
+                      </Route>
+                      <Route path="reports/*" element={<DocumentReviewRedirect fromPrefix="/kmt/reports" toPrefix="/kmt/document-review" />} />
+                      <Route path="document/:id" element={<KmtDocumentView />} />
+                      <Route path="rsaui-submission/:id" element={<KmtRsaSubmissionView />} />
+                      <Route path="documents/new" element={<KmtTemplateWizard />} />
+                      <Route path="documents/:id/edit" element={<KmtTemplateWizard />} />
+                      <Route path="documents/:id" element={<KmtTemplateView />} />
+                      <Route path="documents" element={<KmtDocumentsPage />} />
+                      <Route path="workflow-builder" element={<Navigate to="/kmt/documents" replace />} />
+                      <Route path="form-builder" element={<Navigate to="/kmt/documents" replace />} />
+                      <Route path="edit" element={<RsauiKmtEditLayout />}>
+                        <Route index element={<RsauiKmtEditIndex />} />
+                        <Route path="select" element={<RsauiPocSelectStep />} />
+                        <Route path="configure" element={<RsauiPocProductConfig />} />
+                        <Route path="review" element={<RsauiPocReviewSummary />} />
+                        <Route path="submit" element={<RsauiPocSubmit />} />
+                      </Route>
+                      <Route path="escalate/:id" element={<RsauiKmtEscalate />} />
+                      <Route path="extend/:id" element={<RsauiKmtExtend />} />
+                      <Route path="archive/:id" element={<RsauiKmtArchive />} />
+                      <Route path="users" element={<KmtUsersPage />} />
+                      <Route path="delegations" element={<KmtDelegationsPage />} />
+                      <Route path="settings" element={<KmtSettingsPage />} />
+                    </Route>
 
-            <Route path="/rsaui/kmt" element={<ProtectedRoute role="KMT" app="RSAUI" />}>
-              <Route path="dashboard" element={<KMTDashboard />} />
-              <Route path="documents/new" element={<KmtTemplateWizard />} />
-              <Route path="documents/:id/edit" element={<KmtTemplateWizard />} />
-              <Route path="documents/:id" element={<KmtTemplateView />} />
-              <Route path="documents" element={<KmtDocumentsPage />} />
-              <Route path="submission/:id" element={<KmtRsaSubmissionView />} />
-              <Route path="edit" element={<RsauiKmtEditLayout />}>
-                <Route index element={<RsauiKmtEditIndex />} />
-                <Route path="select" element={<RsauiPocSelectStep />} />
-                <Route path="configure" element={<RsauiPocProductConfig />} />
-                <Route path="review" element={<RsauiPocReviewSummary />} />
-                <Route path="submit" element={<RsauiPocSubmit />} />
-              </Route>
-              <Route path="escalate/:id" element={<RsauiKmtEscalate />} />
-              <Route path="extend/:id" element={<RsauiKmtExtend />} />
-              <Route path="archive/:id" element={<RsauiKmtArchive />} />
-              <Route path="document-review" element={<KmtRsaShell />}>
-                <Route index element={<Navigate to="review" replace />} />
-                <Route path=":queue" element={<KmtRsaBody />} />
-              </Route>
-              <Route path="settings" element={<KmtSettingsPage />} />
-            </Route>
-
-            {/* BUFM Routes */}
-            <Route path="/bufm" element={<ProtectedRoute role="BUFM" app="CEUI" />}>
-              <Route index element={<BUFMDashboard />} />
-              <Route path="dashboard" element={<Navigate to="/bufm" replace />} />
-              <Route path="review/:id" element={<BufmRsaTaskReview />} />
-              <Route path="reject/:id" element={<BufmRsaRejectPage />} />
-              <Route path="document-review" element={<BufmReportsLayout />}>
-                <Route index element={<Navigate to="review" replace />} />
-                <Route path="review" element={<BufmReviewQueue />} />
-                <Route path="approved" element={<BufmDocumentList mode="approved" />} />
-                <Route path="rejected" element={<BufmDocumentList mode="rejected" />} />
-                <Route path="unclaimed" element={<BufmRsaUnclaimedQueue />} />
-              </Route>
-              <Route path="reports/*" element={<DocumentReviewRedirect fromPrefix="/bufm/reports" toPrefix="/bufm/document-review" />} />
-              <Route path="document/:id" element={<BufmDocumentView />} />
-              <Route path="users/:userId/documents" element={<BufmUserDocuments />} />
-              <Route path="users" element={<BufmUsersPage />} />
-              <Route path="settings" element={<BufmSimplePage title="Settings" />} />
-            </Route>
-
-            {/* KMT Routes */}
-            <Route path="/kmt" element={<ProtectedRoute role="KMT" app="CEUI" />}>
-              <Route index element={<KMTDashboard />} />
-              <Route path="document-review" element={<KmtReportsShell />}>
-                <Route index element={<Navigate to="review" replace />} />
-                <Route path=":queue" element={<KmtReportsBody />} />
-              </Route>
-              <Route path="reports/*" element={<DocumentReviewRedirect fromPrefix="/kmt/reports" toPrefix="/kmt/document-review" />} />
-              <Route path="document/:id" element={<KmtDocumentView />} />
-              <Route path="rsaui-submission/:id" element={<KmtRsaSubmissionView />} />
-              <Route path="documents/new" element={<KmtTemplateWizard />} />
-              <Route path="documents/:id/edit" element={<KmtTemplateWizard />} />
-              <Route path="documents/:id" element={<KmtTemplateView />} />
-              <Route path="documents" element={<KmtDocumentsPage />} />
-              <Route path="workflow-builder" element={<Navigate to="/kmt/documents" replace />} />
-              <Route path="form-builder" element={<Navigate to="/kmt/documents" replace />} />
-              <Route path="users" element={<KmtUsersPage />} />
-              <Route path="delegations" element={<KmtDelegationsPage />} />
-              <Route path="settings" element={<KmtSettingsPage />} />
-            </Route>
-
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
-        </KmtUsersProvider>
-        </KmtTemplateProvider>
-        </RsaUIProvider>
-      </DocProvider>
-    </AuthProvider>
+                    <Route path="/rsaui/*" element={<LegacyRsauiRedirect />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </BrowserRouter>
+              </KmtUsersProvider>
+            </KmtTemplateProvider>
+          </RsaUIProvider>
+        </DocProvider>
+      </AuthProvider>
     </NotificationProvider>
   )
 }

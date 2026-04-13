@@ -1,50 +1,24 @@
 import { useNavigate } from 'react-router-dom'
 import RsAppBrand from '../../components/RsAppBrand.jsx'
 
-const APPS = [
-  {
-    id: 'CEUI',
-    title: 'CEUI',
-    subtitle: 'Customer Experience UI',
-    description: 'Manage customer accounts, service requests and billing operations',
-    badge: 'Customer Portal',
-    to: '/ceui/login',
-  },
-  {
-    id: 'RSAUI',
-    title: 'RSAUI',
-    subtitle: 'Residential Service Area UI',
-    description: 'Create and manage service area requests, product configurations and approval workflows',
-    badge: 'Service Area Management',
-    to: '/rsaui/login',
-  },
-]
-
 export default function ApplicationSelector() {
   const navigate = useNavigate()
 
   return (
-    <main className="app-select-page">
-      <div className="app-select-shell">
-        <h1>Select Your Application</h1>
-        <p>Choose the platform you want to access</p>
-        <div className="app-select-grid">
-          {APPS.map(app => (
-            <button
-              key={app.id}
-              type="button"
-              className="app-select-card"
-              onClick={() => navigate(app.to)}
-            >
-              <div className="app-select-card__title-row">
-                <RsAppBrand appLabel={app.id} variant="selector" />
-                <span>{app.badge}</span>
-              </div>
-              {app.subtitle ? <h3>{app.subtitle}</h3> : null}
-              <p>{app.description}</p>
-            </button>
-          ))}
+    <main className="app-select-page app-select-page--unified">
+      <div className="app-select-shell app-select-shell--unified">
+        <div className="app-select-hero">
+          <RsAppBrand appLabel="CEUI" variant="selector" />
+          <h1>Republic Services workspace</h1>
+          <p>Knowledge documents, service-area workflows, BUFM review, and KMT publishing — one login.</p>
         </div>
+        <button
+          type="button"
+          className="app-select-cta btn btn-primary"
+          onClick={() => navigate('/login')}
+        >
+          Continue to sign in
+        </button>
       </div>
     </main>
   )

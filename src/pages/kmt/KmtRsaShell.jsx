@@ -9,7 +9,7 @@ const TABS = [
 ]
 
 export default function KmtRsaShell() {
-  const base = '/rsaui/kmt/document-review'
+  const base = '/kmt/document-review'
 
   return (
     <Layout>

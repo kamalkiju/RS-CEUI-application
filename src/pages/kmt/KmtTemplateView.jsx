@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import Layout from '../../components/Layout.jsx'
 import { useKmtTemplates } from '../../context/KmtTemplateContext.jsx'
@@ -24,12 +24,17 @@ function fieldToReadOnly(f, isDraft) {
 export default function KmtTemplateView() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const { getTemplate } = useKmtTemplates()
   const { users } = useKmtUsers()
   const t = id ? getTemplate(id) : null
 
-  const basePath = location.pathname.startsWith('/rsaui/kmt') ? '/rsaui/kmt/documents' : '/kmt/documents'
+  const basePath = '/kmt/documents'
+  const withApp = path => {
+    const rsa = t?.targetApp === 'RSAUI' || searchParams.get('app') === 'RSAUI'
+    if (!rsa) return path
+    return path.includes('?') ? `${path}&app=RSAUI` : `${path}?app=RSAUI`
+  }
 
   const [activeStep, setActiveStep] = useState(1)
 
@@ -87,7 +92,7 @@ export default function KmtTemplateView() {
       <Layout>
         <div className="kmt-page">
           <p>Template not found.</p>
-          <button type="button" className="btn btn-outline" onClick={() => navigate(basePath)}>
+          <button type="button" className="btn btn-outline" onClick={() => navigate(withApp(basePath))}>
             Back to documents
           </button>
         </div>
@@ -106,7 +111,7 @@ export default function KmtTemplateView() {
         <div className="bufm-doc-view__inner">
           <div className="bufm-doc-view__sticky">
             <header className="bufm-doc-view__header">
-              <button type="button" className="back-btn bufm-doc-view__back" onClick={() => navigate(basePath)} aria-label="Back">
+              <button type="button" className="back-btn bufm-doc-view__back" onClick={() => navigate(withApp(basePath))} aria-label="Back">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="15 18 9 12 15 6" />
                 </svg>
@@ -125,7 +130,7 @@ export default function KmtTemplateView() {
                 </p>
               </div>
               <div className="bufm-doc-view__header-actions">
-                <button type="button" className="btn btn-outline" onClick={() => navigate(`${basePath}/${t.id}/edit`)}>
+                <button type="button" className="btn btn-outline" onClick={() => navigate(withApp(`${basePath}/${t.id}/edit`))}>
                   Edit template
                 </button>
               </div>

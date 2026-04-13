@@ -5,5 +5,5 @@ import { Navigate } from 'react-router-dom'
  * Legacy route kept so old links still work.
  */
 export default function RsauiRoleSelect() {
-  return <Navigate to="/rsaui/login" replace />
+  return <Navigate to="/login" replace />
 }

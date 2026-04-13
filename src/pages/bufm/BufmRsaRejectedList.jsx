@@ -42,7 +42,7 @@ export default function BufmRsaRejectedList() {
                     <button
                       type="button"
                       className="btn btn-primary bufm-table__view"
-                      onClick={() => navigate(`/rsaui/bufm/review/${encodeURIComponent(sub.id)}`)}
+                      onClick={() => navigate(`/bufm/review/${encodeURIComponent(sub.id)}`)}
                     >
                       View Details →
                     </button>

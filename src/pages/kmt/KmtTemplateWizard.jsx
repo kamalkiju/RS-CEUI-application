@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import Layout from '../../components/Layout.jsx'
 import { useKmtTemplates } from '../../context/KmtTemplateContext.jsx'
 import { useNotifications } from '../../context/NotificationContext.jsx'
@@ -61,17 +61,19 @@ function migrateAssigneesByLevel(t, levels) {
 export default function KmtTemplateWizard() {
   const { id: routeId } = useParams()
   const navigate = useNavigate()
-  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const { getTemplate, saveTemplate, updateTemplate } = useKmtTemplates()
   const { addNotification } = useNotifications()
   const { users } = useKmtUsers()
 
   const templateApp = useMemo(
-    () => (location.pathname.startsWith('/rsaui/kmt') ? 'RSAUI' : 'CEUI'),
-    [location.pathname],
+    () => (searchParams.get('app') === 'RSAUI' ? 'RSAUI' : 'CEUI'),
+    [searchParams],
   )
-  const basePath = templateApp === 'RSAUI' ? '/rsaui/kmt/documents' : '/kmt/documents'
+  const basePath = '/kmt/documents'
+  const withApp = path =>
+    templateApp === 'RSAUI' ? (path.includes('?') ? `${path}&app=RSAUI` : `${path}?app=RSAUI`) : path
 
   const initialForm = () =>
     templateApp === 'RSAUI'
@@ -126,7 +128,7 @@ export default function KmtTemplateWizard() {
 
   const breadcrumb = (
     <nav className="kmt-breadcrumb kmt-template-editor__breadcrumb" aria-label="Breadcrumb">
-      <Link to={basePath}>Document templates</Link>
+      <Link to={withApp(basePath)}>Document templates</Link>
       <span aria-hidden> / </span>
       <span>{editingId ? 'Edit workflow template' : 'Create workflow template'}</span>
     </nav>
@@ -177,8 +179,8 @@ export default function KmtTemplateWizard() {
     })
     const actor = user?.name || 'KMT'
     const title = displayName()
-    const pocPath = templateApp === 'RSAUI' ? '/rsaui/poc/document-review' : '/poc'
-    const bufmPath = templateApp === 'RSAUI' ? '/rsaui/bufm/document-review/review' : '/bufm/document-review/review'
+    const pocPath = templateApp === 'RSAUI' ? '/poc/document-review' : '/poc'
+    const bufmPath = templateApp === 'RSAUI' ? '/bufm/document-review/rsaui/review' : '/bufm/document-review/ceui/review'
     addNotification({
       role: 'POC',
       statusType: 'publish',
@@ -197,18 +199,18 @@ export default function KmtTemplateWizard() {
       documentName: title,
       ctaAction: { label: 'Open document review', path: bufmPath },
     })
-    navigate(basePath)
+    navigate(withApp(basePath))
   }
 
   const handleSaveDraftChoice = option => {
     setSaveModal(false)
     if (option === 'draft') {
       persist('draft')
-      navigate(basePath)
+      navigate(withApp(basePath))
     } else if (option === 'submit') {
       const tid = persist('submitted')
       updateTemplate(tid, { status: 'submitted' })
-      navigate(basePath)
+      navigate(withApp(basePath))
     }
   }
 
@@ -304,7 +306,7 @@ export default function KmtTemplateWizard() {
 
         <footer className="kmt-template-editor__footer">
           <div className="kmt-template-editor__footer-inner">
-            <button type="button" className="btn btn-outline" onClick={() => navigate(basePath)}>
+            <button type="button" className="btn btn-outline" onClick={() => navigate(withApp(basePath))}>
               Back to templates
             </button>
             <div className="kmt-template-editor__footer-actions">

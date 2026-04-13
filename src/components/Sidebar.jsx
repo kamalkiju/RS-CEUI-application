@@ -37,71 +37,22 @@ const ICON_SETTINGS = (
   </svg>
 )
 
-const NAV_ITEMS_POC = [
-  {
-    label: 'Knowledge Documents',
-    path: '/poc',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-        <polyline points="10 9 9 9 8 9" />
-      </svg>
-    ),
-  },
-]
+const ICON_DOC = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <polyline points="10 9 9 9 8 9" />
+  </svg>
+)
 
-const RSA_NAV_ITEMS_POC = [
-  { label: 'Document Review', path: '/rsaui/poc/document-review', icon: ICON_REPORT },
-  { label: 'Settings', path: '/rsaui/poc/settings', icon: ICON_SETTINGS },
-]
-
-const RSA_NAV_ITEMS_BUFM = [
-  { label: 'Dashboard', path: '/rsaui/bufm/dashboard', icon: ICON_OVERVIEW },
-  { label: 'Document Review', path: '/rsaui/bufm/document-review/review', icon: ICON_REPORT },
-  { label: 'Settings', path: '/rsaui/bufm/settings', icon: ICON_SETTINGS },
-]
-
-const RSA_NAV_ITEMS_KMT = [
-  { label: 'Dashboard', path: '/rsaui/kmt/dashboard', icon: ICON_OVERVIEW },
-  {
-    label: 'Documents',
-    path: '/rsaui/kmt/documents',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-      </svg>
-    ),
-  },
-  { label: 'Document Review', path: '/rsaui/kmt/document-review/review', icon: ICON_REPORT },
-  { label: 'Settings', path: '/rsaui/kmt/settings', icon: ICON_SETTINGS },
-]
-
-const NAV_ITEMS_BUFM = [
-  {
-    label: 'Dashboard',
-    path: '/bufm',
-    icon: ICON_OVERVIEW,
-  },
-  {
-    label: 'Document Review',
-    path: '/bufm/document-review',
-    icon: ICON_REPORT,
-  },
-  {
-    label: 'Users',
-    path: '/bufm/users',
-    icon: ICON_USERS,
-  },
-  {
-    label: 'Settings',
-    path: '/bufm/settings',
-    icon: ICON_SETTINGS,
-  },
-]
+const ICON_SERVICE = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+)
 
 const ICON_DELEGATION = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -112,9 +63,24 @@ const ICON_DELEGATION = (
   </svg>
 )
 
+/** POC: knowledge list, RSA-style review & create service, settings */
+const NAV_ITEMS_POC = [
+  { label: 'Knowledge Documents', path: '/poc', icon: ICON_DOC },
+  { label: 'Document Review', path: '/poc/document-review', icon: ICON_REPORT },
+  { label: 'Create service area', path: '/poc/service-area', icon: ICON_SERVICE },
+  { label: 'Settings', path: '/poc/settings', icon: ICON_SETTINGS },
+]
+
+const NAV_ITEMS_BUFM = [
+  { label: 'Dashboard', path: '/bufm', icon: ICON_OVERVIEW },
+  { label: 'Document Review', path: '/bufm/document-review', icon: ICON_REPORT },
+  { label: 'Users', path: '/bufm/users', icon: ICON_USERS },
+  { label: 'Settings', path: '/bufm/settings', icon: ICON_SETTINGS },
+]
+
+/** KMT: documents & templates before document review (per unified nav order) */
 const NAV_ITEMS_KMT = [
   { label: 'Dashboard', path: '/kmt', icon: ICON_OVERVIEW },
-  { label: 'Document Review', path: '/kmt/document-review', icon: ICON_REPORT },
   {
     label: 'Documents',
     path: '/kmt/documents',
@@ -125,17 +91,13 @@ const NAV_ITEMS_KMT = [
       </svg>
     ),
   },
+  { label: 'Document Review', path: '/kmt/document-review', icon: ICON_REPORT },
   { label: 'Users', path: '/kmt/users', icon: ICON_USERS },
   { label: 'Delegations', path: '/kmt/delegations', icon: ICON_DELEGATION },
   { label: 'Settings', path: '/kmt/settings', icon: ICON_SETTINGS },
 ]
 
-function getNavItems(role, app) {
-  if (app === 'RSAUI') {
-    if (role === 'BUFM') return RSA_NAV_ITEMS_BUFM
-    if (role === 'KMT') return RSA_NAV_ITEMS_KMT
-    return RSA_NAV_ITEMS_POC
-  }
+function getNavItems(role) {
   if (role === 'BUFM') return NAV_ITEMS_BUFM
   if (role === 'KMT') return NAV_ITEMS_KMT
   return NAV_ITEMS_POC
@@ -143,34 +105,25 @@ function getNavItems(role, app) {
 
 function isNavPathActive(pathname, path) {
   if (!path || path === '#') return false
-  if (path === '/poc') return pathname === '/poc' || pathname.startsWith('/poc/')
-  if (path === '/rsaui/poc/document-review') return pathname.startsWith('/rsaui/poc/document-review')
-  if (path === '/rsaui/poc/settings') return pathname.startsWith('/rsaui/poc/settings')
-  if (path === '/rsaui/bufm/document-review/review') {
-    return (
-      pathname.startsWith('/rsaui/bufm/document-review') ||
-      pathname.startsWith('/rsaui/bufm/review') ||
-      pathname.startsWith('/rsaui/bufm/reject')
-    )
-  }
-  if (path === '/rsaui/bufm/settings') return pathname.startsWith('/rsaui/bufm/settings')
-  if (path === '/rsaui/kmt/documents') return pathname.startsWith('/rsaui/kmt/documents')
-  if (path === '/rsaui/kmt/document-review/review') {
-    return (
-      pathname.startsWith('/rsaui/kmt/document-review') ||
-      pathname.startsWith('/rsaui/kmt/edit') ||
-      pathname.startsWith('/rsaui/kmt/submission') ||
-      pathname.startsWith('/rsaui/kmt/escalate') ||
-      pathname.startsWith('/rsaui/kmt/extend') ||
-      pathname.startsWith('/rsaui/kmt/archive')
-    )
-  }
-  if (path === '/rsaui/kmt/settings') return pathname.startsWith('/rsaui/kmt/settings')
+  if (path === '/poc') return pathname === '/poc' || pathname === '/poc/'
+  if (path === '/poc/document-review') return pathname.startsWith('/poc/document-review')
+  if (path === '/poc/service-area') return pathname.startsWith('/poc/service-area')
+  if (path === '/poc/settings') return pathname.startsWith('/poc/settings')
   if (path === '/bufm') return pathname === '/bufm' || pathname === '/bufm/'
   if (path === '/bufm/document-review') return pathname.startsWith('/bufm/document-review')
+  if (path === '/bufm/users') return pathname.startsWith('/bufm/users')
+  if (path === '/bufm/settings') return pathname.startsWith('/bufm/settings')
   if (path === '/kmt') return pathname === '/kmt' || pathname === '/kmt/'
-  if (path === '/kmt/document-review') return pathname.startsWith('/kmt/document-review')
   if (path === '/kmt/documents') return pathname.startsWith('/kmt/documents')
+  if (path === '/kmt/document-review') {
+    return (
+      pathname.startsWith('/kmt/document-review') ||
+      pathname.startsWith('/kmt/edit') ||
+      pathname.startsWith('/kmt/escalate') ||
+      pathname.startsWith('/kmt/extend') ||
+      pathname.startsWith('/kmt/archive')
+    )
+  }
   if (path === '/kmt/users') return pathname.startsWith('/kmt/users')
   if (path === '/kmt/delegations') return pathname.startsWith('/kmt/delegations')
   if (path === '/kmt/settings') return pathname.startsWith('/kmt/settings')
@@ -188,10 +141,10 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onClose }) {
   const location = useLocation()
   const [openMenu, setOpenMenu] = useState(null)
 
-  const navItems = getNavItems(user?.role, user?.app)
+  const navItems = getNavItems(user?.role)
 
   useEffect(() => {
-    const items = getNavItems(user?.role, user?.app)
+    const items = getNavItems(user?.role)
     for (const item of items) {
       if (!item.children) continue
       const hit = item.children.some(sub => isNavPathActive(location.pathname, sub.path))
@@ -201,7 +154,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onClose }) {
       }
     }
     setOpenMenu(null)
-  }, [location.pathname, user?.role, user?.app])
+  }, [location.pathname, user?.role])
 
   return (
     <>
@@ -215,7 +168,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onClose }) {
             <span /><span /><span />
           </button>
           <div className="sidebar-brand-wrap">
-            <RsAppBrand appLabel={user?.app === 'RSAUI' ? 'RSAUI' : 'CEUI'} variant="sidebar" />
+            <RsAppBrand appLabel="CEUI" variant="sidebar" />
           </div>
         </div>
 

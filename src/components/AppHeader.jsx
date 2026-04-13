@@ -17,8 +17,7 @@ export default function AppHeader({ onMobileMenuClick, isMobile }) {
   const unread = user?.role ? unreadCountForRole(user.role) : 0
 
   const handleLogout = () => {
-    const appLabel = user?.app === 'RSAUI' ? 'RSAUI' : 'CEUI'
-    const ok = window.confirm(`Logout of ${appLabel}?\n\nYou will be redirected to the application selector.`)
+    const ok = window.confirm(`Log out of CEUI?\n\nYou will return to the workspace entry screen.`)
     if (!ok) return
     logout()
     navigate('/')
@@ -40,7 +39,7 @@ export default function AppHeader({ onMobileMenuClick, isMobile }) {
           </button>
         )}
 
-        {/* App branding (RS + CEUI/RSAUI) lives only in the sidebar to avoid duplicate marks in the top bar. */}
+        {/* App branding (RS + CEUI) lives only in the sidebar to avoid duplicate marks in the top bar. */}
 
         <div className="header-spacer" />
 

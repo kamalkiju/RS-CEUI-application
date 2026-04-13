@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
 import RsAppBrand from '../../components/RsAppBrand.jsx'
 
-const RSAUI_HOME = {
-  POC: '/rsaui/poc/document-review',
-  BUFM: '/rsaui/bufm/dashboard',
-  KMT: '/rsaui/kmt/dashboard',
+/** Unified CEUI role landing (same as main Login). Kept for legacy imports. */
+const CEUI_HOME = {
+  POC: '/poc',
+  BUFM: '/bufm',
+  KMT: '/kmt',
 }
 
 /** Demo credentials — prefilled; user can change role in dropdown before Sign In. */
@@ -20,7 +21,7 @@ const QUICK_USERS = [
 ]
 
 function inferName(email) {
-  if (!email) return 'RSAUI User'
+  if (!email) return 'User'
   return email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
@@ -35,10 +36,10 @@ export default function RsauiLogin() {
   const emailValid = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()), [email])
 
   useEffect(() => {
-    if (user?.app === 'RSAUI' && user?.role && RSAUI_HOME[user.role]) {
-      navigate(RSAUI_HOME[user.role], { replace: true })
+    if (user?.role && CEUI_HOME[user.role]) {
+      navigate(CEUI_HOME[user.role], { replace: true })
     }
-  }, [user?.app, user?.role, navigate])
+  }, [user?.role, navigate])
 
   const signInWith = ({ email: em, name, role: r }) => {
     const normalizedEmail = (em || email).trim()
@@ -52,12 +53,12 @@ export default function RsauiLogin() {
     }
     setError('')
     login({
-      app: 'RSAUI',
+      app: 'CEUI',
       email: normalizedEmail,
       name: name || inferName(normalizedEmail),
       role: r,
     })
-    navigate(RSAUI_HOME[r])
+    navigate(CEUI_HOME[r])
   }
 
   const submit = e => {
@@ -74,22 +75,22 @@ export default function RsauiLogin() {
     <div className="rsaui-login-page">
       <div className="rsaui-login-left">
         <div className="rsaui-login-brand">
-          <RsAppBrand appLabel="RSAUI" variant="login" />
+          <RsAppBrand appLabel="CEUI" variant="login" />
         </div>
-        <h1>Residential Service Area Workspace</h1>
-        <p>Build, review, and govern service area requests across POC, BUFM and KMT workflows.</p>
+        <h1>Republic Services workspace</h1>
+        <p>Knowledge documents and service-area workflows — POC, BUFM, and KMT in one application.</p>
         <ul>
-          <li><strong>POC Workflow</strong> - Create and configure service area requests</li>
-          <li><strong>BUFM Review</strong> - Priority-based queue with SLA tracking</li>
-          <li><strong>KMT Governance</strong> - System-wide monitoring and lifecycle management</li>
+          <li><strong>POC</strong> — Knowledge documents and service-area requests</li>
+          <li><strong>BUFM</strong> — Field review and dual-stream queues</li>
+          <li><strong>KMT</strong> — Templates, publishing, and governance</li>
         </ul>
       </div>
 
       <div className="rsaui-login-right">
         <button type="button" className="rsaui-back-link" onClick={() => navigate('/')}>← Back</button>
         <div className="rsaui-login-card">
-          <h2>Sign In to RSAUI</h2>
-          <p>Access your workspace</p>
+          <h2>Sign in</h2>
+          <p>Same account as the main CEUI login</p>
 
           <section className="rsaui-quick-login">
             <span>QUICK LOGIN — SELECT USER</span>
@@ -126,9 +127,9 @@ export default function RsauiLogin() {
               Role
               <select value={role} onChange={e => setRole(e.target.value)} className="rsaui-login-role-select">
                 <option value="">— Select role —</option>
-                <option value="POC">POC — Request Creator &amp; Configurator</option>
-                <option value="BUFM">BUFM — Business Reviewer &amp; Approver</option>
-                <option value="KMT">KMT — Governance &amp; Monitor</option>
+                <option value="POC">POC — Point of Contact</option>
+                <option value="BUFM">BUFM — Business Unit Field Manager</option>
+                <option value="KMT">KMT — Knowledge Management Team</option>
               </select>
             </label>
             <button type="submit" className="btn btn-primary">Sign In</button>

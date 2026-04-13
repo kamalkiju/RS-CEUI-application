@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import Layout from '../../components/Layout.jsx'
 import { useKmtTemplates } from '../../context/KmtTemplateContext.jsx'
 import ConfirmModal from '../../components/ConfirmModal.jsx'
@@ -11,9 +11,14 @@ const TABS = [
 
 export default function KmtDocumentsPage() {
   const navigate = useNavigate()
-  const location = useLocation()
-  const templateApp = location.pathname.startsWith('/rsaui/kmt') ? 'RSAUI' : 'CEUI'
-  const basePath = templateApp === 'RSAUI' ? '/rsaui/kmt/documents' : '/kmt/documents'
+  const [searchParams, setSearchParams] = useSearchParams()
+  const templateApp = searchParams.get('app') === 'RSAUI' ? 'RSAUI' : 'CEUI'
+  const basePath = '/kmt/documents'
+  const withApp = path => {
+    if (templateApp !== 'RSAUI') return path
+    const sep = path.includes('?') ? '&' : '?'
+    return `${path}${sep}app=RSAUI`
+  }
 
   const { templates, deleteTemplate } = useKmtTemplates()
   const [tab, setTab] = useState('draft')
@@ -54,10 +59,27 @@ export default function KmtDocumentsPage() {
                 : 'Create and publish CEUI workflow templates. Drafts and submitted templates.'}
             </p>
           </div>
-          <button type="button" className="btn btn-primary" onClick={() => navigate(`${basePath}/new`)}>
+          <button type="button" className="btn btn-primary" onClick={() => navigate(withApp(`${basePath}/new`))}>
             Create workflow template
           </button>
         </div>
+
+        <nav className="kmt-templates__streams" aria-label="Template catalog">
+          <button
+            type="button"
+            className={`kmt-templates__stream${templateApp === 'CEUI' ? ' kmt-templates__stream--active' : ''}`}
+            onClick={() => setSearchParams({})}
+          >
+            CEUI templates
+          </button>
+          <button
+            type="button"
+            className={`kmt-templates__stream${templateApp === 'RSAUI' ? ' kmt-templates__stream--active' : ''}`}
+            onClick={() => setSearchParams({ app: 'RSAUI' })}
+          >
+            RSAUI templates
+          </button>
+        </nav>
 
         <nav className="kmt-templates__tabs" aria-label="Template status">
           {TABS.map(t => (
@@ -111,10 +133,10 @@ export default function KmtDocumentsPage() {
                     </td>
                     <td>{t.updatedAt?.slice(0, 10) || '—'}</td>
                     <td className="kmt-templates-table__actions">
-                      <button type="button" className="btn btn-outline kmt-btn-compact" onClick={() => navigate(`${basePath}/${t.id}`)}>
+                      <button type="button" className="btn btn-outline kmt-btn-compact" onClick={() => navigate(withApp(`${basePath}/${t.id}`))}>
                         View
                       </button>
-                      <button type="button" className="btn btn-primary kmt-btn-compact" onClick={() => navigate(`${basePath}/${t.id}/edit`)}>
+                      <button type="button" className="btn btn-primary kmt-btn-compact" onClick={() => navigate(withApp(`${basePath}/${t.id}/edit`))}>
                         Edit
                       </button>
                       <button

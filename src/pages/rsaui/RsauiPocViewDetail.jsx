@@ -5,7 +5,7 @@ import { useRsaUI, RSA_STATUS } from '../../context/RsaUIContext.jsx'
 import RsaSubmissionDetailView from '../../components/rsa/RsaSubmissionDetailView.jsx'
 import RsaDocumentFullscreenModal from '../../components/rsa/RsaDocumentFullscreenModal.jsx'
 
-const BASE = '/rsaui/poc/create'
+const BASE = '/poc/service-area'
 
 export default function RsauiPocViewDetail() {
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
@@ -18,7 +18,7 @@ export default function RsauiPocViewDetail() {
   const sub = submissionId ? getSubmission(submissionId) : null
   const from = sp.get('from') || ''
 
-  const backUrl = from ? `/rsaui/poc/document-review?tab=${encodeURIComponent(from)}` : '/rsaui/poc/document-review'
+  const backUrl = from ? `/poc/document-review?tab=${encodeURIComponent(from)}` : '/poc/document-review'
 
   if (!submissionId || !sub) {
     return (
@@ -72,7 +72,7 @@ export default function RsauiPocViewDetail() {
       assignedBufmReviewer: sub.assignedBufmReviewer || rm.assignedBUFM || 'Jane Wilson',
     })
     window.alert('✓ Sent for approval')
-    navigate('/rsaui/poc/document-review?tab=awaiting')
+    navigate('/poc/document-review?tab=awaiting')
   }
 
   const detailProps = {

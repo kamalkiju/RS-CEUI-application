@@ -5,7 +5,7 @@ import { useRsaUI, RSA_STATUS } from '../../context/RsaUIContext.jsx'
 import RejectionBanner from '../../components/RejectionBanner.jsx'
 import { getProductConfigureBlockers } from '../../utils/rsaProductTabs.js'
 
-const BASE = '/rsaui/poc/create'
+const BASE = '/poc/service-area'
 
 const STEPS = [
   { path: 'select', label: '1. Select Area' },
@@ -29,7 +29,7 @@ export default function RsauiPocCreateLayout() {
   const { getSubmission, createDraft, saveDraft, removeSubmission } = useRsaUI()
   const [saving, setSaving] = useState(false)
 
-  const isViewRoute = /\/rsaui\/poc\/create\/view\/?$/.test(location.pathname)
+  const isViewRoute = /\/poc\/service-area\/view\/?$/.test(location.pathname)
 
   const sub = submissionId ? getSubmission(submissionId) : null
   const stepIdx = stepIndexFromPath(location.pathname)
@@ -118,7 +118,7 @@ export default function RsauiPocCreateLayout() {
     if (!submissionId || !sub || sub.status !== RSA_STATUS.Draft) return
     if (!window.confirm(`Delete draft ${submissionId}? This cannot be undone.`)) return
     removeSubmission(submissionId)
-    navigate('/rsaui/poc/document-review?tab=draft')
+    navigate('/poc/document-review?tab=draft')
   }
 
   const goStep = delta => {
@@ -129,9 +129,9 @@ export default function RsauiPocCreateLayout() {
   const pocWizardExitPath =
     isEditDetailsFlow || sp.get('from')
       ? sp.get('from')
-        ? `/rsaui/poc/document-review?tab=${encodeURIComponent(sp.get('from'))}`
-        : '/rsaui/poc/document-review'
-      : '/rsaui/poc/document-review'
+        ? `/poc/document-review?tab=${encodeURIComponent(sp.get('from'))}`
+        : '/poc/document-review'
+      : '/poc/document-review'
 
   const handleFooterContinue = () => {
     if (!submissionId || !sub) {
@@ -176,8 +176,8 @@ export default function RsauiPocCreateLayout() {
   )
 
   const backTarget = sp.get('from')
-    ? `/rsaui/poc/document-review?tab=${encodeURIComponent(sp.get('from'))}`
-    : '/rsaui/poc/document-review'
+    ? `/poc/document-review?tab=${encodeURIComponent(sp.get('from'))}`
+    : '/poc/document-review'
 
   if (isViewRoute) {
     return (

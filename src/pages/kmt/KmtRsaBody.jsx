@@ -39,10 +39,10 @@ export default function KmtRsaBody() {
     return out.slice(0, 10)
   }, [submissions, queue, RSA_STATUS])
 
-  const submissionPath = id => `/rsaui/kmt/submission/${encodeURIComponent(id)}`
+  const submissionPath = id => `/kmt/rsaui-submission/${encodeURIComponent(id)}`
 
   const kmtEditWizard = (id, from = 'review') =>
-    `/rsaui/kmt/edit/select?submission=${encodeURIComponent(id)}&mode=edit&from=${encodeURIComponent(from)}`
+    `/kmt/edit/select?submission=${encodeURIComponent(id)}&mode=edit&from=${encodeURIComponent(from)}`
 
   const publish = sub => {
     if (sub.status !== RSA_STATUS.Pending_KMT) return
@@ -306,10 +306,10 @@ export default function KmtRsaBody() {
                       >
                         View
                       </button>
-                      <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/rsaui/kmt/extend/${encodeURIComponent(sub.id)}`)}>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/kmt/extend/${encodeURIComponent(sub.id)}`)}>
                         Extend
                       </button>
-                      <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/rsaui/kmt/archive/${encodeURIComponent(sub.id)}`)}>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/kmt/archive/${encodeURIComponent(sub.id)}`)}>
                         Archive
                       </button>
                     </td>

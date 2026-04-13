@@ -20,12 +20,12 @@ export default function RsauiPocDashboard() {
   }, [submissions])
 
   const goReview = tab => {
-    navigate(`/rsaui/poc/document-review?tab=${tab}`)
+    navigate(`/poc/document-review?tab=${tab}`)
   }
 
   const createServiceArea = () => {
     const id = createDraft()
-    navigate(`/rsaui/poc/create/select?submission=${encodeURIComponent(id)}&mode=edit`)
+    navigate(`/poc/service-area/select?submission=${encodeURIComponent(id)}&mode=edit`)
   }
 
   const cards = [

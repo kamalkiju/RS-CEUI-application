@@ -1,7 +1,6 @@
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import Layout from '../../components/Layout.jsx'
-import { useAuth } from '../../context/AuthContext.jsx'
 import { useRsaUI } from '../../context/RsaUIContext.jsx'
 import RejectModal from '../../components/RejectModal.jsx'
 import RsaSubmissionDetailView from '../../components/rsa/RsaSubmissionDetailView.jsx'
@@ -11,18 +10,16 @@ export default function KmtRsaSubmissionView() {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { user } = useAuth()
   const { getSubmission, approveKMT, rejectKMT, patchSubmission, RSA_STATUS } = useRsaUI()
 
-  const paths = useMemo(() => {
-    const rsaui = user?.app === 'RSAUI'
-    const base = rsaui ? '/rsaui/kmt/document-review' : '/kmt/document-review'
-    return {
-      review: `${base}/review`,
-      approved: `${base}/approved`,
-      rejected: `${base}/rejected`,
-    }
-  }, [user?.app])
+  const paths = useMemo(
+    () => ({
+      review: '/kmt/document-review/review',
+      approved: '/kmt/document-review/approved',
+      rejected: '/kmt/document-review/rejected',
+    }),
+    [],
+  )
   const decodedId = id ? decodeURIComponent(id) : ''
   const sub = decodedId ? getSubmission(decodedId) : null
   const [rejectOpen, setRejectOpen] = useState(false)

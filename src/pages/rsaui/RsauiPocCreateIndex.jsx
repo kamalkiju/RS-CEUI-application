@@ -16,7 +16,7 @@ export default function RsauiPocCreateIndex() {
     const hasSub = Boolean(q.get('submission'))
 
     if (mode === 'view' && hasSub) {
-      navigate(`/rsaui/poc/create/view?${q.toString()}`, { replace: true })
+      navigate(`/poc/service-area/view?${q.toString()}`, { replace: true })
       return
     }
 
@@ -26,7 +26,7 @@ export default function RsauiPocCreateIndex() {
     } else if (!q.get('mode')) {
       q.set('mode', 'edit')
     }
-    navigate(`/rsaui/poc/create/select?${q.toString()}`, { replace: true })
+    navigate(`/poc/service-area/select?${q.toString()}`, { replace: true })
   }, [createDraft, navigate, sp])
 
   return null

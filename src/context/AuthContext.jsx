@@ -2,11 +2,24 @@ import { createContext, useContext, useState, useEffect } from 'react'
 
 const AuthContext = createContext(null)
 
+function normalizeStoredUser(u) {
+  if (!u || typeof u !== 'object') return u
+  if (u.app === 'RSAUI') {
+    return { ...u, app: 'CEUI' }
+  }
+  return u
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
       const raw = sessionStorage.getItem('ceui_user')
-      return raw ? JSON.parse(raw) : null
+      const parsed = raw ? JSON.parse(raw) : null
+      const n = normalizeStoredUser(parsed)
+      if (n && n !== parsed) {
+        sessionStorage.setItem('ceui_user', JSON.stringify(n))
+      }
+      return n
     } catch {
       return null
     }
@@ -14,8 +27,9 @@ export function AuthProvider({ children }) {
   const [pendingAuth, setPendingAuth] = useState(null)
 
   const login = (userData) => {
-    sessionStorage.setItem('ceui_user', JSON.stringify(userData))
-    setUser(userData)
+    const payload = normalizeStoredUser({ ...userData, app: 'CEUI' })
+    sessionStorage.setItem('ceui_user', JSON.stringify(payload))
+    setUser(payload)
     setPendingAuth(null)
   }
 

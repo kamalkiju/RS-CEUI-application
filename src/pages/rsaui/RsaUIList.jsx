@@ -117,21 +117,21 @@ export default function RsaUIList({ syncTabToUrl = false }) {
   const openView = (id, fromTab) => {
     const q = new URLSearchParams({ submission: id, mode: 'view' })
     if (fromTab) q.set('from', fromTab)
-    navigate(`/rsaui/poc/create/view?${q.toString()}`)
+    navigate(`/poc/service-area/view?${q.toString()}`)
   }
 
   const openEdit = id => {
-    navigate(`/rsaui/poc/create/select?submission=${encodeURIComponent(id)}&mode=edit`)
+    navigate(`/poc/service-area/select?submission=${encodeURIComponent(id)}&mode=edit`)
   }
 
   const openEditConfigure = id => {
-    navigate(`/rsaui/poc/create/configure?submission=${encodeURIComponent(id)}&mode=edit`)
+    navigate(`/poc/service-area/configure?submission=${encodeURIComponent(id)}&mode=edit`)
   }
 
   const handleClone = id => {
     const newId = cloneSubmission(id)
     if (newId) {
-      navigate(`/rsaui/poc/create/view?submission=${encodeURIComponent(newId)}&mode=view&from=draft`)
+      navigate(`/poc/service-area/view?submission=${encodeURIComponent(newId)}&mode=view&from=draft`)
     }
   }
 
@@ -156,12 +156,12 @@ export default function RsaUIList({ syncTabToUrl = false }) {
       assignedBufmReviewer: s.assignedBufmReviewer || rm.assignedBUFM || 'Jane Wilson',
     })
     window.alert('✓ Sent for approval')
-    navigate('/rsaui/poc/document-review?tab=awaiting')
+    navigate('/poc/document-review?tab=awaiting')
   }
 
   const startNew = () => {
     const id = createDraft()
-    navigate(`/rsaui/poc/create?submission=${encodeURIComponent(id)}&mode=edit`)
+    navigate(`/poc/service-area?submission=${encodeURIComponent(id)}&mode=edit`)
   }
 
   /** Which row actions to show depends on list tab + row status. */
@@ -245,11 +245,11 @@ export default function RsaUIList({ syncTabToUrl = false }) {
       <main className="kd-main rsa-ui-list-page">
         <div className="kd-page-header">
           <div>
-            <h1 className="kd-page-title">{syncTabToUrl ? 'Document Review' : 'RSAUI'}</h1>
+            <h1 className="kd-page-title">{syncTabToUrl ? 'Document Review' : 'Service area requests'}</h1>
             <p className="kd-page-sub">
               {syncTabToUrl
                 ? 'Drafts, approval pipeline, rejections, approved service areas, and expiry queue.'
-                : 'RSAUI submissions and queues.'}
+                : 'Residential service-area submissions and queues.'}
             </p>
           </div>
           <button type="button" className="btn btn-primary" onClick={startNew}>
@@ -257,7 +257,7 @@ export default function RsaUIList({ syncTabToUrl = false }) {
           </button>
         </div>
 
-        <div className="rsa-ui-list-filters" role="tablist" aria-label="RSAUI document lists">
+        <div className="rsa-ui-list-filters" role="tablist" aria-label="Service area request lists">
           {FILTERS.map(f => (
             <button
               key={f.id}

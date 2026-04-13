@@ -64,7 +64,7 @@ export default function BufmRsaReviewQueue() {
                       <button
                         type="button"
                         className="btn btn-primary bufm-table__view"
-                        onClick={() => navigate(`/rsaui/bufm/review/${encodeURIComponent(sub.id)}`)}
+                        onClick={() => navigate(`/bufm/review/${encodeURIComponent(sub.id)}`)}
                       >
                         Review →
                       </button>

@@ -7,7 +7,7 @@ const BUFM_APPROVERS = ['Jane Wilson', 'Robert Chen', 'Maria Wilson']
 
 const REASONS = ['New Service Area', 'Expansion', 'Regulatory Change', 'Contract Addition']
 
-const POC_BASE = '/rsaui/poc/create'
+const POC_BASE = '/poc/service-area'
 
 function KmtWizardFinalize({ submissionId, sub, tabSuffix, wizardBase, kmtReturnPath }) {
   const navigate = useNavigate()
@@ -34,7 +34,7 @@ function KmtWizardFinalize({ submissionId, sub, tabSuffix, wizardBase, kmtReturn
       persistNote()
       approveKMT(submissionId)
       window.alert('✓ Published successfully')
-      navigate('/rsaui/kmt/document-review/approved')
+      navigate('/kmt/document-review/approved')
     } finally {
       setSaving(false)
     }
@@ -54,7 +54,7 @@ function KmtWizardFinalize({ submissionId, sub, tabSuffix, wizardBase, kmtReturn
         requestMeta: { ...(cur.requestMeta || {}), kmtPublishNote: kmtNote },
       })
       window.alert('✓ Changes saved')
-      navigate(kmtReturnPath || '/rsaui/kmt/document-review/approved')
+      navigate(kmtReturnPath || '/kmt/document-review/approved')
     } finally {
       setSaving(false)
     }
@@ -186,7 +186,7 @@ export default function RsauiPocSubmit() {
       })
       setConfirmOpen(false)
       window.alert('✓ Request submitted successfully')
-      navigate('/rsaui/poc/document-review?tab=awaiting')
+      navigate('/poc/document-review?tab=awaiting')
     } finally {
       setSaving(false)
     }
