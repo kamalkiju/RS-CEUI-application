@@ -6334,11 +6334,19 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 }
 
 /* POC document chat — layout inspired by single-doc chat reference; theme uses app accent */
+/* Fixed height below app header (56px) so message + sidebar regions scroll independently */
+.main > .workflow-chat.workflow-chat--poc {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
 .workflow-chat.workflow-chat--poc {
   max-width: none;
   margin: 0;
-  padding: 0 0 0;
-  min-height: calc(100vh - 120px);
+  padding: 0 16px 16px;
+  min-height: 0;
+  height: calc(100vh - 56px);
+  max-height: calc(100vh - 56px);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -6347,6 +6355,7 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   display: flex;
   flex: 1;
   min-height: 0;
+  max-height: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -6357,6 +6366,8 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   width: 260px;
   min-width: 240px;
   flex-shrink: 0;
+  min-height: 0;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -6364,6 +6375,7 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   background: #f8fafc;
   border-right: 1px solid var(--border);
   box-sizing: border-box;
+  overflow: hidden;
 }
 .workflow-chat-poc__back-link {
   font-size: 13px;
@@ -6380,6 +6392,7 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow: hidden;
 }
 .workflow-chat-poc__nav-head {
   display: flex;
@@ -6447,12 +6460,21 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .workflow-chat-poc__history {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 4px 4px 4px 0;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
 }
 .workflow-chat-poc__history-item {
   width: 100%;
@@ -6518,8 +6540,13 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 20px 24px 16px;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .workflow-chat-poc__hero {
   padding: 20px 22px;
@@ -6840,17 +6867,29 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   justify-content: flex-end;
 }
 @media (max-width: 900px) {
+  .workflow-chat.workflow-chat--poc {
+    padding: 0 12px 12px;
+    height: calc(100vh - 56px);
+    max-height: calc(100vh - 56px);
+  }
   .workflow-chat-poc__shell {
     flex-direction: column;
+    flex: 1;
+    min-height: 0;
   }
   .workflow-chat-poc__sidebar {
     width: 100%;
     min-width: 0;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    max-height: 220px;
+    max-height: min(38vh, 260px);
+    flex-shrink: 0;
+  }
+  .workflow-chat-poc__nav-section {
+    min-height: 0;
   }
   .workflow-chat-poc__history {
-    max-height: 120px;
+    max-height: none;
+    min-height: 0;
   }
 }
