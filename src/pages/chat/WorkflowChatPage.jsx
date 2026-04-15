@@ -28,8 +28,13 @@ const PHASES = {
 const POC_CHAT_STORAGE_KEY = 'rs-poc-workflow-chat-v1'
 const POC_CHAT_PATH = '/poc/chat'
 
-/** Pre-filled in the composer after the user sends hi (no assistant “suggestion” bubble). */
+/** Fallback when no catalog row is selected yet. */
 const DEFAULT_WORKFLOW_PROMPT = 'K-5031 — update document title and contract activation date'
+
+function defaultPromptForDocId(docId) {
+  if (!docId) return ''
+  return `${docId} — update document title and contract activation date`
+}
 
 function pocWelcomeMessages() {
   return [{ role: 'assistant', id: 'welcome', content: 'Welcome. Say **hi** below to start.' }]
@@ -277,6 +282,23 @@ export default function WorkflowChatPage() {
     [docs],
   )
 
+  /** Catalog selection pre-fills the composer after the hi gate (user still sends the message). */
+  const onCatalogChange = useCallback(
+    e => {
+      const docId = e.target.value
+      setSelectedDocId(docId)
+      const pocGate =
+        role === 'POC' && pocSessions.find(s => s.id === pocActiveSessionId)?.pocHiGatePassed === true
+      const reviewerGate = (role === 'BUFM' || role === 'KMT') && reviewerHiGatePassed
+      if (docId && (pocGate || reviewerGate)) {
+        setInput(defaultPromptForDocId(docId))
+      } else if (!docId) {
+        setInput('')
+      }
+    },
+    [role, pocSessions, pocActiveSessionId, reviewerHiGatePassed],
+  )
+
   const pushAssistantPoc = useCallback((content, extra = {}) => {
     const sid = pocActiveSessionIdRef.current
     setPocSessions(prev =>
@@ -513,7 +535,7 @@ export default function WorkflowChatPage() {
             s.id === pocActiveSessionId ? { ...s, pocHiGatePassed: true, updatedAt: Date.now() } : s,
           ),
         )
-        setInput(DEFAULT_WORKFLOW_PROMPT)
+        setInput(defaultPromptForDocId(selectedDocId) || DEFAULT_WORKFLOW_PROMPT)
         return
       }
 
@@ -555,7 +577,7 @@ export default function WorkflowChatPage() {
           return
         }
         setReviewerHiGatePassed(true)
-        setInput(DEFAULT_WORKFLOW_PROMPT)
+        setInput(defaultPromptForDocId(selectedDocId) || DEFAULT_WORKFLOW_PROMPT)
         return
       }
     }
@@ -761,7 +783,7 @@ export default function WorkflowChatPage() {
       return
     }
     if (action.type === 'hint') {
-      setInput(DEFAULT_WORKFLOW_PROMPT)
+      setInput(defaultPromptForDocId(selectedDocId) || DEFAULT_WORKFLOW_PROMPT)
       return
     }
     if (action.type === 'delegate') {
@@ -913,7 +935,7 @@ export default function WorkflowChatPage() {
                       id="chat-doc-select-poc-composer"
                       className="workflow-chat-poc__composer-select"
                       value={selectedDocId}
-                      onChange={e => setSelectedDocId(e.target.value)}
+                      onChange={onCatalogChange}
                       aria-label="Catalog row to match"
                     >
                       <option value="">Select…</option>
@@ -1019,7 +1041,7 @@ export default function WorkflowChatPage() {
                     id="chat-doc-select-reviewer-composer"
                     className="workflow-chat-poc__composer-select"
                     value={selectedDocId}
-                    onChange={e => setSelectedDocId(e.target.value)}
+                    onChange={onCatalogChange}
                     aria-label="Catalog row to match"
                   >
                     <option value="">Select…</option>
