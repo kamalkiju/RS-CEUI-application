@@ -87,7 +87,7 @@ function bufmWelcomeMessages() {
       role: 'assistant',
       id: 'welcome',
       content:
-        'Welcome to **BUFM document chat**. Select a document next to **Attach** (or type its ID or title in your message), then send any note. The flow runs **Initializing → Processing → Completed** and summarizes **sections and fields the POC recorded** on the document. **Open document** to see green POC highlights, flag items if needed, then **Approve** or **Reject** on the review page.',
+        'Welcome to **BUFM document chat**. Select a document next to **Attach** (or type its ID or title), then send **any text**. You will get one **summary of POC-related changes**, plus **Open document**, **Approve**, and **Reject** in the same reply after the flow completes.',
     },
   ]
 }
@@ -606,20 +606,21 @@ export default function WorkflowChatPage() {
         return
       }
       const extrasNav = buildNavigationExtrasForReviewer(doc, userLine)
+      const storedExtras = buildChatWorkflowExtrasFromDoc(doc)
       await runProgress()
       const body = formatPocChangesForChat(doc, { roleLabel: 'POC' })
-      pushAssistant(`**Completed.** Initializing → processing → finished.\n\n${body}`)
-      await delay(380)
-      pushAssistant(
-        '**Next steps** — open the document to review POC highlights (green), flag items if needed, then approve or reject from the header when the document is awaiting BUFM approval.',
-        {
-          actions: [
-            { type: 'openBufm', label: 'Open document', docId: doc.id, extras: extrasNav },
-            { type: 'bufmApprove', label: 'Approve', docId: doc.id },
-            { type: 'bufmReject', label: 'Reject', docId: doc.id, extras: extrasNav },
-          ],
-        },
-      )
+      let inferredAppend = ''
+      if (!storedExtras && extrasNav.sections?.length) {
+        inferredAppend = `\n\n---\n\n**Review focus (from your message)** — highlight targets for this visit:\n\n**Sections**\n${extrasNav.sections.map(s => `• ${s}`).join('\n')}\n\n**Fields**\n${extrasNav.fields.map(f => `• ${f}`).join('\n')}`
+      }
+      const summaryBlock = `**Summary — POC-related changes**\nInitializing → processing → **completed** for **${doc.sub || doc.id}** (\`${doc.id}\`).\n\n${body}${inferredAppend}\n\n---\n\nUse the buttons below to **open the document** (green POC highlights), **approve**, or **reject** (when this document is awaiting BUFM approval).`
+      pushAssistant(summaryBlock, {
+        actions: [
+          { type: 'openBufm', label: 'Open document', docId: doc.id, extras: extrasNav },
+          { type: 'bufmApprove', label: 'Approve', docId: doc.id },
+          { type: 'bufmReject', label: 'Reject', docId: doc.id, extras: extrasNav },
+        ],
+      })
       return
     }
 
@@ -1035,7 +1036,7 @@ export default function WorkflowChatPage() {
 
   const reviewerHeroSub =
     role === 'BUFM'
-      ? 'Select a document next to Attach (or mention title or ID). Send any message to run Initializing → Processing → Completed and see what the POC recorded. Open the document for green highlights, then Approve or Reject with flags.'
+      ? 'Select a document next to Attach (or mention title or ID), then send any text. You get a **summary of POC-related changes** in one reply, with **Open document**, **Approve**, and **Reject**.'
       : 'Select a document next to Attach (or mention title or ID). Send any message for the same flow plus BUFM/KMT context. Open the document for read-only highlights.'
 
   return (
