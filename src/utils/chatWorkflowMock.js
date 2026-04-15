@@ -29,35 +29,55 @@ export function defaultChatSummary(doc) {
   return `Applied your requested updates on “${doc.sub || doc.id}”. Review highlighted sections before submitting.`
 }
 
-/** Simulated sections/fields the assistant “changed” for demo highlights. */
-export function inferSimulatedPocPatches(text) {
-  const s = String(text || '').toLowerCase()
-  const sections = []
-  const fields = []
-  if (/basic|title|document name|activation|contract/i.test(s)) {
-    sections.push('Basic Information')
-    if (/title|name/i.test(s)) fields.push('Document title')
-    if (/activation|date/i.test(s)) fields.push('Contract activation date')
+/**
+ * Infer one focused patch per clause (split on “and” / commas). Uses text after an em/en dash when present (e.g. “K-5031 — update fees”).
+ * First matching domain wins per clause so unrelated keywords do not light every tab.
+ */
+function inferFromSingleClause(clause) {
+  const s = String(clause || '')
+    .toLowerCase()
+    .trim()
+  if (!s) return { sections: [], fields: [] }
+  if (/fee|standard fee|erf|franchise fee/i.test(s)) {
+    return { sections: ['Standard fees (selected)'], fields: ['Active fee set'] }
   }
-  if (/payment|billing|invoice/i.test(s)) {
-    sections.push('Payment & Billing Terms')
-    fields.push('Payment terms')
-  }
-  if (/fee|standard fee/i.test(s)) {
-    sections.push('Standard fees (selected)')
-    fields.push('Active fee set')
+  if (/payment|billing|invoice|net\s*\d+/i.test(s)) {
+    return { sections: ['Payment & Billing Terms'], fields: ['Payment terms'] }
   }
   if (/offering|rate|primary/i.test(s)) {
-    sections.push('Configured offerings')
-    fields.push('Primary offering')
+    return { sections: ['Configured offerings'], fields: ['Primary offering'] }
   }
   if (/service categor|solid waste|recycl/i.test(s)) {
-    sections.push('Solid Waste')
-    fields.push('Category notes')
+    return { sections: ['Solid Waste'], fields: ['Category notes'] }
   }
-  if (!sections.length && !fields.length) {
-    sections.push('Basic Information')
-    fields.push('Document title', 'Review notes')
+  if (/basic|title|document name|activation|contract/i.test(s)) {
+    const sections = ['Basic Information']
+    const fields = []
+    if (/title|name/i.test(s)) fields.push('Document title')
+    if (/activation|date/i.test(s)) fields.push('Contract activation date')
+    if (!fields.length) fields.push('Review notes')
+    return { sections, fields }
+  }
+  return { sections: [], fields: [] }
+}
+
+/** Simulated sections/fields the assistant “changed” for demo highlights. */
+export function inferSimulatedPocPatches(text) {
+  const raw = String(text || '').trim()
+  let body = raw
+  const dashParts = raw.split(/\s*[—–]\s*/)
+  if (dashParts.length >= 2) body = dashParts.slice(1).join(' — ').trim()
+  const chunks = body
+    .split(/\s+,\s*|\s+and\s+/i)
+    .map(c => c.trim())
+    .filter(Boolean)
+  const useChunks = chunks.length ? chunks : [body]
+  const sections = []
+  const fields = []
+  for (const ch of useChunks) {
+    const p = inferFromSingleClause(ch)
+    sections.push(...p.sections)
+    fields.push(...p.fields)
   }
   return {
     sections: [...new Set(sections)],
@@ -67,4 +87,84 @@ export function inferSimulatedPocPatches(text) {
 
 export async function delay(ms) {
   return new Promise(r => setTimeout(r, ms))
+}
+
+/**
+ * True when the reviewer message is asking to see POC’s changes / updates / resubmission.
+ */
+export function wantsPocChangeSummary(text) {
+  const s = String(text || '').toLowerCase().trim()
+  if (s.length === 0) return true
+  return /poc|resubmit|resubmission|change|update|review|highlight|section|field|what changed|delta|diff|since rejection|after reject|show me|see the|need to see|what did|list of|which field|which section|mens/i.test(
+    s,
+  )
+}
+
+/**
+ * Real POC update metadata from the document (BUFM/KMT chat). No simulation.
+ */
+export function getPocUpdateDataFromDoc(doc) {
+  if (!doc) {
+    return { sections: [], fields: [], note: '', hasAny: false }
+  }
+  const sections = Array.isArray(doc.poc_updated_sections)
+    ? doc.poc_updated_sections.map(x => String(x).trim()).filter(Boolean)
+    : []
+  const fields = Array.isArray(doc.poc_updated_fields)
+    ? doc.poc_updated_fields.map(x => String(x).trim()).filter(Boolean)
+    : []
+  const note = String(doc.pocResubmissionNote || '').trim()
+  const hasAny = sections.length > 0 || fields.length > 0 || note.length > 0
+  return { sections, fields, note, hasAny }
+}
+
+/**
+ * Markdown-style text for chat: only sections / fields / note actually stored on the document.
+ */
+export function formatPocChangesForChat(doc, { roleLabel = 'POC' } = {}) {
+  const { sections, fields, note, hasAny } = getPocUpdateDataFromDoc(doc)
+  const title = doc ? `**${doc.sub || doc.id}** (\`${doc.id}\`)` : '**Document**'
+  if (!hasAny) {
+    return `${title}\n\nNo **${roleLabel} update metadata** on this document yet (no \`poc_updated_sections\` / \`poc_updated_fields\` / resubmission note). After a POC resubmits following rejection, those lists populate and highlights appear on the document view.\n\nYou can still open the document to review the full content and any reviewer flags.`
+  }
+  let out = `${title}\n\n**Sections ${roleLabel} updated**\n`
+  out += sections.length ? sections.map(s => `• ${s}`).join('\n') : '• — (none listed)'
+  out += `\n\n**Fields ${roleLabel} updated**\n`
+  out += fields.length ? fields.map(f => `• ${f}`).join('\n') : '• — (none listed)'
+  if (note) {
+    out += `\n\n**${roleLabel} resubmission note**\n> ${note}`
+  }
+  out +=
+    '\n\nOpen the document below — **green** styling marks POC-touched areas; **orange** marks reviewer-flagged items where applicable.'
+  return out
+}
+
+/**
+ * Payload for navigation: merge real POC highlights for the viewer session.
+ */
+export function buildChatWorkflowExtrasFromDoc(doc) {
+  const { sections, fields, note, hasAny } = getPocUpdateDataFromDoc(doc)
+  if (!hasAny) return null
+  return {
+    sections,
+    fields,
+    summary: note || 'POC-updated sections and fields from document metadata.',
+  }
+}
+
+/** Extra lines for KMT chat (BUFM / KMT comments on file). */
+export function formatKmtReviewerContext(doc) {
+  if (!doc) return ''
+  const parts = []
+  if (doc.approved_by_BUFM) {
+    parts.push('**BUFM:** Approved toward KMT.')
+  }
+  if (doc.rejection_comment_BUFM) {
+    parts.push(`**BUFM comment:** ${String(doc.rejection_comment_BUFM).trim()}`)
+  }
+  if (doc.rejection_comment_KMT) {
+    parts.push(`**KMT (prior rejection):** ${String(doc.rejection_comment_KMT).trim()}`)
+  }
+  if (!parts.length) return ''
+  return `\n\n---\n\n${parts.join('\n\n')}`
 }

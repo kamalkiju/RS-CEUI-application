@@ -110,8 +110,17 @@ export default function DocumentEditor() {
   const [chatWorkflowExtras] = useState(() => fromChatWorkflow ?? null)
   const liveDoc = doc?.id ? getDocumentById(doc.id) : doc
   const effectiveDoc = useMemo(
-    () => mergeChatWorkflowHighlights(liveDoc, chatWorkflowExtras),
+    () =>
+      mergeChatWorkflowHighlights(liveDoc, chatWorkflowExtras, {
+        /** From workflow chat: override stored POC highlight lists for this visit (may clear lists). */
+        replacePocHighlights: Boolean(chatWorkflowExtras),
+      }),
     [liveDoc, chatWorkflowExtras],
+  )
+
+  const chatHighlightSession = Boolean(
+    chatWorkflowExtras &&
+      (chatWorkflowExtras.sections?.length > 0 || chatWorkflowExtras.fields?.length > 0),
   )
 
   useEffect(() => {
@@ -204,6 +213,14 @@ export default function DocumentEditor() {
     setCurrentStep(n)
   }
 
+  const handleSaveDraft = () => {
+    if (!doc?.id) return
+    updateDoc(doc.id, {
+      status: 'draft',
+      tabs: ['draft', 'all'],
+    })
+  }
+
   const handleSubmit = () => {
     if (!doc?.id) return
     const latest = getDocumentById(doc.id) || doc
@@ -231,7 +248,7 @@ export default function DocumentEditor() {
       }
     }
     updateDoc(doc.id, {
-      status: 'pending',
+      status: 'Pending_BUFM',
       tabs: ['approval', 'all'],
       ...(pocResubmissionNote ? { pocResubmissionNote } : {}),
       ...pocDiff,
@@ -389,7 +406,7 @@ export default function DocumentEditor() {
             <span className="doc-approved-locked-hint" title="Approved versions are read-only">Approved (locked)</span>
           ) : !inViewMode ? (
             <>
-              <button type="button" className="btn btn-outline">
+              <button type="button" className="btn btn-outline" onClick={handleSaveDraft}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Save Draft
               </button>
@@ -430,7 +447,7 @@ export default function DocumentEditor() {
             isReviewerHighlightingWholeStep(s.num, reviewerSets.sections)
           const tabPoc =
             pocStepsWithHits.has(s.num) ||
-            isReviewerHighlightingWholeStep(s.num, pocSets.sections)
+            (!chatHighlightSession && isReviewerHighlightingWholeStep(s.num, pocSets.sections))
           return (
           <div
             key={s.num}
@@ -449,9 +466,9 @@ export default function DocumentEditor() {
         })}
       </div>
 
-      {chatWorkflowExtras && (
+      {chatHighlightSession && (
         <div className="doc-chat-workflow-banner" role="status">
-          Workflow chat: showing simulated POC highlight overlays for this visit. They are not saved until you edit and submit the document.
+          Workflow chat: only the steps from your last chat update are highlighted here. Use Save Draft or Submit for Approval in the toolbar, or the same actions in Workflow chat.
         </div>
       )}
 

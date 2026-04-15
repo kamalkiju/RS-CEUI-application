@@ -9,6 +9,10 @@ import {
   inferSimulatedPocPatches,
   defaultChatSummary,
   delay,
+  wantsPocChangeSummary,
+  formatPocChangesForChat,
+  buildChatWorkflowExtrasFromDoc,
+  formatKmtReviewerContext,
 } from '../../utils/chatWorkflowMock.js'
 
 const PHASES = {
@@ -51,17 +55,17 @@ function BubbleText({ text }) {
 export default function WorkflowChatPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const { docs, addDoc } = useDocs()
+  const { docs, addDoc, updateDoc } = useDocs()
   const [messages, setMessages] = useState(() => [
     {
       role: 'assistant',
       id: 'welcome',
       content:
         user?.role === 'POC'
-          ? 'Describe the document and what to change — for example: “K-5031 — update Basic Information: set contract activation date to next quarter.” You can also attach a file or use voice (demo).'
+          ? 'Pick a document and describe what to change (e.g. “K-5031 — update payment terms”). After you confirm, the chat lists only those wizard areas, **Open document** shows them highlighted, then **Save as draft** or **Submit for approval** (also available on the document page).'
           : user?.role === 'BUFM'
-            ? 'Enter a document ID or paste a title to see POC changes, BUFM context, and open the review detail page with highlights.'
-            : 'Enter a document ID or title to see POC updates, BUFM comments, routing options, and open the KMT review view with highlights.',
+            ? 'Pick a document (or type an ID like K-5031). Ask to **show POC changes** — the chat lists **sections and fields** from the document metadata, then links to the review page with highlights.'
+            : 'Pick a document and ask to see **POC updates** — sections, fields, resubmission note, plus BUFM/KMT context. Then open the document to view highlights.',
     },
   ])
   const [input, setInput] = useState('')
@@ -71,6 +75,8 @@ export default function WorkflowChatPage() {
   const [selectedDocId, setSelectedDocId] = useState('')
   /** POC: pending confirm before simulated apply */
   const pendingPocRef = useRef(null)
+  /** After confirm: last inferred patch (for Save draft / Submit from chat). */
+  const lastPocChatPatchRef = useRef(null)
   const listEndRef = useRef(null)
 
   const role = user?.role || 'POC'
@@ -125,13 +131,13 @@ export default function WorkflowChatPage() {
 
   const navigateToDocBufm = (docId, extras) => {
     navigate(`/bufm/document/${encodeURIComponent(docId)}`, {
-      state: { fromChatWorkflow: extras },
+      state: extras ? { fromChatWorkflow: extras } : {},
     })
   }
 
   const navigateToDocKmt = (docId, extras) => {
     navigate(`/kmt/document/${encodeURIComponent(docId)}`, {
-      state: { fromChatWorkflow: extras, kmtEdit: false },
+      state: { ...(extras ? { fromChatWorkflow: extras } : {}), kmtEdit: false },
     })
   }
 
@@ -170,10 +176,23 @@ export default function WorkflowChatPage() {
       fields: patches.fields,
       summary,
     }
+    lastPocChatPatchRef.current = {
+      docId: doc.id,
+      sections: patches.sections,
+      fields: patches.fields,
+    }
+    const detail =
+      patches.sections.length || patches.fields.length
+        ? `**Sections to review**\n${patches.sections.length ? patches.sections.map(x => `• ${x}`).join('\n') : '• —'}\n\n**Fields to review**\n${patches.fields.length ? patches.fields.map(x => `• ${x}`).join('\n') : '• —'}`
+        : '**Sections to review**\n• — (no keywords matched; open the document and edit the wizard, or describe a specific area such as fees or payment terms.)'
     pushAssistant(
-      `**Summary of changes (demo)**\n\n${summary}\n\n• Sections: ${patches.sections.join(', ')}\n• Fields: ${patches.fields.join(', ')}\n\nOpen the document to review highlighted areas.`,
+      `**Summary (demo)**\n\n${summary}\n\n${detail}\n\nOpen the document to see only these areas highlighted in the wizard. Save as draft or submit for BUFM review from here or from the document toolbar.`,
       {
-        actions: [{ type: 'openDoc', label: 'Open document (highlights)', doc, extras }],
+        actions: [
+          { type: 'openDoc', label: 'Open document', doc, extras },
+          { type: 'pocChatSaveDraft', label: 'Save as draft', docId: doc.id },
+          { type: 'pocChatSubmitApproval', label: 'Submit for approval', docId: doc.id },
+        ],
       },
     )
     pendingPocRef.current = null
@@ -219,8 +238,12 @@ export default function WorkflowChatPage() {
       const patches = inferSimulatedPocPatches(userLine)
       const pend = { doc, text: userLine, patches }
       pendingPocRef.current = pend
+      const preview =
+        patches.sections.length || patches.fields.length
+          ? `**Sections**\n${patches.sections.map(x => `• ${x}`).join('\n')}\n\n**Fields**\n${patches.fields.map(x => `• ${x}`).join('\n')}`
+          : '**Sections / fields**\n• No wizard areas were inferred — try phrasing like “update fees” or “K-5031 — change payment terms”. You can still confirm to continue and edit in the document.'
       pushAssistant(
-        `**Confirm updates (demo)** — I will apply the following highlights for your review:\n\n• Sections: ${patches.sections.join(', ')}\n• Fields: ${patches.fields.join(', ')}\n\nConfirm to continue, or edit your message and send again.`,
+        `**Confirm updates (demo)** — only these wizard areas will be highlighted after you confirm:\n\n${preview}\n\nConfirm to continue, or edit your message and send again.`,
         {
           actions: [{ type: 'confirmPoc', label: 'Confirm & apply (demo)' }],
         },
@@ -230,39 +253,84 @@ export default function WorkflowChatPage() {
 
     if (role === 'BUFM') {
       if (!doc) {
-        pushAssistant('Select or name a document (ID in message or dropdown) to load BUFM review context.')
+        pushAssistant(
+          'Select a document above or type an ID (e.g. **K-5031**), then ask to **show POC changes** to list sections and fields updated by the POC.',
+        )
+        return
+      }
+      if (!wantsPocChangeSummary(userLine)) {
+        pushAssistant(
+          `Matched **${doc.sub || doc.id}** (\`${doc.id}\`). To see **what the POC changed** (sections & fields from the system), say e.g. “show POC changes” or “need to see updates after resubmission”.`,
+          {
+            actions: [
+              {
+                type: 'openBufm',
+                label: 'Open document anyway',
+                docId: doc.id,
+                extras: buildChatWorkflowExtrasFromDoc(doc),
+              },
+            ],
+          },
+        )
         return
       }
       await runProgress()
-      const patches = inferSimulatedPocPatches(userLine)
-      const extras = { sections: patches.sections, fields: patches.fields, summary: 'POC-submitted updates (simulated)' }
-      pushAssistant(
-        `**${doc.sub || doc.id}** — Simulated POC changes pending your review.\n\n• ${doc.pocResubmissionNote || 'No resubmission note on file.'}\n\nOpen the document to see **green** highlights for POC updates and **orange** for reviewer flags.`,
-        {
-          actions: [{ type: 'openBufm', label: 'Open BUFM document review', docId: doc.id, extras }],
-        },
-      )
+      const extras = buildChatWorkflowExtrasFromDoc(doc)
+      const body = formatPocChangesForChat(doc, { roleLabel: 'POC' })
+      pushAssistant(body, {
+        actions: [
+          {
+            type: 'openBufm',
+            label: extras ? 'View document (POC highlights)' : 'Open BUFM document review',
+            docId: doc.id,
+            extras,
+          },
+        ],
+      })
       return
     }
 
     if (role === 'KMT') {
       if (!doc) {
-        pushAssistant('Select or name a document to load KMT oversight context.')
+        pushAssistant(
+          'Select a document or type an ID, then ask to **show POC changes** to list section- and field-level updates plus reviewer context.',
+        )
+        return
+      }
+      if (!wantsPocChangeSummary(userLine)) {
+        pushAssistant(
+          `Matched **${doc.sub || doc.id}** (\`${doc.id}\`). Ask to **show POC changes** or **list POC updates** to analyze metadata; or open the document below.`,
+          {
+            actions: [
+              {
+                type: 'openKmt',
+                label: 'Open document',
+                docId: doc.id,
+                extras: buildChatWorkflowExtrasFromDoc(doc),
+              },
+              { type: 'delegate', label: 'Release to another BUFM (demo)' },
+              { type: 'history', label: 'View change history (demo)' },
+            ],
+          },
+        )
         return
       }
       await runProgress()
-      const patches = inferSimulatedPocPatches(userLine)
-      const extras = { sections: patches.sections, fields: patches.fields, summary: 'Stack: POC + BUFM + KMT (demo)' }
-      pushAssistant(
-        `**${doc.sub || doc.id}**\n\n• **POC changes (simulated):** ${patches.sections.slice(0, 2).join(', ') || '—'}\n• **BUFM:** ${doc.rejection_comment_BUFM || doc.approved_by_BUFM ? 'Approved by BUFM' : '—'}\n• **Comments:** ${doc.rejection_comment_KMT || '—'}\n\nUse **Open KMT review** for highlighted read-only steps. **Release to another BUFM** is a demo handoff; **Version history** is in the document drawer.`,
-        {
-          actions: [
-            { type: 'openKmt', label: 'Open KMT document review', docId: doc.id, extras },
-            { type: 'delegate', label: 'Release to another BUFM (demo)' },
-            { type: 'history', label: 'View change history (demo)' },
-          ],
-        },
-      )
+      const extras = buildChatWorkflowExtrasFromDoc(doc)
+      const body =
+        formatPocChangesForChat(doc, { roleLabel: 'POC' }) + formatKmtReviewerContext(doc)
+      pushAssistant(body, {
+        actions: [
+          {
+            type: 'openKmt',
+            label: extras ? 'View document (POC highlights)' : 'Open KMT document review',
+            docId: doc.id,
+            extras,
+          },
+          { type: 'delegate', label: 'Release to another BUFM (demo)' },
+          { type: 'history', label: 'View change history (demo)' },
+        ],
+      })
     }
   }
 
@@ -287,8 +355,50 @@ export default function WorkflowChatPage() {
       handleConfirmPoc()
       return
     }
+    if (action.type === 'pocChatSaveDraft' && action.docId) {
+      const st = lastPocChatPatchRef.current
+      if (!st || st.docId !== action.docId) {
+        pushAssistant(
+          'Confirm your update on the previous assistant message (**Confirm & apply**), then use Save as draft again.',
+        )
+        return
+      }
+      updateDoc(action.docId, {
+        status: 'draft',
+        tabs: ['draft', 'all'],
+        poc_updated_sections: st.sections,
+        poc_updated_fields: st.fields,
+      })
+      const d = resolveDoc(action.docId)
+      pushAssistant(
+        `**${d?.sub || action.docId}** (\`${action.docId}\`) is saved as a **draft**. Open **Knowledge Documents** → **Draft Documents** to continue editing.`,
+      )
+      return
+    }
+    if (action.type === 'pocChatSubmitApproval' && action.docId) {
+      const st = lastPocChatPatchRef.current
+      if (!st || st.docId !== action.docId) {
+        pushAssistant(
+          'Confirm your update on the previous assistant message (**Confirm & apply**), then use Submit for approval again.',
+        )
+        return
+      }
+      const today = new Date().toISOString().slice(0, 10)
+      updateDoc(action.docId, {
+        status: 'Pending_BUFM',
+        tabs: ['approval', 'all'],
+        submittedDate: today,
+        poc_updated_sections: st.sections,
+        poc_updated_fields: st.fields,
+      })
+      const d = resolveDoc(action.docId)
+      pushAssistant(
+        `**${d?.sub || action.docId}** (\`${action.docId}\`) is **submitted for BUFM review**. It appears under **Awaiting Approval** for POC and in the BUFM review queue.`,
+      )
+      return
+    }
     if (action.type === 'hint') {
-      setInput('K-5031 — update Basic Information: set document title and contract activation date')
+      setInput('K-5031 — update document title and contract activation date')
       return
     }
     if (action.type === 'delegate') {
@@ -350,10 +460,10 @@ export default function WorkflowChatPage() {
             <ul className="workflow-chat__aside-list">
               {role === 'POC' && (
                 <>
-                  <li>Include document ID (e.g. K-5031) and describe changes.</li>
-                  <li>Confirm the simulated patch, then open the document with highlights.</li>
-                  <li>Document name only → we ask what to change; you can clone.</li>
-                  <li>Rejected docs: open from Rejected tab — highlights show reviewer fields.</li>
+                  <li>Include document ID (e.g. K-5031) and describe changes after an em dash.</li>
+                  <li>Confirm, then open the document — only inferred sections/fields are highlighted.</li>
+                  <li>Save as draft or submit for approval from the chat or the document toolbar.</li>
+                  <li>Submit sends the doc to Awaiting Approval and the BUFM queue.</li>
                 </>
               )}
               {role === 'BUFM' && (
