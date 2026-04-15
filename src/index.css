@@ -1461,7 +1461,9 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 
 /* POC view details — one panel */
 .rsa-poc-view-detail--unified {
-  max-width: 1180px;
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Detail view — unified single panel (POC) */
@@ -1533,15 +1535,17 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 }
 .rsa-poc-view-read-shell {
   width: 100%;
-  max-width: 1120px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 /* One outer white card + grey footer strip (POC view / KMT read) */
 .rsa-read-surface {
   width: 100%;
-  max-width: 1120px;
-  margin: 0 auto 24px;
+  max-width: none;
+  margin: 0 0 24px;
+  box-sizing: border-box;
   background: #fff;
   border: 1px solid #e8edf3;
   border-radius: 14px;
@@ -1697,18 +1701,21 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 
 /* BUFM task — single summary card */
 .bufm-rsa-summary-card {
-  max-width: 1180px;
-  margin: 0 auto;
+  --bufm-rsa-summary-pad-x: clamp(16px, 2.5vw, 40px);
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  box-sizing: border-box;
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-  padding: 20px 24px 22px;
+  padding: 20px var(--bufm-rsa-summary-pad-x) 22px;
 }
 .bufm-rsa-summary-divider {
   height: 1px;
   background: #e8edf3;
-  margin: 18px -24px;
+  margin: 18px calc(-1 * var(--bufm-rsa-summary-pad-x, 24px));
 }
 .bufm-rsa-summary-actions {
   display: flex;
@@ -2269,7 +2276,17 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 }
 
 /* ─── BUFM Reports & document view ───────────────── */
-.bufm-reports-page { padding: 24px 28px 48px; flex: 1; }
+.bufm-reports-page {
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  padding: clamp(16px, 2.2vw, 28px) clamp(16px, 2.5vw, 40px) 48px;
+}
+.bufm-reports-page__body {
+  width: 100%;
+  max-width: none;
+}
 .bufm-reports-page__title { font-size: 24px; font-weight: 800; color: var(--text-primary); margin-bottom: 6px; }
 .bufm-reports-page__sub { font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px; }
 .bufm-reports-page__streams {
@@ -2796,6 +2813,10 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 
 /* ─── KMT (Knowledge Management) ─────────────────── */
 .kmt-page { flex: 1; width: 100%; max-width: none; padding: 24px 28px 40px; box-sizing: border-box; }
+/* KMT document review shares BUFM reports shell — match full-width page padding */
+.kmt-page.kmt-reports.bufm-reports-page {
+  padding: clamp(16px, 2.2vw, 28px) clamp(16px, 2.5vw, 40px) 40px;
+}
 .kmt-page__title { font-size: 24px; font-weight: 800; color: var(--text-primary); margin-bottom: 6px; }
 .kmt-page__sub { font-size: 13.5px; color: var(--text-muted); margin-bottom: 24px; max-width: 720px; line-height: 1.5; }
 
@@ -5356,9 +5377,11 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 }
 
 .bufm-rsa-page {
-  max-width: 1300px;
-  margin: 0 auto;
-  padding: 20px 24px 120px;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+  padding: 20px clamp(16px, 2.5vw, 40px) 120px;
   background: linear-gradient(180deg, #f1f5f9 0%, #f8fafc 100%);
   min-height: 100%;
 }
@@ -5372,7 +5395,16 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 40; background: #fff; border-top: 2px solid var(--border); box-shadow: 0 -8px 24px rgba(0,0,0,.08);
 }
 .bufm-rsa-sticky__inner {
-  max-width: 1300px; margin: 0 auto; padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; justify-content: space-between;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+  padding: 12px clamp(16px, 2.5vw, 40px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  justify-content: space-between;
 }
 .bufm-rsa-sticky__title { font-weight: 800; font-size: 15px; }
 .bufm-rsa-sticky__meta { font-size: 12px; color: var(--text-muted); flex: 1; min-width: 200px; }
@@ -5863,11 +5895,19 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 }
 
 /* POC view details (full summary, no wizard) */
+.rsa-ui-flow--view-detail {
+  padding: 20px clamp(16px, 2.5vw, 40px) 32px;
+}
 .rsa-ui-flow--view-detail .rsa-ui-flow__body {
   padding-bottom: 24px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
 }
 .rsa-poc-view-detail__card {
-  max-width: 1180px;
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 .rsa-ui-list-actions--wrap {
   flex-wrap: wrap;
@@ -5931,9 +5971,10 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   -webkit-overflow-scrolling: touch;
 }
 .rsa-doc-fullscreen__body .rsa-read-surface {
-  max-width: 1180px;
-  margin-left: auto;
-  margin-right: auto;
+  max-width: none;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 /* KMT — Extend Expiry (form card) */
