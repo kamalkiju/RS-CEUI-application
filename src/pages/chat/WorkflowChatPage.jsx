@@ -6,10 +6,9 @@ import { useDocs, generateDocId } from '../../context/DocContext.jsx'
 import {
   resolveChatDocumentId,
   inferSimulatedPocPatches,
-  ensurePocDemoPatches,
+  ensurePocChatPatches,
   defaultChatSummary,
   delay,
-  wantsPocChangeSummary,
   formatPocChangesForChat,
   buildChatWorkflowExtrasFromDoc,
   formatKmtReviewerContext,
@@ -32,7 +31,29 @@ function pocWelcomeMessages(user) {
       role: 'assistant',
       id: 'welcome',
       content:
-        'Welcome to **document chat**. Choose a document in the bar below (next to Attach), or mention its title or ID in your message. Any message starts the **Confirm & apply** demo so you always get highlight areas; then **Open document** to see them in green. Use **Save as draft** or **Submit for approval** when ready.',
+        'Welcome to **document chat**. Choose a document next to **Attach**, or mention its title or ID in your message. Send to preview planned highlights, then **Confirm & apply**. **Open document** to see them in green. Use **Save as draft** or **Submit for approval** when ready.',
+    },
+  ]
+}
+
+function bufmWelcomeMessages() {
+  return [
+    {
+      role: 'assistant',
+      id: 'welcome',
+      content:
+        'Welcome to **BUFM document chat**. Select a document next to **Attach** (or type its ID or title in your message), then send any note. The flow runs **Initializing → Processing → Completed** and summarizes **sections and fields the POC recorded** on the document. **Open document** to see green POC highlights, flag items if needed, then **Approve** or **Reject** on the review page.',
+    },
+  ]
+}
+
+function kmtWelcomeMessages() {
+  return [
+    {
+      role: 'assistant',
+      id: 'welcome',
+      content:
+        'Welcome to **KMT document chat**. Select a document next to **Attach** (or type its ID or title), then send any message. The flow runs **Initializing → Processing → Completed** with a summary of **POC updates** plus BUFM/KMT context. **Open document** for read-only highlights and final actions.',
     },
   ]
 }
@@ -99,8 +120,8 @@ function ProgressPill({ phase }) {
   if (phase === PHASES.idle || phase === PHASES.done) return null
   const labels = {
     [PHASES.init]: 'Initializing…',
-    [PHASES.analyze]: 'Analyzing request…',
-    [PHASES.update]: 'Updating changes…',
+    [PHASES.analyze]: 'Processing…',
+    [PHASES.update]: 'Completing…',
   }
   return (
     <div className="workflow-chat__progress" role="status" aria-live="polite">
@@ -140,18 +161,11 @@ export default function WorkflowChatPage() {
   const [submitModalDocId, setSubmitModalDocId] = useState(null)
   const [uploadPct, setUploadPct] = useState(0)
 
-  const [messages, setMessages] = useState(() => [
-    {
-      role: 'assistant',
-      id: 'welcome',
-      content:
-        user?.role === 'POC'
-          ? ''
-          : user?.role === 'BUFM'
-            ? 'Pick a document (or type an ID like K-5031). Ask to **show POC changes** — the chat lists **sections and fields** from the document metadata, then links to the review page with highlights.'
-            : 'Pick a document and ask to see **POC updates** — sections, fields, resubmission note, plus BUFM/KMT context. Then open the document to view highlights.',
-    },
-  ])
+  const [messages, setMessages] = useState(() => {
+    if (user?.role === 'BUFM') return bufmWelcomeMessages()
+    if (user?.role === 'KMT') return kmtWelcomeMessages()
+    return []
+  })
 
   const [input, setInput] = useState('')
   const [phase, setPhase] = useState(PHASES.idle)
@@ -201,8 +215,17 @@ export default function WorkflowChatPage() {
     navigate(POC_CHAT_PATH, { replace: true, state: {} })
   }, [location.state, role, navigate, pocSessions])
 
+  const startNewReviewerChat = () => {
+    if (role === 'BUFM') setMessages(bufmWelcomeMessages())
+    else if (role === 'KMT') setMessages(kmtWelcomeMessages())
+    setSelectedDocId('')
+    setAttachedName(null)
+    setVoiceNote(null)
+    setPhase(PHASES.idle)
+  }
+
   useEffect(() => {
-    if (!attachedName || role !== 'POC') {
+    if (!attachedName || (role !== 'POC' && role !== 'BUFM' && role !== 'KMT')) {
       setUploadPct(0)
       return
     }
@@ -218,6 +241,9 @@ export default function WorkflowChatPage() {
     }, 220)
     return () => window.clearInterval(t0)
   }, [attachedName, role])
+
+  const reviewerChatBack =
+    role === 'BUFM' ? { to: '/bufm/document-review', label: '← Document review' } : { to: '/kmt/documents', label: '← Documents' }
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -401,11 +427,11 @@ export default function WorkflowChatPage() {
     const sectionLines = sections.length ? sections.map(x => `• ${x}`).join('\n') : '• —'
     const fieldLines = fields.length ? fields.map(x => `• ${x}`).join('\n') : '• —'
     const fallbackNote = usedFallback
-      ? '\n\n*(Demo used default **Basic Information** highlights because your message did not match fee/payment/basic cues.)*\n'
+      ? '\n\n*(Using **Basic Information** sample highlights because your message did not match fee, payment, or basic cues.)*\n'
       : ''
-    const detail = `**What we will highlight (demo)**${fallbackNote}\n\n**Sections**\n${sectionLines}\n\n**Fields**\n${fieldLines}`
+    const detail = `**Planned highlights**${fallbackNote}\n\n**Sections**\n${sectionLines}\n\n**Fields**\n${fieldLines}`
     pushAssistantPoc(
-      `${detail}\n\n---\n\n**Summary (demo)**\n${summary}\n\nOpen the document to see these areas in **green** in the wizard. Then **Save as draft** or **Submit for approval** below or on the document page.`,
+      `${detail}\n\n---\n\n**Summary**\n${summary}\n\nOpen the document to see these areas in **green** in the wizard. Then **Save as draft** or **Submit for approval** below or on the document page.`,
       {
         actions: [
           { type: 'openDoc', label: 'Open document', docId: doc.id, doc, extras },
@@ -473,18 +499,18 @@ export default function WorkflowChatPage() {
         )
         return
       }
-      const patches = ensurePocDemoPatches(inferSimulatedPocPatches(userLine))
+      const patches = ensurePocChatPatches(inferSimulatedPocPatches(userLine))
       const pend = { doc, text: userLine, patches }
       pendingPocRef.current = pend
       const sectionBlock = patches.sections.map(x => `• ${x}`).join('\n')
       const fieldBlock = patches.fields.map(x => `• ${x}`).join('\n')
       const preview = patches.usedFallback
-        ? `**Planned highlights (demo — sample)**\nYour message did not match specific fee/payment/basic wording, so the walkthrough uses **Basic Information** with sample fields. You can still confirm.\n\n**Sections**\n${sectionBlock}\n\n**Fields**\n${fieldBlock}`
-        : `**Planned highlights (demo)**\n\n**Sections**\n${sectionBlock}\n\n**Fields**\n${fieldBlock}`
+        ? `**Planned highlights (sample)**\nYour message did not match specific fee, payment, or basic wording, so **Basic Information** sample fields are used. You can still confirm.\n\n**Sections**\n${sectionBlock}\n\n**Fields**\n${fieldBlock}`
+        : `**Planned highlights**\n\n**Sections**\n${sectionBlock}\n\n**Fields**\n${fieldBlock}`
       pushAssistantPoc(
         `${preview}\n\nConfirm to generate the preview and actions below, or edit your message and send again.`,
         {
-          actions: [{ type: 'confirmPoc', label: 'Confirm & apply (demo)' }],
+          actions: [{ type: 'confirmPoc', label: 'Confirm & apply' }],
         },
       )
       return
@@ -493,81 +519,49 @@ export default function WorkflowChatPage() {
     if (role === 'BUFM') {
       if (!doc) {
         pushAssistant(
-          'Select a document above or type an ID (e.g. **K-5031**), then ask to **show POC changes** to list sections and fields updated by the POC.',
-        )
-        return
-      }
-      if (!wantsPocChangeSummary(userLine)) {
-        pushAssistant(
-          `Matched **${doc.sub || doc.id}** (\`${doc.id}\`). To see **what the POC changed** (sections & fields from the system), say e.g. “show POC changes” or “need to see updates after resubmission”.`,
-          {
-            actions: [
-              {
-                type: 'openBufm',
-                label: 'Open document anyway',
-                docId: doc.id,
-                extras: buildChatWorkflowExtrasFromDoc(doc),
-              },
-            ],
-          },
+          'Select a document in the menu next to **Attach**, or type an ID such as **K-5031** and enough of the document title to match.',
         )
         return
       }
       await runProgress()
       const extras = buildChatWorkflowExtrasFromDoc(doc)
       const body = formatPocChangesForChat(doc, { roleLabel: 'POC' })
-      pushAssistant(body, {
-        actions: [
-          {
-            type: 'openBufm',
-            label: extras ? 'View document (POC highlights)' : 'Open BUFM document review',
-            docId: doc.id,
-            extras,
-          },
-        ],
-      })
+      pushAssistant(
+        `**Completed.** Initializing → processing → finished.\n\n${body}`,
+        {
+          actions: [
+            {
+              type: 'openBufm',
+              label: extras ? 'Open document (POC highlights)' : 'Open BUFM document review',
+              docId: doc.id,
+              extras,
+            },
+          ],
+        },
+      )
       return
     }
 
     if (role === 'KMT') {
       if (!doc) {
         pushAssistant(
-          'Select a document or type an ID, then ask to **show POC changes** to list section- and field-level updates plus reviewer context.',
-        )
-        return
-      }
-      if (!wantsPocChangeSummary(userLine)) {
-        pushAssistant(
-          `Matched **${doc.sub || doc.id}** (\`${doc.id}\`). Ask to **show POC changes** or **list POC updates** to analyze metadata; or open the document below.`,
-          {
-            actions: [
-              {
-                type: 'openKmt',
-                label: 'Open document',
-                docId: doc.id,
-                extras: buildChatWorkflowExtrasFromDoc(doc),
-              },
-              { type: 'delegate', label: 'Release to another BUFM (demo)' },
-              { type: 'history', label: 'View change history (demo)' },
-            ],
-          },
+          'Select a document in the menu next to **Attach**, or type an ID and enough of the title to match.',
         )
         return
       }
       await runProgress()
       const extras = buildChatWorkflowExtrasFromDoc(doc)
-      const body =
-        formatPocChangesForChat(doc, { roleLabel: 'POC' }) + formatKmtReviewerContext(doc)
-      pushAssistant(body, {
+      const body = formatPocChangesForChat(doc, { roleLabel: 'POC' }) + formatKmtReviewerContext(doc)
+      pushAssistant(`**Completed.** Initializing → processing → finished.\n\n${body}`, {
         actions: [
           {
             type: 'openKmt',
-            label: extras ? 'View document (POC highlights)' : 'Open KMT document review',
+            label: extras ? 'Open document (POC highlights)' : 'Open KMT document review',
             docId: doc.id,
             extras,
           },
-          { type: 'delegate', label: 'Release to another BUFM (demo)' },
-          { type: 'history', label: 'View change history (demo)' },
+          { type: 'delegate', label: 'Release to another BUFM' },
+          { type: 'history', label: 'View change history' },
         ],
       })
     }
@@ -577,7 +571,7 @@ export default function WorkflowChatPage() {
     if (action.type === 'openDoc') {
       const d = action.doc || resolveDoc(action.docId)
       if (!d) {
-        if (role === 'POC') pushAssistantPoc('Document is no longer in the catalog (demo).')
+        if (role === 'POC') pushAssistantPoc('Document is no longer in the catalog.')
         return
       }
       navigateToDocPoc(d, action.extras)
@@ -632,11 +626,11 @@ export default function WorkflowChatPage() {
       return
     }
     if (action.type === 'delegate') {
-      window.alert('Demo: task would be reassigned in BUFM queue (no backend).')
+      window.alert('Task reassignment would be handled in the BUFM queue.')
       return
     }
     if (action.type === 'history') {
-      window.alert('Demo: opens version history — use “View Version History” on the document page.')
+      window.alert('Use “View Version History” on the document page for prior versions.')
       return
     }
   }
@@ -648,11 +642,11 @@ export default function WorkflowChatPage() {
   }
 
   const onVoice = () => {
-    setVoiceNote('Voice transcript (demo): please update fees section to match regional schedule.')
+    setVoiceNote('Voice transcript: please summarize POC updates and fees for this document.')
     if (role === 'POC') {
-      pushAssistantPoc('Voice captured (demo). Transcript will be included when you press **Send**.')
+      pushAssistantPoc('Voice captured. The transcript is included when you press **Send**.')
     } else {
-      pushAssistant('Voice captured (demo). Transcript was added to your next message — press Send to continue.')
+      pushAssistant('Voice captured. The transcript is added to your next message — press **Send** to continue.')
     }
   }
 
@@ -761,7 +755,7 @@ export default function WorkflowChatPage() {
 
               <div className="workflow-chat-poc__sidebar-foot">
                 <p className="workflow-chat-poc__hint-block">
-                  Demo only — attachments are not uploaded to a server.
+                  Attachments stay in this browser session only (not uploaded to a server).
                 </p>
               </div>
             </aside>
@@ -771,7 +765,7 @@ export default function WorkflowChatPage() {
                 <div className="workflow-chat-poc__hero">
                   <h1 className="workflow-chat-poc__hero-title">Document chat</h1>
                   <p className="workflow-chat-poc__hero-sub">
-                    Use the Document menu next to Attach (or mention title or ID in chat). Send any message to start Confirm & apply; opening the document shows the planned sections and fields highlighted in green.
+                    Use the Document menu next to Attach (or mention title or ID in chat). Send to preview highlights, then Confirm & apply. Opening the document shows the planned sections and fields in green.
                   </p>
                 </div>
 
@@ -823,7 +817,7 @@ export default function WorkflowChatPage() {
                     <input type="file" className="workflow-chat__file-input" onChange={onFile} accept=".pdf,.doc,.docx,.txt,.csv" />
                     Attach
                   </label>
-                  <button type="button" className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" onClick={onVoice} title="Voice (demo)">
+                  <button type="button" className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" onClick={onVoice} title="Voice note">
                     Voice
                   </button>
                 </div>
@@ -854,7 +848,7 @@ export default function WorkflowChatPage() {
                     </svg>
                   </button>
                 </div>
-                <p className="workflow-chat-poc__composer-hint">Enter to send · Demo workflow (no live AI)</p>
+                <p className="workflow-chat-poc__composer-hint">Enter to send · Workflow assistant</p>
               </div>
             </div>
           </div>
@@ -863,92 +857,143 @@ export default function WorkflowChatPage() {
     )
   }
 
+  const reviewerHeroSub =
+    role === 'BUFM'
+      ? 'Select a document next to Attach (or mention title or ID). Send any message to run Initializing → Processing → Completed and see what the POC recorded. Open the document for green highlights, then Approve or Reject with flags.'
+      : 'Select a document next to Attach (or mention title or ID). Send any message for the same flow plus BUFM/KMT context. Open the document for read-only highlights.'
+
   return (
     <Layout>
-      <main className="workflow-chat">
-        <header className="workflow-chat__head">
-          <div>
-            <h1 className="workflow-chat__title">Workflow chat</h1>
-            <p className="workflow-chat__sub">
-              {role === 'BUFM' && 'Review POC changes with links into BUFM document detail.'}
-              {role === 'KMT' && 'Final oversight: POC deltas, BUFM context, and KMT review links.'}
-            </p>
-          </div>
-          <div className="workflow-chat__doc-pick">
-            <label className="workflow-chat__pick-label" htmlFor="chat-doc-select">
-              Document
-            </label>
-            <select
-              id="chat-doc-select"
-              className="workflow-chat__select"
-              value={selectedDocId}
-              onChange={e => setSelectedDocId(e.target.value)}
-            >
-              <option value="">— Optional: select document —</option>
-              {docOptions.map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.id} · {d.sub?.slice(0, 48) || '—'}
-                </option>
-              ))}
-            </select>
-          </div>
-        </header>
+      <main className="workflow-chat workflow-chat--poc">
+        <div className="workflow-chat-poc__shell">
+          <aside className="workflow-chat-poc__sidebar" aria-label="Chat">
+            <Link to={reviewerChatBack.to} className="workflow-chat-poc__back-link">
+              {reviewerChatBack.label}
+            </Link>
 
-        <div className="workflow-chat__panel">
-          <aside className="workflow-chat__aside">
-            <h3 className="workflow-chat__aside-title">How it works</h3>
-            <ul className="workflow-chat__aside-list">
-              {role === 'BUFM' && (
-                <>
-                  <li>Select a document, then send to load POC update summary.</li>
-                  <li>Open review shows POC (green) and reviewer (orange) highlights.</li>
-                  <li>Approve / Reject from the document page as usual.</li>
-                </>
-              )}
-              {role === 'KMT' && (
-                <>
-                  <li>Select a document for stacked POC + BUFM context (demo).</li>
-                  <li>Open KMT review uses read-only highlights (use View, not Edit, for full highlights).</li>
-                  <li>Delegate / history actions are demo placeholders.</li>
-                </>
-              )}
-            </ul>
+            <div className="workflow-chat-poc__nav-section">
+              <button type="button" className="workflow-chat-poc__nav-head" aria-expanded="true">
+                <span>Document chat</span>
+                <span className="workflow-chat-poc__chevron" aria-hidden>
+                  ▾
+                </span>
+              </button>
+              <button type="button" className="workflow-chat-poc__new-chat btn btn-primary btn-sm" onClick={startNewReviewerChat}>
+                + New chat
+              </button>
+              <ul className="workflow-chat-poc__history">
+                <li>
+                  <div
+                    className="workflow-chat-poc__history-item workflow-chat-poc__history-item--active workflow-chat-poc__history-item--static"
+                    aria-current="true"
+                  >
+                    <span className="workflow-chat-poc__history-title">Current conversation</span>
+                    <span className="workflow-chat-poc__history-meta">
+                      {messages.length} message{messages.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <div className="workflow-chat-poc__sidebar-foot">
+              <p className="workflow-chat-poc__hint-block">
+                Attachments stay in this browser session only (not uploaded to a server).
+              </p>
+            </div>
           </aside>
 
-          <div className="workflow-chat__main">
-            <div className="workflow-chat__messages">{renderMessageList(messages, false)}</div>
+          <div className="workflow-chat-poc__main">
+            <div className="workflow-chat-poc__main-scroll">
+              <div className="workflow-chat-poc__hero">
+                <h1 className="workflow-chat-poc__hero-title">Document chat</h1>
+                <p className="workflow-chat-poc__hero-sub">{reviewerHeroSub}</p>
+              </div>
 
-            <div className="workflow-chat__composer">
-              <div className="workflow-chat__composer-tools">
-                <label className="workflow-chat__file-btn">
+              {attachedName && (
+                <div className="workflow-chat-poc__upload-card">
+                  <div className="workflow-chat-poc__upload-row">
+                    <span className="workflow-chat-poc__upload-name">{attachedName}</span>
+                    <button
+                      type="button"
+                      className="workflow-chat-poc__upload-dismiss"
+                      aria-label="Remove attachment"
+                      onClick={() => setAttachedName(null)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="workflow-chat-poc__upload-bar" role="progressbar" aria-valuenow={uploadPct} aria-valuemin={0} aria-valuemax={100}>
+                    <div className="workflow-chat-poc__upload-bar-fill" style={{ width: `${uploadPct}%` }} />
+                  </div>
+                  <p className="workflow-chat-poc__upload-status">Uploading — {uploadPct}%</p>
+                </div>
+              )}
+
+              <div className="workflow-chat-poc__messages">{renderMessageList(messages, false)}</div>
+            </div>
+
+            <div className="workflow-chat-poc__composer-wrap">
+              <div className="workflow-chat-poc__composer-tools">
+                <div className="workflow-chat-poc__composer-doc-wrap">
+                  <label className="workflow-chat-poc__composer-doc-label" htmlFor="chat-doc-select-reviewer-composer">
+                    Document
+                  </label>
+                  <select
+                    id="chat-doc-select-reviewer-composer"
+                    className="workflow-chat-poc__composer-select"
+                    value={selectedDocId}
+                    onChange={e => setSelectedDocId(e.target.value)}
+                    aria-label="Active document for this chat"
+                  >
+                    <option value="">Select document…</option>
+                    {docOptions.map(d => (
+                      <option key={d.id} value={d.id}>
+                        {d.id} · {d.sub?.slice(0, 40) || '—'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <label className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" title="Attach file">
                   <input type="file" className="workflow-chat__file-input" onChange={onFile} accept=".pdf,.doc,.docx,.txt,.csv" />
-                  Attach file
+                  Attach
                 </label>
-                <button type="button" className="btn btn-text btn-sm" onClick={onVoice}>
-                  Voice (demo)
+                <button type="button" className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" onClick={onVoice} title="Voice note">
+                  Voice
                 </button>
-                {attachedName && <span className="workflow-chat__attach-name">{attachedName}</span>}
-                {voiceNote && <span className="workflow-chat__attach-name">Voice ready</span>}
               </div>
-              <textarea
-                className="workflow-chat__input"
-                rows={3}
-                placeholder={role === 'BUFM' ? 'e.g. K-5048 — show POC updates for final review' : 'e.g. K-5048 — show POC updates for final review'}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                    e.preventDefault()
-                    handleSend()
+              <div className="workflow-chat-poc__input-row">
+                <input
+                  type="text"
+                  className="workflow-chat-poc__input"
+                  placeholder={
+                    role === 'BUFM'
+                      ? 'e.g. K-5031 — summarize POC updates for my review'
+                      : 'e.g. K-5031 — summarize POC and reviewer context'
                   }
-                }}
-              />
-              <div className="workflow-chat__composer-foot">
-                <span className="workflow-chat__hint">⌘/Ctrl + Enter to send</span>
-                <button type="button" className="btn btn-primary" disabled={phase !== PHASES.idle} onClick={handleSend}>
-                  Send
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      if (phase === PHASES.idle) handleSend()
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="workflow-chat-poc__send"
+                  disabled={phase !== PHASES.idle}
+                  aria-label="Send"
+                  onClick={handleSend}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
                 </button>
               </div>
+              <p className="workflow-chat-poc__composer-hint">Enter to send · Workflow assistant</p>
             </div>
           </div>
         </div>

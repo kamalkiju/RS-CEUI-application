@@ -16,7 +16,7 @@ export function extractDocumentId(text, docs = []) {
 }
 
 /**
- * Fuzzy match: significant tokens from document title appear in the message (demo).
+ * Fuzzy match: significant tokens from document title appear in the message.
  */
 function fuzzyMatchDocumentId(text, docs = []) {
   const t = String(text || '').toLowerCase()
@@ -52,8 +52,8 @@ export function resolveChatDocumentId(text, selectedDocId, docs = []) {
   return fuzzyMatchDocumentId(text, docs)
 }
 
-/** When the message does not map to wizard areas, use a small default patch so the demo always has highlights. */
-export function ensurePocDemoPatches(patches) {
+/** When the message does not map to wizard areas, use a small default patch so the chat session always has highlight targets. */
+export function ensurePocChatPatches(patches) {
   const has = (patches?.sections?.length || 0) + (patches?.fields?.length || 0) > 0
   if (has) {
     return {
@@ -115,7 +115,7 @@ function inferFromSingleClause(clause) {
   return { sections: [], fields: [] }
 }
 
-/** Simulated sections/fields the assistant “changed” for demo highlights. */
+/** Simulated sections/fields inferred from the user message for chat preview highlights. */
 export function inferSimulatedPocPatches(text) {
   const raw = String(text || '').trim()
   let body = raw
