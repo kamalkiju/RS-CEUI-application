@@ -28,16 +28,19 @@ const PHASES = {
 const POC_CHAT_STORAGE_KEY = 'rs-poc-workflow-chat-v1'
 const POC_CHAT_PATH = '/poc/chat'
 
+/** Pre-filled in the composer after the user sends hi (no assistant “suggestion” bubble). */
+const DEFAULT_WORKFLOW_PROMPT = 'K-5031 — update document title and contract activation date'
+
 function pocWelcomeMessages() {
-  return [{ role: 'assistant', id: 'welcome', content: 'Welcome to Ops Agent.' }]
+  return [{ role: 'assistant', id: 'welcome', content: 'Welcome. Say **hi** below to start.' }]
 }
 
 function bufmWelcomeMessages() {
-  return [{ role: 'assistant', id: 'welcome', content: 'Welcome to Ops Agent.' }]
+  return [{ role: 'assistant', id: 'welcome', content: 'Welcome. Say **hi** below to start.' }]
 }
 
 function kmtWelcomeMessages() {
-  return [{ role: 'assistant', id: 'welcome', content: 'Welcome to Ops Agent.' }]
+  return [{ role: 'assistant', id: 'welcome', content: 'Welcome. Say **hi** below to start.' }]
 }
 
 function serializeSessions(sessions) {
@@ -157,6 +160,7 @@ export default function WorkflowChatPage() {
   })
 
   const [input, setInput] = useState('')
+  const [reviewerHiGatePassed, setReviewerHiGatePassed] = useState(false)
   const [phase, setPhase] = useState(PHASES.idle)
   const [selectedDocId, setSelectedDocId] = useState('')
   const pendingPocRef = useRef(null)
@@ -206,6 +210,8 @@ export default function WorkflowChatPage() {
     if (role === 'BUFM') setMessages(bufmWelcomeMessages())
     else if (role === 'KMT') setMessages(kmtWelcomeMessages())
     setSelectedDocId('')
+    setReviewerHiGatePassed(false)
+    setInput('')
     setPhase(PHASES.idle)
   }
 
@@ -376,6 +382,7 @@ export default function WorkflowChatPage() {
     ])
     setPocActiveSessionId(id)
     setSelectedDocId('')
+    setInput('')
   }
 
   const handleCloneDocument = () => {
@@ -496,8 +503,8 @@ export default function WorkflowChatPage() {
         const plain = text.trim()
         const isHi = /^\s*(hi|hello|hey)\b/i.test(plain)
         pushUserPoc(userLine)
-        setInput('')
         if (!isHi) {
+          setInput('')
           pushAssistantPoc('Please say **hi** first to continue.')
           return
         }
@@ -506,6 +513,7 @@ export default function WorkflowChatPage() {
             s.id === pocActiveSessionId ? { ...s, pocHiGatePassed: true, updatedAt: Date.now() } : s,
           ),
         )
+        setInput(DEFAULT_WORKFLOW_PROMPT)
         return
       }
 
@@ -534,6 +542,22 @@ export default function WorkflowChatPage() {
         },
       )
       return
+    }
+
+    if (role === 'BUFM' || role === 'KMT') {
+      if (!reviewerHiGatePassed) {
+        const plain = text.trim()
+        const isHi = /^\s*(hi|hello|hey)\b/i.test(plain)
+        pushUser(userLine)
+        if (!isHi) {
+          setInput('')
+          pushAssistant('Please say **hi** first to continue.')
+          return
+        }
+        setReviewerHiGatePassed(true)
+        setInput(DEFAULT_WORKFLOW_PROMPT)
+        return
+      }
     }
 
     pushUser(userLine)
@@ -737,7 +761,7 @@ export default function WorkflowChatPage() {
       return
     }
     if (action.type === 'hint') {
-      setInput('K-5031 — update document title and contract activation date')
+      setInput(DEFAULT_WORKFLOW_PROMPT)
       return
     }
     if (action.type === 'delegate') {
@@ -849,6 +873,7 @@ export default function WorkflowChatPage() {
                         className={`workflow-chat-poc__history-item${s.id === pocActiveSessionId ? ' workflow-chat-poc__history-item--active' : ''}`}
                         onClick={() => {
                           setPocActiveSessionId(s.id)
+                          setInput('')
                           pendingPocRef.current = null
                           lastPocChatPatchRef.current = null
                         }}
@@ -875,10 +900,6 @@ export default function WorkflowChatPage() {
 
             <div className="workflow-chat-poc__main">
               <div className="workflow-chat-poc__main-scroll">
-                <div className="workflow-chat-poc__hero">
-                  <h1 className="workflow-chat-poc__hero-title">Ops Agent</h1>
-                </div>
-
                 <div className="workflow-chat-poc__messages">{renderMessageList(pocMessages, true)}</div>
               </div>
 
@@ -908,7 +929,7 @@ export default function WorkflowChatPage() {
                   <input
                     type="text"
                     className="workflow-chat-poc__input"
-                    placeholder={pocGateOk ? 'Message…' : 'Type hi first, then send…'}
+                    placeholder={pocGateOk ? 'Message…' : 'Type hi, then send…'}
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={e => {
@@ -939,6 +960,8 @@ export default function WorkflowChatPage() {
       </Layout>
     )
   }
+
+  const reviewerGateOk = reviewerHiGatePassed
 
   return (
     <Layout>
@@ -983,10 +1006,6 @@ export default function WorkflowChatPage() {
 
           <div className="workflow-chat-poc__main">
             <div className="workflow-chat-poc__main-scroll">
-              <div className="workflow-chat-poc__hero">
-                <h1 className="workflow-chat-poc__hero-title">Ops Agent</h1>
-              </div>
-
               <div className="workflow-chat-poc__messages">{renderMessageList(messages, false)}</div>
             </div>
 
@@ -1016,7 +1035,7 @@ export default function WorkflowChatPage() {
                 <input
                   type="text"
                   className="workflow-chat-poc__input"
-                  placeholder="Message…"
+                  placeholder={reviewerGateOk ? 'Message…' : 'Type hi, then send…'}
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => {
