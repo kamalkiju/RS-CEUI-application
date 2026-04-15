@@ -50,6 +50,7 @@ import RsauiKmtExtend from './pages/kmt/RsauiKmtExtend.jsx'
 import RsauiKmtArchive from './pages/kmt/RsauiKmtArchive.jsx'
 import RsauiKmtEditLayout from './pages/kmt/RsauiKmtEditLayout.jsx'
 import RsauiKmtEditIndex from './pages/kmt/RsauiKmtEditIndex.jsx'
+import WorkflowChatPage from './pages/chat/WorkflowChatPage.jsx'
 
 export default function App() {
   return (
@@ -73,6 +74,7 @@ export default function App() {
                       <Route path="editor" element={<DocumentEditor />} />
                       <Route path="document-review" element={<RsaUIList syncTabToUrl />} />
                       <Route path="settings" element={<BufmSimplePage title="POC Settings" />} />
+                      <Route path="chat" element={<WorkflowChatPage />} />
                       <Route path="service-area" element={<RsauiPocCreateLayout />}>
                         <Route index element={<RsauiPocCreateIndex />} />
                         <Route path="view" element={<RsauiPocViewDetail />} />
@@ -108,6 +110,7 @@ export default function App() {
                       <Route path="users/:userId/documents" element={<BufmUserDocuments />} />
                       <Route path="users" element={<BufmUsersPage />} />
                       <Route path="settings" element={<BufmSimplePage title="BUFM Settings" />} />
+                      <Route path="chat" element={<WorkflowChatPage />} />
                     </Route>
 
                     {/* KMT — templates, combined document review, RSA tools */}
@@ -139,6 +142,7 @@ export default function App() {
                       <Route path="users" element={<KmtUsersPage />} />
                       <Route path="delegations" element={<KmtDelegationsPage />} />
                       <Route path="settings" element={<KmtSettingsPage />} />
+                      <Route path="chat" element={<WorkflowChatPage />} />
                     </Route>
 
                     <Route path="/rsaui/*" element={<LegacyRsauiRedirect />} />

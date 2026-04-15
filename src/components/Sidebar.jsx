@@ -37,6 +37,14 @@ const ICON_SETTINGS = (
   </svg>
 )
 
+const ICON_CHAT = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    <line x1="9" y1="10" x2="15" y2="10" />
+    <line x1="9" y1="14" x2="13" y2="14" />
+  </svg>
+)
+
 const ICON_DOC = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -61,6 +69,7 @@ const NAV_ITEMS_POC = [
   { label: 'Knowledge Documents', path: '/poc', icon: ICON_DOC },
   { label: 'RSAUI Documents', path: '/poc/document-review', icon: ICON_REPORT },
   { label: 'Settings', path: '/poc/settings', icon: ICON_SETTINGS },
+  { label: 'Chat', path: '/poc/chat', icon: ICON_CHAT },
 ]
 
 const NAV_ITEMS_BUFM = [
@@ -68,6 +77,7 @@ const NAV_ITEMS_BUFM = [
   { label: 'Document Review', path: '/bufm/document-review', icon: ICON_REPORT },
   { label: 'Users', path: '/bufm/users', icon: ICON_USERS },
   { label: 'Settings', path: '/bufm/settings', icon: ICON_SETTINGS },
+  { label: 'Chat', path: '/bufm/chat', icon: ICON_CHAT },
 ]
 
 /** KMT: documents & templates before document review (per unified nav order) */
@@ -87,6 +97,7 @@ const NAV_ITEMS_KMT = [
   { label: 'Users', path: '/kmt/users', icon: ICON_USERS },
   { label: 'Delegations', path: '/kmt/delegations', icon: ICON_DELEGATION },
   { label: 'Settings', path: '/kmt/settings', icon: ICON_SETTINGS },
+  { label: 'Chat', path: '/kmt/chat', icon: ICON_CHAT },
 ]
 
 function getNavItems(role) {
@@ -101,10 +112,12 @@ function isNavPathActive(pathname, path) {
   if (path === '/poc/document-review') return pathname.startsWith('/poc/document-review')
   if (path === '/poc/service-area') return pathname.startsWith('/poc/service-area')
   if (path === '/poc/settings') return pathname.startsWith('/poc/settings')
+  if (path === '/poc/chat') return pathname.startsWith('/poc/chat')
   if (path === '/bufm') return pathname === '/bufm' || pathname === '/bufm/'
   if (path === '/bufm/document-review') return pathname.startsWith('/bufm/document-review')
   if (path === '/bufm/users') return pathname.startsWith('/bufm/users')
   if (path === '/bufm/settings') return pathname.startsWith('/bufm/settings')
+  if (path === '/bufm/chat') return pathname.startsWith('/bufm/chat')
   if (path === '/kmt') return pathname === '/kmt' || pathname === '/kmt/'
   if (path === '/kmt/documents') return pathname.startsWith('/kmt/documents')
   if (path === '/kmt/document-review') {
@@ -119,6 +132,7 @@ function isNavPathActive(pathname, path) {
   if (path === '/kmt/users') return pathname.startsWith('/kmt/users')
   if (path === '/kmt/delegations') return pathname.startsWith('/kmt/delegations')
   if (path === '/kmt/settings') return pathname.startsWith('/kmt/settings')
+  if (path === '/kmt/chat') return pathname.startsWith('/kmt/chat')
   return pathname === path || pathname.startsWith(`${path}/`)
 }
 

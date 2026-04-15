@@ -22,6 +22,7 @@ import {
   isReviewerHighlightingWholeStep,
   isSectionFlagged,
 } from '../../../utils/reviewFeedback.js'
+import { mergeChatWorkflowHighlights } from '../../../utils/chatWorkflowMerge.js'
 
 const STEPS = [
   { num: 1, name: 'Knowledge Area',    count: '0/9' },
@@ -105,27 +106,40 @@ export default function DocumentEditor() {
   const { updateDoc, getDocumentById } = useDocs()
 
   // Document data passed from the list or create flow (must be before liveDoc — avoids TDZ crash / white screen)
-  const { doc, mode, previewOnly } = location.state || {}
+  const { doc, mode, previewOnly, fromChatWorkflow } = location.state || {}
+  const [chatWorkflowExtras] = useState(() => fromChatWorkflow ?? null)
   const liveDoc = doc?.id ? getDocumentById(doc.id) : doc
-  const reviewerSets = useMemo(() => buildReviewerFlagSets(liveDoc || {}), [liveDoc])
-  const pocSets = useMemo(() => buildPocUpdateFlagSets(liveDoc || {}), [liveDoc])
+  const effectiveDoc = useMemo(
+    () => mergeChatWorkflowHighlights(liveDoc, chatWorkflowExtras),
+    [liveDoc, chatWorkflowExtras],
+  )
+
+  useEffect(() => {
+    if (!location.state?.fromChatWorkflow) return
+    const { fromChatWorkflow: _fc, ...rest } = location.state
+    navigate('.', { replace: true, state: Object.keys(rest).length ? rest : undefined })
+    // Strip one-shot chat payload from history; highlights kept in chatWorkflowExtras state.
+  }, [])
+
+  const reviewerSets = useMemo(() => buildReviewerFlagSets(effectiveDoc || {}), [effectiveDoc])
+  const pocSets = useMemo(() => buildPocUpdateFlagSets(effectiveDoc || {}), [effectiveDoc])
   const reviewerStepsWithHits = useMemo(() => {
-    const rs = buildReviewerFlagSets(liveDoc || {})
-    return getStepsTouchedByPocUpdates(liveDoc || {}, Array.from(rs.sections), Array.from(rs.fields))
-  }, [liveDoc])
+    const rs = buildReviewerFlagSets(effectiveDoc || {})
+    return getStepsTouchedByPocUpdates(effectiveDoc || {}, Array.from(rs.sections), Array.from(rs.fields))
+  }, [effectiveDoc])
   const pocStepsWithHits = useMemo(
     () =>
       getStepsTouchedByPocUpdates(
-        liveDoc || {},
-        liveDoc?.poc_updated_sections || [],
-        liveDoc?.poc_updated_fields || [],
+        effectiveDoc || {},
+        effectiveDoc?.poc_updated_sections || [],
+        effectiveDoc?.poc_updated_fields || [],
       ),
-    [liveDoc],
+    [effectiveDoc],
   )
   const editReviewHighlight = useMemo(() => {
-    if (!liveDoc) return null
-    const rs = buildReviewerFlagSets(liveDoc)
-    const ps = buildPocUpdateFlagSets(liveDoc)
+    if (!effectiveDoc) return null
+    const rs = buildReviewerFlagSets(effectiveDoc)
+    const ps = buildPocUpdateFlagSets(effectiveDoc)
     const hasRev = rs.sections.size > 0 || rs.fields.size > 0
     const hasPoc = ps.sections.size > 0 || ps.fields.size > 0
     if (!hasRev && !hasPoc) return null
@@ -135,7 +149,7 @@ export default function DocumentEditor() {
       pocSec: t => isSectionFlagged(t, ps.sections),
       pocFld: l => isFieldFlagged(l, ps.fields),
     }
-  }, [liveDoc])
+  }, [effectiveDoc])
   const isNew = mode === 'create' || !doc
   const isRework = mode === 'rework'
   const lockApproved = doc?.status === 'approved' && !isNew
@@ -435,8 +449,14 @@ export default function DocumentEditor() {
         })}
       </div>
 
+      {chatWorkflowExtras && (
+        <div className="doc-chat-workflow-banner" role="status">
+          Workflow chat: showing simulated POC highlight overlays for this visit. They are not saved until you edit and submit the document.
+        </div>
+      )}
+
       {inViewMode ? (
-        <DocumentReadOnlySteps doc={doc} step={currentStep} />
+        <DocumentReadOnlySteps doc={effectiveDoc} step={currentStep} />
       ) : (
         <>
       {currentStep === 1 && (

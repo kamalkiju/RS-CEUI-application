@@ -31,6 +31,7 @@ import {
   lastRejectTrailEntry,
   normalizeLabel,
 } from '../../utils/reviewFeedback.js'
+import { mergeChatWorkflowHighlights } from '../../utils/chatWorkflowMerge.js'
 import KmtFormBuilder from './KmtFormBuilder.jsx'
 import { ensureFivePocTabs } from './kmtFormBuilderShared.js'
 import { normalizeTemplateForm } from './pocReferenceFormSeed.js'
@@ -51,6 +52,15 @@ export default function KmtDocumentView() {
   const { user } = useAuth()
   const { docs, getDocumentById, updateDoc, countDocumentsByUserId } = useDocs()
   const doc = id ? getDocumentById(id) : null
+  const [chatWorkflowExtras] = useState(() => location.state?.fromChatWorkflow ?? null)
+
+  useEffect(() => {
+    if (!location.state?.fromChatWorkflow) return
+    const { fromChatWorkflow: _fc, ...rest } = location.state
+    navigate(location.pathname, { replace: true, state: Object.keys(rest).length ? rest : undefined })
+  }, [])
+
+  const effectiveDoc = useMemo(() => mergeChatWorkflowHighlights(doc, chatWorkflowExtras), [doc, chatWorkflowExtras])
 
   const [activeStep, setActiveStep] = useState(1)
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -88,19 +98,24 @@ export default function KmtDocumentView() {
     doc?.status === 'approved' ? 'Final Approved' : disp?.label
   const showBufmApprovedLine = doc?.status === 'Pending_KMT' && doc?.approved_by_BUFM
   const showKmtRejectReason = doc?.status === 'Rejected_KMT' && doc?.rejection_comment_KMT
-  const heading = doc ? getReadOnlyStepHeading(activeStep) : { title: '', subtitle: '' }
-  const sections = doc ? getReadOnlyStepSections(doc, activeStep) : []
+  const heading = effectiveDoc ? getReadOnlyStepHeading(activeStep) : { title: '', subtitle: '' }
+  const sections = effectiveDoc ? getReadOnlyStepSections(effectiveDoc, activeStep) : []
 
-  const reviewerSets = useMemo(() => buildReviewerFlagSets(doc), [doc])
-  const pocSets = useMemo(() => buildPocUpdateFlagSets(doc), [doc])
+  const reviewerSets = useMemo(() => buildReviewerFlagSets(effectiveDoc), [effectiveDoc])
+  const pocSets = useMemo(() => buildPocUpdateFlagSets(effectiveDoc), [effectiveDoc])
   const pocStepsWithUpdates = useMemo(
-    () => getStepsTouchedByPocUpdates(doc, doc.poc_updated_sections || [], doc.poc_updated_fields || []),
-    [doc],
+    () =>
+      getStepsTouchedByPocUpdates(
+        effectiveDoc,
+        effectiveDoc.poc_updated_sections || [],
+        effectiveDoc.poc_updated_fields || [],
+      ),
+    [effectiveDoc],
   )
   const reviewerStepsWithHits = useMemo(() => {
-    const rs = buildReviewerFlagSets(doc)
-    return getStepsTouchedByPocUpdates(doc, Array.from(rs.sections), Array.from(rs.fields))
-  }, [doc])
+    const rs = buildReviewerFlagSets(effectiveDoc)
+    return getStepsTouchedByPocUpdates(effectiveDoc, Array.from(rs.sections), Array.from(rs.fields))
+  }, [effectiveDoc])
   const wholeStepReviewer = useMemo(
     () =>
       reviewerStepsWithHits.has(activeStep) ||
@@ -114,8 +129,8 @@ export default function KmtDocumentView() {
     [activeStep, pocSets.sections, pocStepsWithUpdates],
   )
   const lastKmtReject = useMemo(
-    () => lastRejectTrailEntry(doc?.reviewAuditTrail, 'KMT'),
-    [doc?.reviewAuditTrail],
+    () => lastRejectTrailEntry(effectiveDoc?.reviewAuditTrail, 'KMT'),
+    [effectiveDoc?.reviewAuditTrail],
   )
 
   const totalByUser = doc?.createdByUserId
@@ -138,9 +153,9 @@ export default function KmtDocumentView() {
   const showReviewActions = doc?.status === 'Pending_KMT'
 
   const hasPocUpdatesForReview = Boolean(
-    doc?.poc_updated_sections?.length ||
-      doc?.poc_updated_fields?.length ||
-      doc?.pocResubmissionNote?.trim?.(),
+    effectiveDoc?.poc_updated_sections?.length ||
+      effectiveDoc?.poc_updated_fields?.length ||
+      effectiveDoc?.pocResubmissionNote?.trim?.(),
   )
 
   const pulseRevision = doc
@@ -389,11 +404,17 @@ export default function KmtDocumentView() {
             </section>
           </div>
 
+          {chatWorkflowExtras && (
+            <div className="doc-chat-workflow-banner doc-chat-workflow-banner--kmt" role="status">
+              Workflow chat: merged simulated highlights for this visit (not persisted).
+            </div>
+          )}
+
           {showReviewActions && hasPocUpdatesForReview && (
             <PocUpdateSummaryBanner
-              sections={doc.poc_updated_sections || []}
-              fields={doc.poc_updated_fields || []}
-              resubmissionNote={doc.pocResubmissionNote}
+              sections={effectiveDoc.poc_updated_sections || []}
+              fields={effectiveDoc.poc_updated_fields || []}
+              resubmissionNote={effectiveDoc.pocResubmissionNote}
             />
           )}
 

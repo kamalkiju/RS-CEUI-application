@@ -1,5 +1,5 @@
-import { useParams, useNavigate } from 'react-router-dom'
-import { useState, useMemo } from 'react'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useState, useMemo, useEffect } from 'react'
 import Layout from '../../components/Layout.jsx'
 import { useDocs } from '../../context/DocContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -26,6 +26,7 @@ import {
   lastRejectTrailEntry,
   normalizeLabel,
 } from '../../utils/reviewFeedback.js'
+import { mergeChatWorkflowHighlights } from '../../utils/chatWorkflowMerge.js'
 
 const STEPPER_STEPS = [
   { n: 1, short: 'Knowledge Area' },
@@ -38,9 +39,18 @@ const STEPPER_STEPS = [
 export default function BufmDocumentView() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const { getDocumentById, updateDoc } = useDocs()
   const doc = id ? getDocumentById(id) : null
+  const [chatWorkflowExtras] = useState(() => location.state?.fromChatWorkflow ?? null)
+
+  useEffect(() => {
+    if (!location.state?.fromChatWorkflow) return
+    navigate(location.pathname, { replace: true, state: {} })
+  }, [])
+
+  const effectiveDoc = useMemo(() => mergeChatWorkflowHighlights(doc, chatWorkflowExtras), [doc, chatWorkflowExtras])
 
   const [activeStep, setActiveStep] = useState(1)
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -48,19 +58,24 @@ export default function BufmDocumentView() {
   const [historyOpen, setHistoryOpen] = useState(false)
 
   const disp = useMemo(() => (doc ? getDisplayStatus(doc, 'BUFM') : null), [doc])
-  const heading = doc ? getReadOnlyStepHeading(activeStep) : { title: '', subtitle: '' }
-  const sections = doc ? getReadOnlyStepSections(doc, activeStep) : []
+  const heading = effectiveDoc ? getReadOnlyStepHeading(activeStep) : { title: '', subtitle: '' }
+  const sections = effectiveDoc ? getReadOnlyStepSections(effectiveDoc, activeStep) : []
 
-  const reviewerSets = useMemo(() => buildReviewerFlagSets(doc), [doc])
-  const pocSets = useMemo(() => buildPocUpdateFlagSets(doc), [doc])
+  const reviewerSets = useMemo(() => buildReviewerFlagSets(effectiveDoc), [effectiveDoc])
+  const pocSets = useMemo(() => buildPocUpdateFlagSets(effectiveDoc), [effectiveDoc])
   const pocStepsWithUpdates = useMemo(
-    () => getStepsTouchedByPocUpdates(doc, doc.poc_updated_sections || [], doc.poc_updated_fields || []),
-    [doc],
+    () =>
+      getStepsTouchedByPocUpdates(
+        effectiveDoc,
+        effectiveDoc.poc_updated_sections || [],
+        effectiveDoc.poc_updated_fields || [],
+      ),
+    [effectiveDoc],
   )
   const reviewerStepsWithHits = useMemo(() => {
-    const rs = buildReviewerFlagSets(doc)
-    return getStepsTouchedByPocUpdates(doc, Array.from(rs.sections), Array.from(rs.fields))
-  }, [doc])
+    const rs = buildReviewerFlagSets(effectiveDoc)
+    return getStepsTouchedByPocUpdates(effectiveDoc, Array.from(rs.sections), Array.from(rs.fields))
+  }, [effectiveDoc])
   const wholeStepReviewer = useMemo(
     () =>
       reviewerStepsWithHits.has(activeStep) ||
@@ -74,8 +89,8 @@ export default function BufmDocumentView() {
     [activeStep, pocSets.sections, pocStepsWithUpdates],
   )
   const lastBufmReject = useMemo(
-    () => lastRejectTrailEntry(doc?.reviewAuditTrail, 'BUFM'),
-    [doc?.reviewAuditTrail],
+    () => lastRejectTrailEntry(effectiveDoc?.reviewAuditTrail, 'BUFM'),
+    [effectiveDoc?.reviewAuditTrail],
   )
 
   const showReviewActions = doc?.status === 'Pending_BUFM'
@@ -249,14 +264,20 @@ export default function BufmDocumentView() {
             </header>
           </div>
 
+          {chatWorkflowExtras && (
+            <div className="doc-chat-workflow-banner doc-chat-workflow-banner--bufm" role="status">
+              Workflow chat: merged simulated POC highlights for this visit (not persisted).
+            </div>
+          )}
+
           {showReviewActions &&
-            (doc.poc_updated_sections?.length > 0 ||
-              doc.poc_updated_fields?.length > 0 ||
-              doc.pocResubmissionNote?.trim?.()) && (
+            (effectiveDoc.poc_updated_sections?.length > 0 ||
+              effectiveDoc.poc_updated_fields?.length > 0 ||
+              effectiveDoc.pocResubmissionNote?.trim?.()) && (
               <PocUpdateSummaryBanner
-                sections={doc.poc_updated_sections || []}
-                fields={doc.poc_updated_fields || []}
-                resubmissionNote={doc.pocResubmissionNote}
+                sections={effectiveDoc.poc_updated_sections || []}
+                fields={effectiveDoc.poc_updated_fields || []}
+                resubmissionNote={effectiveDoc.pocResubmissionNote}
               />
             )}
 
