@@ -322,6 +322,33 @@ export function formatBufmChatPocChangeSummary(doc) {
 }
 
 /**
+ * KMT chat: POC before/after, BUFM comments / flagged sections, then KMT context.
+ */
+export function formatKmtChatReviewSummary(doc) {
+  if (!doc) return ''
+  const pocBlock = formatBufmChatPocChangeSummary(doc)
+  const bufmParts = []
+  if (doc.rejection_comment_BUFM?.trim()) {
+    bufmParts.push(`**BUFM comment (prior review):** ${String(doc.rejection_comment_BUFM).trim()}`)
+  }
+  const hs = doc.rejection_highlight_sections
+  if (Array.isArray(hs) && hs.length) {
+    bufmParts.push(`**Sections BUFM flagged (before POC resubmission):**\n${hs.map(s => `• ${s}`).join('\n')}`)
+  }
+  const hf = doc.rejection_highlight_fields
+  if (Array.isArray(hf) && hf.length) {
+    bufmParts.push(`**Fields BUFM flagged:**\n${hf.map(s => `• ${s}`).join('\n')}`)
+  }
+  const bufmBlock =
+    bufmParts.length > 0 ? `### BUFM review (reference)\n\n${bufmParts.join('\n\n')}` : ''
+  const kmtCtx = formatKmtReviewerContext(doc)?.trim()
+  const parts = [`### POC updates\n\n${pocBlock}`]
+  if (bufmBlock) parts.push(bufmBlock)
+  if (kmtCtx) parts.push(kmtCtx)
+  return parts.join('\n\n---\n\n')
+}
+
+/**
  * Payload for navigation: merge real POC highlights for the viewer session.
  */
 export function buildChatWorkflowExtrasFromDoc(doc) {

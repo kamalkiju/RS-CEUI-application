@@ -162,6 +162,7 @@ export default function KmtDocumentView() {
 
   const canKmtDecide = doc?.status === 'Pending_KMT'
   const showReviewActions = canKmtDecide || chatHighlightSession
+  const kmtHeaderActionsEnabled = canKmtDecide || chatHighlightSession
 
   const hasPocUpdatesForReview = Boolean(
     effectiveDoc?.poc_updated_sections?.length ||
@@ -206,7 +207,7 @@ export default function KmtDocumentView() {
     rejectPicks.some(p => p.scope === scope && normalizeLabel(p.label) === normalizeLabel(label))
 
   const handleApprove = () => {
-    if (doc.status !== 'Pending_KMT') {
+    if (doc.status !== 'Pending_KMT' && !chatHighlightSession) {
       window.alert('Publish is only available when this document is pending KMT final review.')
       return
     }
@@ -224,7 +225,7 @@ export default function KmtDocumentView() {
   }
 
   const handleRejectConfirm = payload => {
-    if (doc.status !== 'Pending_KMT') {
+    if (doc.status !== 'Pending_KMT' && !chatHighlightSession) {
       window.alert('Reject is only available when this document is pending KMT final review.')
       return
     }
@@ -289,7 +290,7 @@ export default function KmtDocumentView() {
   }
 
   const handleReleaseTask = () => {
-    if (!canKmtDecide) {
+    if (!canKmtDecide && !chatHighlightSession) {
       window.alert('Release is only available while this document is pending KMT final review.')
       return
     }
@@ -422,8 +423,12 @@ export default function KmtDocumentView() {
                         <button
                           type="button"
                           className="btn btn-primary"
-                          disabled={!canKmtDecide}
-                          title={!canKmtDecide ? 'Available when status is pending KMT review' : undefined}
+                          disabled={!kmtHeaderActionsEnabled}
+                          title={
+                            !kmtHeaderActionsEnabled
+                              ? 'Available when status is pending KMT review or when opened from Ops Agent chat'
+                              : undefined
+                          }
                           onClick={handleApprove}
                         >
                           Publish
@@ -431,8 +436,12 @@ export default function KmtDocumentView() {
                         <button
                           type="button"
                           className="btn btn-outline"
-                          disabled={!canKmtDecide}
-                          title={!canKmtDecide ? 'Available when status is pending KMT review' : undefined}
+                          disabled={!kmtHeaderActionsEnabled}
+                          title={
+                            !kmtHeaderActionsEnabled
+                              ? 'Available when status is pending KMT review or when opened from Ops Agent chat'
+                              : undefined
+                          }
                           onClick={handleReleaseTask}
                         >
                           Release task
@@ -440,8 +449,12 @@ export default function KmtDocumentView() {
                         <button
                           type="button"
                           className="btn btn-outline bufm-doc-view__reject"
-                          disabled={!canKmtDecide}
-                          title={!canKmtDecide ? 'Available when status is pending KMT review' : undefined}
+                          disabled={!kmtHeaderActionsEnabled}
+                          title={
+                            !kmtHeaderActionsEnabled
+                              ? 'Available when status is pending KMT review or when opened from Ops Agent chat'
+                              : undefined
+                          }
                           onClick={() => setRejectOpen(true)}
                         >
                           Reject

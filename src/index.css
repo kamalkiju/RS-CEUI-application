@@ -6295,7 +6295,7 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   background: var(--accent);
   border-color: var(--accent);
   box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.2);
-  animation: poc-ops-pulse 1.05s ease-in-out infinite;
+  animation: none;
 }
 .poc-ops-stepper__item--success::before {
   background: #22c55e;
@@ -6312,6 +6312,49 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   font-weight: 600;
   color: #0f172a;
   line-height: 1.4;
+}
+.poc-ops-stepper__item--pending .poc-ops-stepper__text {
+  color: #94a3b8;
+  font-weight: 500;
+}
+.poc-ops-stepper__item--done .poc-ops-stepper__text {
+  color: #64748b;
+}
+.poc-ops-stepper__item--active .poc-ops-stepper__text {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+.poc-ops-stepper__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+.poc-ops-stepper__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #1d4ed8;
+  opacity: 0.28;
+  animation: poc-ops-dot-wave 1.85s ease-in-out infinite;
+}
+.poc-ops-stepper__dot:nth-child(2) {
+  animation-delay: 0.28s;
+}
+.poc-ops-stepper__dot:nth-child(3) {
+  animation-delay: 0.56s;
+}
+@keyframes poc-ops-dot-wave {
+  0%,
+  100% {
+    opacity: 0.28;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
 }
 @keyframes poc-ops-pulse {
   50% {
@@ -6516,47 +6559,43 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .workflow-chat-poc__sidebar-actions .workflow-chat-poc__new-chat {
   width: 100%;
 }
-.workflow-chat-poc__delete-chat {
-  align-self: flex-start;
-  color: #b91c1c !important;
-  font-weight: 700;
-}
 .workflow-chat-poc__history-row {
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: 4px;
 }
 .workflow-chat-poc__history-row .workflow-chat-poc__history-item {
   flex: 1;
   min-width: 0;
 }
+/* Icon-only delete: no filled background; subtle hover */
 .workflow-chat-poc__history-delete {
   flex-shrink: 0;
-  padding: 8px 10px;
-  font-size: 11px;
-  font-weight: 800;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  background: #fef2f2;
-  color: #b91c1c;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s, border-color 0.15s;
-}
-.workflow-chat-poc__history-delete:hover {
-  background: #fee2e2;
-  border-color: #f87171;
-}
-.workflow-chat-poc__history-delete--icon {
+  align-self: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 36px;
-  padding: 8px;
-  font-size: 0;
-  line-height: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: 0 2px 0 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s ease, background 0.15s ease;
 }
-.workflow-chat-poc__history-delete--icon svg {
+.workflow-chat-poc__history-delete:hover {
+  color: #b91c1c;
+  background: transparent;
+}
+.workflow-chat-poc__history-delete:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.workflow-chat-poc__history-delete svg {
   display: block;
   flex-shrink: 0;
 }

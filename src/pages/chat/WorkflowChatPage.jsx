@@ -14,10 +14,10 @@ import {
   formatPocChangesForChat,
   buildChatWorkflowExtrasFromDoc,
   buildNavigationExtrasForReviewer,
-  formatKmtReviewerContext,
   isDuplicateReviewDateWorkflow,
   OPS_REVIEW_DATE_DISPLAY,
   formatBufmChatPocChangeSummary,
+  formatKmtChatReviewSummary,
 } from '../../utils/chatWorkflowMock.js'
 
 const PHASES = {
@@ -35,9 +35,17 @@ const POC_CHAT_PATH = '/poc/chat'
 const DEFAULT_WORKFLOW_PROMPT =
   'K-5008 — Duplicate this document and update the Document review date as 25th April 2016'
 
+const DEFAULT_KMT_CATALOG_PROMPT =
+  'K-5008 — Summarize the updates on this document (POC changes, BUFM comments, and what is pending for KMT)'
+
 function defaultPromptForDocId(docId) {
   if (!docId) return ''
   return `${docId} — Duplicate this document and update the Document review date as 25th April 2016`
+}
+
+function defaultKmtPromptForDocId(docId) {
+  if (!docId) return ''
+  return `${docId} — Summarize the updates on this document (POC changes, BUFM comments, and what is pending for KMT)`
 }
 
 const POC_OPS_STEP_LABELS = ['Analyse the fields', 'Checking the fields', 'Update the fields', 'Completed']
@@ -61,6 +69,13 @@ function PocOpsStepper({ stepIndex }) {
           return (
             <li key={label} className={`poc-ops-stepper__item${mod}`}>
               <span className="poc-ops-stepper__text">{label}</span>
+              {active && (
+                <span className="poc-ops-stepper__dots" aria-hidden="true">
+                  <span className="poc-ops-stepper__dot" />
+                  <span className="poc-ops-stepper__dot" />
+                  <span className="poc-ops-stepper__dot" />
+                </span>
+              )}
             </li>
           )
         })}
@@ -78,7 +93,7 @@ function bufmWelcomeMessages() {
 }
 
 function kmtWelcomeMessages() {
-  return [{ role: 'assistant', id: 'welcome', content: 'Welcome. Say **hi** below to start.' }]
+  return [{ role: 'assistant', id: 'welcome', content: "Welcome to Ops Agent! Let's get started." }]
 }
 
 function serializeSessions(sessions) {
@@ -300,13 +315,17 @@ export default function WorkflowChatPage() {
     }
   }, [role, pocActiveSessionId, pocSessions])
 
-  /** Pre-fill default prompt for BUFM when the conversation is only the welcome line. */
+  /** Pre-fill default prompt for BUFM / KMT when the conversation is only the welcome line. */
   useEffect(() => {
-    if (role !== 'BUFM') return
+    if (role !== 'BUFM' && role !== 'KMT') return
     if (messages.length === 1 && messages[0]?.id === 'welcome') {
-      setInput(defaultPromptForDocId(selectedDocId) || DEFAULT_WORKFLOW_PROMPT)
+      if (role === 'KMT') {
+        setInput(defaultKmtPromptForDocId(selectedDocId) || DEFAULT_KMT_CATALOG_PROMPT)
+      } else {
+        setInput(defaultPromptForDocId(selectedDocId) || DEFAULT_WORKFLOW_PROMPT)
+      }
     }
-  }, [role, messages])
+  }, [role, messages, selectedDocId])
 
   const docOptions = useMemo(
     () =>
@@ -331,12 +350,16 @@ export default function WorkflowChatPage() {
       const docId = e.target.value
       setSelectedDocId(docId)
       if (docId) {
-        setInput(defaultPromptForDocId(docId))
+        if (role === 'KMT') {
+          setInput(defaultKmtPromptForDocId(docId))
+        } else {
+          setInput(defaultPromptForDocId(docId))
+        }
       } else {
         setInput('')
       }
     },
-    [],
+    [role],
   )
 
   const pushAssistantPoc = useCallback((content, extra = {}) => {
@@ -483,7 +506,7 @@ export default function WorkflowChatPage() {
   const runOpsAnalysisSteps = async () => {
     for (let s = 0; s < 4; s++) {
       setOpsAnalysisStep(s)
-      await delay(s === 3 ? 520 : 650)
+      await delay(s === 3 ? 900 : 980)
     }
   }
 
@@ -500,6 +523,33 @@ export default function WorkflowChatPage() {
           { type: 'openBufm', label: 'Open document', docId: d.id, extras: extrasNav },
           { type: 'bufmApprove', label: 'Approve', docId: d.id },
           { type: 'bufmReject', label: 'Reject', docId: d.id, extras: extrasNav },
+        ],
+      })
+    } finally {
+      setOpsAnalysisStep(null)
+    }
+  }
+
+  const runKmtOpsPipeline = async (doc, userLine, matchSource) => {
+    try {
+      await runOpsAnalysisSteps()
+      const d = resolveDoc(doc.id) || doc
+      const extrasNav = buildNavigationExtrasForReviewer(d, userLine)
+      const storedExtras = buildChatWorkflowExtrasFromDoc(d)
+      const initLine = formatChatDocumentResolutionLine(userLine, d, matchSource)
+      const reviewBody = formatKmtChatReviewSummary(d)
+      let inferredAppend = ''
+      if (!storedExtras && extrasNav.sections?.length) {
+        inferredAppend = `\n\n---\n\n**Review focus (from your message)** — temporary highlight targets for this visit:\n\n**Sections**\n${extrasNav.sections.map(s => `• ${s}`).join('\n')}\n\n**Fields**\n${extrasNav.fields.map(f => `• ${f}`).join('\n')}`
+      }
+      const summaryBlock = `**Summary — KMT review (${d.sub || d.id} · \`${d.id}\`)**\n\n${initLine}\n\n${reviewBody}${inferredAppend}\n\n---\n\nUse **Open document** for the same highlights as in chat. **Edit details** updates catalog fields. **Publish**, **Reject**, or **Release** apply when you have a pending KMT task (or use this chat preview to jump to the page).`
+      pushAssistant(summaryBlock, {
+        actions: [
+          { type: 'openKmt', label: 'Open document', docId: d.id, extras: extrasNav },
+          { type: 'kmtEdit', label: 'Edit details', docId: d.id, extras: extrasNav },
+          { type: 'kmtApprove', label: 'Publish', docId: d.id },
+          { type: 'kmtReject', label: 'Reject', docId: d.id, extras: extrasNav },
+          { type: 'kmtRelease', label: 'Release task', docId: d.id },
         ],
       })
     } finally {
@@ -675,25 +725,7 @@ export default function WorkflowChatPage() {
         )
         return
       }
-      const extrasNav = buildNavigationExtrasForReviewer(doc, userLine)
-      const storedExtras = buildChatWorkflowExtrasFromDoc(doc)
-      await runProgress()
-      const initLine = formatChatDocumentResolutionLine(userLine, doc, matchSource)
-      const body = formatPocChangesForChat(doc, { roleLabel: 'POC' }) + formatKmtReviewerContext(doc)
-      let inferredAppend = ''
-      if (!storedExtras && extrasNav.sections?.length) {
-        inferredAppend = `\n\n---\n\n**Review focus (from your message)** — temporary highlight targets for this visit:\n\n**Sections**\n${extrasNav.sections.map(s => `• ${s}`).join('\n')}\n\n**Fields**\n${extrasNav.fields.map(f => `• ${f}`).join('\n')}`
-      }
-      const summaryBlock = `**Summary — KMT document review**\n${initLine}\nInitializing → processing → **completed** for **${doc.sub || doc.id}** (\`${doc.id}\`).\n\n${body}${inferredAppend}\n\n---\n\nUse the buttons below to **open the document** (green POC highlights where metadata exists), **edit catalog details** (title, geography, service area), **publish** or **reject** when pending KMT, or **release task** (demo).`
-      pushAssistant(summaryBlock, {
-        actions: [
-          { type: 'openKmt', label: 'Open document', docId: doc.id, extras: extrasNav },
-          { type: 'kmtEdit', label: 'Edit details', docId: doc.id, extras: extrasNav },
-          { type: 'kmtApprove', label: 'Publish', docId: doc.id },
-          { type: 'kmtReject', label: 'Reject', docId: doc.id, extras: extrasNav },
-          { type: 'kmtRelease', label: 'Release task', docId: doc.id },
-        ],
-      })
+      await runKmtOpsPipeline(doc, userLine, matchSource)
     }
   }
 
@@ -977,7 +1009,7 @@ export default function WorkflowChatPage() {
                       </button>
                       <button
                         type="button"
-                        className="workflow-chat-poc__history-delete workflow-chat-poc__history-delete--icon"
+                        className="workflow-chat-poc__history-delete"
                         aria-label={`Delete chat ${s.title}`}
                         title="Delete chat"
                         onClick={e => deletePocSession(e, s.id)}
@@ -1079,12 +1111,9 @@ export default function WorkflowChatPage() {
                 <button type="button" className="workflow-chat-poc__new-chat btn btn-primary btn-sm" onClick={startNewReviewerChat}>
                   + New chat
                 </button>
-                <button type="button" className="workflow-chat-poc__delete-chat btn btn-text btn-sm" onClick={deleteReviewerConversation}>
-                  Delete chat
-                </button>
               </div>
               <ul className="workflow-chat-poc__history">
-                <li>
+                <li className="workflow-chat-poc__history-row">
                   <div
                     className="workflow-chat-poc__history-item workflow-chat-poc__history-item--active workflow-chat-poc__history-item--static"
                     aria-current="true"
@@ -1094,6 +1123,20 @@ export default function WorkflowChatPage() {
                       {messages.length} message{messages.length === 1 ? '' : 's'}
                     </span>
                   </div>
+                  <button
+                    type="button"
+                    className="workflow-chat-poc__history-delete"
+                    aria-label="Delete chat"
+                    title="Delete chat"
+                    onClick={deleteReviewerConversation}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      <line x1="10" y1="11" x2="10" y2="17" />
+                      <line x1="14" y1="11" x2="14" y2="17" />
+                    </svg>
+                  </button>
                 </li>
               </ul>
             </div>

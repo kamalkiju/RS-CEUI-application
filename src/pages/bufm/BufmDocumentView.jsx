@@ -111,6 +111,7 @@ export default function BufmDocumentView() {
 
   const canBufmDecide = doc?.status === 'Pending_BUFM'
   const showReviewActions = canBufmDecide || chatHighlightSession
+  const bufmHeaderActionsEnabled = canBufmDecide || chatHighlightSession
 
   const pulseRevision = doc
     ? `${doc.updated}|${(doc.pulseComments || []).length}`
@@ -145,7 +146,7 @@ export default function BufmDocumentView() {
     rejectPicks.some(p => p.scope === scope && normalizeLabel(p.label) === normalizeLabel(label))
 
   const handleApprove = () => {
-    if (doc.status !== 'Pending_BUFM') {
+    if (doc.status !== 'Pending_BUFM' && !chatHighlightSession) {
       window.alert('Approve is only available when this document is awaiting BUFM approval (review queue).')
       return
     }
@@ -163,7 +164,7 @@ export default function BufmDocumentView() {
   }
 
   const handleRejectConfirm = payload => {
-    if (doc.status !== 'Pending_BUFM') {
+    if (doc.status !== 'Pending_BUFM' && !chatHighlightSession) {
       window.alert('Reject is only available when this document is awaiting BUFM approval.')
       return
     }
@@ -266,8 +267,12 @@ export default function BufmDocumentView() {
                       <button
                         type="button"
                         className="btn btn-primary"
-                        disabled={!canBufmDecide}
-                        title={!canBufmDecide ? 'Available when status is Awaiting BUFM approval' : undefined}
+                        disabled={!bufmHeaderActionsEnabled}
+                        title={
+                          !bufmHeaderActionsEnabled
+                            ? 'Available when status is Awaiting BUFM approval or when opened from Ops Agent chat'
+                            : undefined
+                        }
                         onClick={handleApprove}
                       >
                         Approve
@@ -275,8 +280,12 @@ export default function BufmDocumentView() {
                       <button
                         type="button"
                         className="btn btn-outline bufm-doc-view__reject"
-                        disabled={!canBufmDecide}
-                        title={!canBufmDecide ? 'Available when status is Awaiting BUFM approval' : undefined}
+                        disabled={!bufmHeaderActionsEnabled}
+                        title={
+                          !bufmHeaderActionsEnabled
+                            ? 'Available when status is Awaiting BUFM approval or when opened from Ops Agent chat'
+                            : undefined
+                        }
                         onClick={() => setRejectOpen(true)}
                       >
                         Reject
