@@ -712,7 +712,7 @@ export default function WorkflowChatPage() {
     if (role === 'KMT') {
       if (!doc) {
         pushAssistant(
-          `**Initialization** — No knowledge document matched your text: “${userSnippet || '(empty)'}”.\n\nUse the catalog picker, type an ID (**K-5031**), or paste **more words from the document title** (division, city, “MUNI”, etc.).`,
+          `No catalog document matched: “${userSnippet || '(empty)'}”. Use the catalog picker, an ID like **K-5031**, or more words from the **title** (division, city, “MUNI”, etc.).`,
         )
         return
       }

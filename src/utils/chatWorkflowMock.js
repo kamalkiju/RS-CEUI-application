@@ -131,30 +131,11 @@ export function resolveChatDocumentId(text, selectedDocId, docs = []) {
 }
 
 /**
- * Human-readable line for chat: how the catalog document was chosen from free text.
+ * Previously used for “Initialization / Your message” lines in BUFM/KMT chat summaries.
+ * Intentionally returns nothing so assistant replies stay limited to POC/BUFM/KMT summary content only.
  */
-export function formatChatDocumentResolutionLine(userLine, doc, matchSource) {
-  if (!doc) return ''
-  const snippet = String(userLine || '')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .slice(0, 220)
-  const safe = snippet || '(empty)'
-  const label = doc.sub || doc.id
-  switch (matchSource) {
-    case 'menu':
-      return `**Initialization** — Using the **catalog** row selected in the picker: **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
-    case 'explicit_id':
-      return `**Initialization** — Matched **catalog ID** in your message: **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
-    case 'title_prefix':
-      return `**Initialization** — Matched a **title prefix** from your text: **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
-    case 'title_phrase':
-      return `**Initialization** — Matched **document name / phrase** overlap: **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
-    case 'fuzzy_tokens':
-      return `**Initialization** — Matched **keywords** against catalog titles (best fit): **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
-    default:
-      return `**Initialization** — **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
-  }
+export function formatChatDocumentResolutionLine(_userLine, _doc, _matchSource) {
+  return ''
 }
 
 /** When the message does not map to wizard areas, use a small default patch so the chat session always has highlight targets. */
