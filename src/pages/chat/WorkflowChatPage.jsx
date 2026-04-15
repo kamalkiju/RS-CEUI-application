@@ -36,9 +36,16 @@ const DEFAULT_WORKFLOW_PROMPT =
 const DEFAULT_KMT_CATALOG_PROMPT =
   'K-5008 — Summarize the updates on this document (POC changes, BUFM comments)'
 
+const DEFAULT_BUFM_CATALOG_PROMPT = 'K-5008 — What are the changes done by the POC?'
+
 function defaultPromptForDocId(docId) {
   if (!docId) return ''
   return `${docId} — Duplicate this document and update the Document review date as 25th April 2016`
+}
+
+function defaultBufmPromptForDocId(docId) {
+  if (!docId) return ''
+  return `${docId} — What are the changes done by the POC?`
 }
 
 function defaultKmtPromptForDocId(docId) {
@@ -46,7 +53,7 @@ function defaultKmtPromptForDocId(docId) {
   return `${docId} — Summarize the updates on this document (POC changes, BUFM comments)`
 }
 
-const POC_OPS_STEP_LABELS = ['Analyse the fields', 'Checking the fields', 'Update the fields', 'Completed']
+const POC_OPS_STEP_LABELS = ['Analyzing document', 'Checking the fields', 'Updating the fields', 'Completed']
 
 function PocOpsStepper({ stepIndex }) {
   return (
@@ -320,7 +327,7 @@ export default function WorkflowChatPage() {
       if (role === 'KMT') {
         setInput(defaultKmtPromptForDocId(selectedDocId) || DEFAULT_KMT_CATALOG_PROMPT)
       } else {
-        setInput(defaultPromptForDocId(selectedDocId) || DEFAULT_WORKFLOW_PROMPT)
+        setInput(defaultBufmPromptForDocId(selectedDocId) || DEFAULT_BUFM_CATALOG_PROMPT)
       }
     }
   }, [role, messages, selectedDocId])
@@ -350,6 +357,8 @@ export default function WorkflowChatPage() {
       if (docId) {
         if (role === 'KMT') {
           setInput(defaultKmtPromptForDocId(docId))
+        } else if (role === 'BUFM') {
+          setInput(defaultBufmPromptForDocId(docId))
         } else {
           setInput(defaultPromptForDocId(docId))
         }
@@ -516,11 +525,7 @@ export default function WorkflowChatPage() {
       const changeBlock = formatBufmChatPocChangeSummary(d)
       const summaryBlock = `**BUFM — summary**\n\n${changeBlock}`
       pushAssistant(summaryBlock, {
-        actions: [
-          { type: 'openBufm', label: 'Open document', docId: d.id, extras: extrasNav },
-          { type: 'bufmApprove', label: 'Approve', docId: d.id },
-          { type: 'bufmReject', label: 'Reject', docId: d.id, extras: extrasNav },
-        ],
+        actions: [{ type: 'openBufm', label: 'View document', docId: d.id, extras: extrasNav }],
       })
     } finally {
       setOpsAnalysisStep(null)
@@ -534,21 +539,8 @@ export default function WorkflowChatPage() {
       const extrasNav = buildNavigationExtrasForReviewer(d, userLine)
       const reviewBody = formatKmtChatReviewSummary(d)
       const summaryBlock = `**KMT — summary**\n\n${reviewBody}`
-      const kmtFullActions = [
-        { type: 'openKmt', label: 'Open document', docId: d.id, extras: extrasNav },
-        { type: 'kmtEdit', label: 'Edit details', docId: d.id, extras: extrasNav },
-        { type: 'kmtApprove', label: 'Approve', docId: d.id },
-        { type: 'kmtReject', label: 'Reject', docId: d.id, extras: extrasNav },
-        { type: 'kmtRelease', label: 'Release task', docId: d.id },
-      ]
-      const kmtInitialActions = [
-        { type: 'openKmt', label: 'Open document', docId: d.id, extras: extrasNav },
-        { type: 'kmtApprove', label: 'Approve', docId: d.id },
-        { type: 'kmtReject', label: 'Reject', docId: d.id, extras: extrasNav },
-      ]
       pushAssistant(summaryBlock, {
-        actions: kmtInitialActions,
-        kmtFullActions,
+        actions: [{ type: 'openKmt', label: 'View document', docId: d.id, extras: extrasNav }],
       })
     } finally {
       setOpsAnalysisStep(null)
@@ -610,13 +602,9 @@ export default function WorkflowChatPage() {
 
       if (reviewFlow) {
         pushAssistantPoc(
-          `**Summary — what changed**\n\n• **Document review date** updated to **${OPS_REVIEW_DATE_DISPLAY}** in **Basic Information**.\n\nOpen the document to see this field highlighted in **green** in the wizard.`,
+          `**Summary — what changed**\n\n• **Document review date** updated to **${OPS_REVIEW_DATE_DISPLAY}** in **Basic Information**.\n\nUse **View document** to see this field highlighted in the wizard.`,
           {
-            actions: [
-              { type: 'openDoc', label: 'Open document', docId: resolved.id, doc: resolved, extras },
-              { type: 'pocChatSaveDraft', label: 'Save as draft', docId: resolved.id },
-              { type: 'pocChatSubmitApproval', label: 'Submit for approval', docId: resolved.id },
-            ],
+            actions: [{ type: 'openDoc', label: 'View document', docId: resolved.id, doc: resolved, extras }],
           },
         )
       } else {
@@ -628,13 +616,9 @@ export default function WorkflowChatPage() {
           : ''
         const detail = `**Planned highlights**${fallbackNote}\n\n**Sections**\n${sectionLines}\n\n**Fields**\n${fieldLines}`
         pushAssistantPoc(
-          `${detail}\n\n---\n\n**Summary**\n${summary}\n\nOpen the document to see these areas in **green** in the wizard. Then **Save as draft** or **Submit for approval** below or on the document page.`,
+          `${detail}\n\n---\n\n**Summary**\n${summary}\n\nUse **View document** to see these areas highlighted in the wizard.`,
           {
-            actions: [
-              { type: 'openDoc', label: 'Open document', docId: resolved.id, doc: resolved, extras },
-              { type: 'pocChatSaveDraft', label: 'Save as draft', docId: resolved.id },
-              { type: 'pocChatSubmitApproval', label: 'Submit for approval', docId: resolved.id },
-            ],
+            actions: [{ type: 'openDoc', label: 'View document', docId: resolved.id, doc: resolved, extras }],
           },
         )
       }
@@ -780,13 +764,6 @@ export default function WorkflowChatPage() {
     }
     if (action.type === 'openKmt' && action.docId) {
       navigateToDocKmt(action.docId, action.extras)
-      if (msg?.kmtFullActions?.length) {
-        setMessages(prev =>
-          prev.map(m =>
-            m.id === msg.id ? { ...m, actions: m.kmtFullActions, kmtFullActions: undefined } : m,
-          ),
-        )
-      }
       return
     }
     if (action.type === 'kmtEdit' && action.docId) {
@@ -904,6 +881,7 @@ export default function WorkflowChatPage() {
                     a.type === 'confirmPoc' ||
                     a.type === 'bufmApprove' ||
                     a.type === 'kmtApprove' ||
+                    a.type === 'openDoc' ||
                     a.type === 'openBufm' ||
                     a.type === 'openKmt'
                   const danger = a.type === 'bufmReject' || a.type === 'kmtReject'
