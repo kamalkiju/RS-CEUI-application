@@ -534,14 +534,21 @@ export default function WorkflowChatPage() {
       const extrasNav = buildNavigationExtrasForReviewer(d, userLine)
       const reviewBody = formatKmtChatReviewSummary(d)
       const summaryBlock = `**KMT — summary**\n\n${reviewBody}`
+      const kmtFullActions = [
+        { type: 'openKmt', label: 'Open document', docId: d.id, extras: extrasNav },
+        { type: 'kmtEdit', label: 'Edit details', docId: d.id, extras: extrasNav },
+        { type: 'kmtApprove', label: 'Publish', docId: d.id },
+        { type: 'kmtReject', label: 'Reject', docId: d.id, extras: extrasNav },
+        { type: 'kmtRelease', label: 'Release task', docId: d.id },
+      ]
+      const kmtInitialActions = [
+        { type: 'openKmt', label: 'Open document', docId: d.id, extras: extrasNav },
+        { type: 'kmtApprove', label: 'Publish', docId: d.id },
+        { type: 'kmtReject', label: 'Reject', docId: d.id, extras: extrasNav },
+      ]
       pushAssistant(summaryBlock, {
-        actions: [
-          { type: 'openKmt', label: 'Open document', docId: d.id, extras: extrasNav },
-          { type: 'kmtEdit', label: 'Edit details', docId: d.id, extras: extrasNav },
-          { type: 'kmtApprove', label: 'Publish', docId: d.id },
-          { type: 'kmtReject', label: 'Reject', docId: d.id, extras: extrasNav },
-          { type: 'kmtRelease', label: 'Release task', docId: d.id },
-        ],
+        actions: kmtInitialActions,
+        kmtFullActions,
       })
     } finally {
       setOpsAnalysisStep(null)
@@ -773,6 +780,13 @@ export default function WorkflowChatPage() {
     }
     if (action.type === 'openKmt' && action.docId) {
       navigateToDocKmt(action.docId, action.extras)
+      if (msg?.kmtFullActions?.length) {
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === msg.id ? { ...m, actions: m.kmtFullActions, kmtFullActions: undefined } : m,
+          ),
+        )
+      }
       return
     }
     if (action.type === 'kmtEdit' && action.docId) {
