@@ -1852,7 +1852,9 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .reject-modal__scroll {
   flex: 1 1 auto;
   min-height: 0;
+  max-height: min(58vh, 560px);
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 24px 26px 8px;
   -webkit-overflow-scrolling: touch;
 }
@@ -6350,6 +6352,46 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   width: 100%;
   justify-content: center;
 }
+.workflow-chat-poc__sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.workflow-chat-poc__sidebar-actions .workflow-chat-poc__new-chat {
+  width: 100%;
+}
+.workflow-chat-poc__delete-chat {
+  align-self: flex-start;
+  color: #b91c1c !important;
+  font-weight: 700;
+}
+.workflow-chat-poc__history-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.workflow-chat-poc__history-row .workflow-chat-poc__history-item {
+  flex: 1;
+  min-width: 0;
+}
+.workflow-chat-poc__history-delete {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+.workflow-chat-poc__history-delete:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
 .workflow-chat-poc__history {
   list-style: none;
   margin: 0;
@@ -6608,6 +6650,25 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .workflow-chat-poc__composer-select:focus {
   border-color: var(--accent);
   background: #fff;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.12);
+}
+.workflow-chat-poc__prompt-select {
+  flex: 1 1 140px;
+  min-width: 120px;
+  max-width: 280px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  background: #fff;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.workflow-chat-poc__prompt-select:focus {
+  outline: none;
+  border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.12);
 }
 .workflow-chat-poc__icon-btn {

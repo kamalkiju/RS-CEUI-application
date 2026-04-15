@@ -53,9 +53,12 @@ export default function BufmDocumentView() {
   const chatHighlightSession = chatHasHighlightPayload
 
   useEffect(() => {
-    if (!location.state?.fromChatWorkflow) return
-    navigate(location.pathname, { replace: true, state: {} })
-  }, [])
+    const st = location.state
+    if (!st || (!st.fromChatWorkflow && !st.openBufmReject)) return
+    const { fromChatWorkflow: _fc, openBufmReject, ...rest } = st
+    if (openBufmReject) setRejectOpen(true)
+    navigate(location.pathname, { replace: true, state: Object.keys(rest).length ? rest : undefined })
+  }, [location.pathname, navigate, location.state])
 
   const effectiveDoc = useMemo(
     () =>
@@ -106,7 +109,8 @@ export default function BufmDocumentView() {
     [effectiveDoc?.reviewAuditTrail],
   )
 
-  const showReviewActions = doc?.status === 'Pending_BUFM'
+  const canBufmDecide = doc?.status === 'Pending_BUFM'
+  const showReviewActions = canBufmDecide || chatHighlightSession
 
   const pulseRevision = doc
     ? `${doc.updated}|${(doc.pulseComments || []).length}`
@@ -141,6 +145,10 @@ export default function BufmDocumentView() {
     rejectPicks.some(p => p.scope === scope && normalizeLabel(p.label) === normalizeLabel(label))
 
   const handleApprove = () => {
+    if (doc.status !== 'Pending_BUFM') {
+      window.alert('Approve is only available when this document is awaiting BUFM approval (review queue).')
+      return
+    }
     const today = new Date().toISOString().slice(0, 10)
     updateDoc(doc.id, {
       status: 'Pending_KMT',
@@ -155,6 +163,10 @@ export default function BufmDocumentView() {
   }
 
   const handleRejectConfirm = payload => {
+    if (doc.status !== 'Pending_BUFM') {
+      window.alert('Reject is only available when this document is awaiting BUFM approval.')
+      return
+    }
     const comment = typeof payload === 'string' ? payload : payload.comment
     const highlightSections =
       typeof payload === 'object' && payload.highlightSections ? payload.highlightSections : []
@@ -251,10 +263,22 @@ export default function BufmDocumentView() {
                   </div>
                   {showReviewActions && (
                     <div className="bufm-doc-view__header-actions">
-                      <button type="button" className="btn btn-primary" onClick={handleApprove}>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        disabled={!canBufmDecide}
+                        title={!canBufmDecide ? 'Available when status is Awaiting BUFM approval' : undefined}
+                        onClick={handleApprove}
+                      >
                         Approve
                       </button>
-                      <button type="button" className="btn btn-outline bufm-doc-view__reject" onClick={() => setRejectOpen(true)}>
+                      <button
+                        type="button"
+                        className="btn btn-outline bufm-doc-view__reject"
+                        disabled={!canBufmDecide}
+                        title={!canBufmDecide ? 'Available when status is Awaiting BUFM approval' : undefined}
+                        onClick={() => setRejectOpen(true)}
+                      >
                         Reject
                       </button>
                     </div>

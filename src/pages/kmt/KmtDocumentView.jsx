@@ -62,10 +62,12 @@ export default function KmtDocumentView() {
   const chatHighlightSession = chatHasHighlightPayload
 
   useEffect(() => {
-    if (!location.state?.fromChatWorkflow) return
-    const { fromChatWorkflow: _fc, ...rest } = location.state
+    const st = location.state
+    if (!st || (!st.fromChatWorkflow && !st.openKmtReject)) return
+    const { fromChatWorkflow: _fc, openKmtReject, ...rest } = st
+    if (openKmtReject) setRejectOpen(true)
     navigate(location.pathname, { replace: true, state: Object.keys(rest).length ? rest : undefined })
-  }, [])
+  }, [location.pathname, navigate, location.state])
 
   const effectiveDoc = useMemo(
     () =>
@@ -163,7 +165,8 @@ export default function KmtDocumentView() {
     [navigate],
   )
 
-  const showReviewActions = doc?.status === 'Pending_KMT'
+  const canKmtDecide = doc?.status === 'Pending_KMT'
+  const showReviewActions = canKmtDecide || chatHighlightSession
 
   const hasPocUpdatesForReview = Boolean(
     effectiveDoc?.poc_updated_sections?.length ||
@@ -208,6 +211,10 @@ export default function KmtDocumentView() {
     rejectPicks.some(p => p.scope === scope && normalizeLabel(p.label) === normalizeLabel(label))
 
   const handleApprove = () => {
+    if (doc.status !== 'Pending_KMT') {
+      window.alert('Publish is only available when this document is pending KMT final review.')
+      return
+    }
     const today = new Date().toISOString().slice(0, 10)
     updateDoc(doc.id, {
       status: 'approved',
@@ -222,6 +229,10 @@ export default function KmtDocumentView() {
   }
 
   const handleRejectConfirm = payload => {
+    if (doc.status !== 'Pending_KMT') {
+      window.alert('Reject is only available when this document is pending KMT final review.')
+      return
+    }
     const comment = typeof payload === 'string' ? payload : payload.comment
     const highlightSections =
       typeof payload === 'object' && payload.highlightSections ? payload.highlightSections : []
@@ -376,10 +387,22 @@ export default function KmtDocumentView() {
                   </div>
                   {showReviewActions && (
                     <div className="bufm-doc-view__header-actions">
-                      <button type="button" className="btn btn-primary" onClick={handleApprove}>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        disabled={!canKmtDecide}
+                        title={!canKmtDecide ? 'Available when status is pending KMT review' : undefined}
+                        onClick={handleApprove}
+                      >
                         Publish
                       </button>
-                      <button type="button" className="btn btn-outline bufm-doc-view__reject" onClick={() => setRejectOpen(true)}>
+                      <button
+                        type="button"
+                        className="btn btn-outline bufm-doc-view__reject"
+                        disabled={!canKmtDecide}
+                        title={!canKmtDecide ? 'Available when status is pending KMT review' : undefined}
+                        onClick={() => setRejectOpen(true)}
+                      >
                         Reject
                       </button>
                     </div>

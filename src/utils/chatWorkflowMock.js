@@ -206,6 +206,21 @@ export function buildChatWorkflowExtrasFromDoc(doc) {
   }
 }
 
+/**
+ * BUFM/KMT chat → document navigation: prefer stored POC lists on the document; if none, infer highlight targets from the user message.
+ */
+export function buildNavigationExtrasForReviewer(doc, userLine = '') {
+  const real = buildChatWorkflowExtrasFromDoc(doc)
+  if (real) return real
+  const fb = ensurePocChatPatches(inferSimulatedPocPatches(String(userLine || '')))
+  return {
+    sections: fb.sections,
+    fields: fb.fields,
+    summary:
+      'No POC update lists are stored on this document yet; highlight targets are inferred from your message for this review visit.',
+  }
+}
+
 /** Extra lines for KMT chat (BUFM / KMT comments on file). */
 export function formatKmtReviewerContext(doc) {
   if (!doc) return ''

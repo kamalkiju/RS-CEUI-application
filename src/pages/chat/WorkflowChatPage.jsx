@@ -11,8 +11,53 @@ import {
   delay,
   formatPocChangesForChat,
   buildChatWorkflowExtrasFromDoc,
+  buildNavigationExtrasForReviewer,
   formatKmtReviewerContext,
 } from '../../utils/chatWorkflowMock.js'
+
+const CHAT_PROMPT_NONE = '__none__'
+
+function WorkflowChatPromptSelect({ id, role, onPick }) {
+  const opts =
+    role === 'POC'
+      ? [
+          [CHAT_PROMPT_NONE, 'Quick prompt…'],
+          ['K-5031 — update document title and contract activation date', 'Title & contract date'],
+          ['K-5031 — update fees and standard fee schedule', 'Fees'],
+          ['K-5031 — update payment terms and billing', 'Payment terms'],
+        ]
+      : role === 'BUFM'
+        ? [
+            [CHAT_PROMPT_NONE, 'Quick prompt…'],
+            ['K-5031 — summarize POC updates for approval', 'Summarize POC updates'],
+            ['K-5031 — list sections and fields changed by POC', 'Sections & fields'],
+            ['K-5031 — need highlights for BUFM review', 'Review highlights'],
+          ]
+        : [
+            [CHAT_PROMPT_NONE, 'Quick prompt…'],
+            ['K-5031 — summarize POC and BUFM context', 'POC & BUFM context'],
+            ['K-5031 — final KMT review before publish', 'Final review'],
+          ]
+  return (
+    <select
+      id={id}
+      className="workflow-chat-poc__prompt-select"
+      aria-label="Insert sample prompt"
+      defaultValue={CHAT_PROMPT_NONE}
+      onChange={e => {
+        const v = e.target.value
+        if (v && v !== CHAT_PROMPT_NONE) onPick(v)
+        e.target.value = CHAT_PROMPT_NONE
+      }}
+    >
+      {opts.map(([value, label]) => (
+        <option key={label} value={value}>
+          {label}
+        </option>
+      ))}
+    </select>
+  )
+}
 
 const PHASES = {
   idle: 'idle',
@@ -223,6 +268,43 @@ export default function WorkflowChatPage() {
     setVoiceNote(null)
     setPhase(PHASES.idle)
   }
+
+  const deleteReviewerConversation = () => {
+    if (!window.confirm('Delete this conversation and start fresh?')) return
+    startNewReviewerChat()
+  }
+
+  const deletePocSession = useCallback(
+    (e, sessionId) => {
+      e.stopPropagation()
+      if (!window.confirm('Delete this chat from history?')) return
+      setPocSessions(prev => {
+        const next = prev.filter(s => s.id !== sessionId)
+        if (next.length === 0) {
+          const id = `s-${Date.now()}`
+          setPocActiveSessionId(id)
+          pendingPocRef.current = null
+          lastPocChatPatchRef.current = null
+          return [
+            {
+              id,
+              docId: null,
+              title: 'New document chat',
+              updatedAt: Date.now(),
+              messages: pocWelcomeMessages(user),
+            },
+          ]
+        }
+        if (sessionId === pocActiveSessionIdRef.current) {
+          setPocActiveSessionId(next[0].id)
+          pendingPocRef.current = null
+          lastPocChatPatchRef.current = null
+        }
+        return next
+      })
+    },
+    [user],
+  )
 
   useEffect(() => {
     if (!attachedName || (role !== 'POC' && role !== 'BUFM' && role !== 'KMT')) {
@@ -523,19 +605,18 @@ export default function WorkflowChatPage() {
         )
         return
       }
+      const extrasNav = buildNavigationExtrasForReviewer(doc, userLine)
       await runProgress()
-      const extras = buildChatWorkflowExtrasFromDoc(doc)
       const body = formatPocChangesForChat(doc, { roleLabel: 'POC' })
+      pushAssistant(`**Completed.** Initializing → processing → finished.\n\n${body}`)
+      await delay(380)
       pushAssistant(
-        `**Completed.** Initializing → processing → finished.\n\n${body}`,
+        '**Next steps** — open the document to review POC highlights (green), flag items if needed, then approve or reject from the header when the document is awaiting BUFM approval.',
         {
           actions: [
-            {
-              type: 'openBufm',
-              label: extras ? 'Open document (POC highlights)' : 'Open BUFM document review',
-              docId: doc.id,
-              extras,
-            },
+            { type: 'openBufm', label: 'Open document', docId: doc.id, extras: extrasNav },
+            { type: 'bufmApprove', label: 'Approve', docId: doc.id },
+            { type: 'bufmReject', label: 'Reject', docId: doc.id, extras: extrasNav },
           ],
         },
       )
@@ -549,21 +630,23 @@ export default function WorkflowChatPage() {
         )
         return
       }
+      const extrasNav = buildNavigationExtrasForReviewer(doc, userLine)
       await runProgress()
-      const extras = buildChatWorkflowExtrasFromDoc(doc)
       const body = formatPocChangesForChat(doc, { roleLabel: 'POC' }) + formatKmtReviewerContext(doc)
-      pushAssistant(`**Completed.** Initializing → processing → finished.\n\n${body}`, {
-        actions: [
-          {
-            type: 'openKmt',
-            label: extras ? 'Open document (POC highlights)' : 'Open KMT document review',
-            docId: doc.id,
-            extras,
-          },
-          { type: 'delegate', label: 'Release to another BUFM' },
-          { type: 'history', label: 'View change history' },
-        ],
-      })
+      pushAssistant(`**Completed.** Initializing → processing → finished.\n\n${body}`)
+      await delay(380)
+      pushAssistant(
+        '**Next steps** — open the document for read-only highlights, then publish or reject when the document is pending KMT.',
+        {
+          actions: [
+            { type: 'openKmt', label: 'Open document', docId: doc.id, extras: extrasNav },
+            { type: 'kmtApprove', label: 'Publish', docId: doc.id },
+            { type: 'kmtReject', label: 'Reject', docId: doc.id, extras: extrasNav },
+            { type: 'delegate', label: 'Release to another BUFM' },
+            { type: 'history', label: 'View change history' },
+          ],
+        },
+      )
     }
   }
 
@@ -581,8 +664,83 @@ export default function WorkflowChatPage() {
       navigateToDocBufm(action.docId, action.extras)
       return
     }
+    if (action.type === 'bufmApprove' && action.docId) {
+      const d = resolveDoc(action.docId)
+      if (!d || d.status !== 'Pending_BUFM') {
+        pushAssistant(
+          '**Approve** runs only when the document is **Awaiting BUFM approval**. Open it from the CEUI review queue, then use Approve on the document page.',
+        )
+        return
+      }
+      const today = new Date().toISOString().slice(0, 10)
+      updateDoc(action.docId, {
+        status: 'Pending_KMT',
+        approved_by_BUFM: true,
+        bufmApproveDate: today,
+        poc_updated_sections: undefined,
+        poc_updated_fields: undefined,
+        pocResubmissionNote: undefined,
+        tabs: Array.from(new Set([...(d.tabs || []), 'approval', 'all'])),
+      })
+      pushAssistant(`**${d.sub || action.docId}** was **approved** by BUFM and is now with KMT.`)
+      return
+    }
+    if (action.type === 'bufmReject' && action.docId) {
+      const d = resolveDoc(action.docId)
+      if (!d || d.status !== 'Pending_BUFM') {
+        pushAssistant(
+          '**Reject** runs only when the document is **Awaiting BUFM approval**. Open it from the review queue to flag items and reject.',
+        )
+        return
+      }
+      navigate(`/bufm/document/${encodeURIComponent(action.docId)}`, {
+        state: {
+          ...(action.extras ? { fromChatWorkflow: action.extras } : {}),
+          openBufmReject: true,
+        },
+      })
+      return
+    }
     if (action.type === 'openKmt' && action.docId) {
       navigateToDocKmt(action.docId, action.extras)
+      return
+    }
+    if (action.type === 'kmtApprove' && action.docId) {
+      const d = resolveDoc(action.docId)
+      if (!d || d.status !== 'Pending_KMT') {
+        pushAssistant(
+          '**Publish** runs only when the document is **Pending KMT**. Open it from the KMT review queue, then use Publish on the document page.',
+        )
+        return
+      }
+      const today = new Date().toISOString().slice(0, 10)
+      updateDoc(action.docId, {
+        status: 'approved',
+        approved_by_KMT: true,
+        kmtApproveDate: today,
+        poc_updated_sections: undefined,
+        poc_updated_fields: undefined,
+        pocResubmissionNote: undefined,
+        tabs: Array.from(new Set([...(d.tabs || []), 'all'])),
+      })
+      pushAssistant(`**${d.sub || action.docId}** was **published** (final approved).`)
+      return
+    }
+    if (action.type === 'kmtReject' && action.docId) {
+      const d = resolveDoc(action.docId)
+      if (!d || d.status !== 'Pending_KMT') {
+        pushAssistant(
+          '**Reject** runs only when the document is **Pending KMT**. Open it from the review queue to reject with comments.',
+        )
+        return
+      }
+      navigate(`/kmt/document/${encodeURIComponent(action.docId)}`, {
+        state: {
+          ...(action.extras ? { fromChatWorkflow: action.extras } : {}),
+          openKmtReject: true,
+          kmtEdit: false,
+        },
+      })
       return
     }
     if (action.type === 'clone') {
@@ -660,16 +818,25 @@ export default function WorkflowChatPage() {
             </div>
             {m.actions?.length > 0 && (
               <div className="workflow-chat__actions">
-                {m.actions.map((a, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className={`btn ${a.type === 'confirmPoc' ? 'btn-primary' : 'btn-outline'} btn-sm`}
-                    onClick={() => onAction(a, m)}
-                  >
-                    {a.label}
-                  </button>
-                ))}
+                {m.actions.map((a, i) => {
+                  const primary =
+                    a.type === 'confirmPoc' ||
+                    a.type === 'bufmApprove' ||
+                    a.type === 'kmtApprove' ||
+                    a.type === 'openBufm' ||
+                    a.type === 'openKmt'
+                  const danger = a.type === 'bufmReject' || a.type === 'kmtReject'
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`btn btn-sm ${primary ? 'btn-primary' : ''} ${danger ? 'btn-outline bufm-doc-view__reject' : !primary ? 'btn-outline' : ''}`}
+                      onClick={() => onAction(a, m)}
+                    >
+                      {a.label}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -733,7 +900,7 @@ export default function WorkflowChatPage() {
                 </button>
                 <ul className="workflow-chat-poc__history">
                   {sortedSessions.map(s => (
-                    <li key={s.id}>
+                    <li key={s.id} className="workflow-chat-poc__history-row">
                       <button
                         type="button"
                         className={`workflow-chat-poc__history-item${s.id === pocActiveSessionId ? ' workflow-chat-poc__history-item--active' : ''}`}
@@ -747,6 +914,14 @@ export default function WorkflowChatPage() {
                         <span className="workflow-chat-poc__history-meta">
                           {s.messages.length} message{s.messages.length === 1 ? '' : 's'}
                         </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="workflow-chat-poc__history-delete"
+                        aria-label={`Delete chat ${s.title}`}
+                        onClick={e => deletePocSession(e, s.id)}
+                      >
+                        Delete
                       </button>
                     </li>
                   ))}
@@ -820,6 +995,7 @@ export default function WorkflowChatPage() {
                   <button type="button" className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" onClick={onVoice} title="Voice note">
                     Voice
                   </button>
+                  <WorkflowChatPromptSelect id="chat-prompt-poc" role="POC" onPick={setInput} />
                 </div>
                 <div className="workflow-chat-poc__input-row">
                   <input
@@ -878,9 +1054,14 @@ export default function WorkflowChatPage() {
                   ▾
                 </span>
               </button>
-              <button type="button" className="workflow-chat-poc__new-chat btn btn-primary btn-sm" onClick={startNewReviewerChat}>
-                + New chat
-              </button>
+              <div className="workflow-chat-poc__sidebar-actions">
+                <button type="button" className="workflow-chat-poc__new-chat btn btn-primary btn-sm" onClick={startNewReviewerChat}>
+                  + New chat
+                </button>
+                <button type="button" className="workflow-chat-poc__delete-chat btn btn-text btn-sm" onClick={deleteReviewerConversation}>
+                  Delete chat
+                </button>
+              </div>
               <ul className="workflow-chat-poc__history">
                 <li>
                   <div
@@ -961,6 +1142,7 @@ export default function WorkflowChatPage() {
                 <button type="button" className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" onClick={onVoice} title="Voice note">
                   Voice
                 </button>
+                <WorkflowChatPromptSelect id="chat-prompt-reviewer" role={role} onPick={setInput} />
               </div>
               <div className="workflow-chat-poc__input-row">
                 <input
