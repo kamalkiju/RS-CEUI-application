@@ -36,7 +36,7 @@ const DEFAULT_WORKFLOW_PROMPT =
   'K-5008 — Duplicate this document and update the Document review date as 25th April 2016'
 
 const DEFAULT_KMT_CATALOG_PROMPT =
-  'K-5008 — Summarize the updates on this document (POC changes, BUFM comments, and what is pending for KMT)'
+  'K-5008 — Summarize the updates on this document (POC changes, BUFM comments)'
 
 function defaultPromptForDocId(docId) {
   if (!docId) return ''
@@ -45,7 +45,7 @@ function defaultPromptForDocId(docId) {
 
 function defaultKmtPromptForDocId(docId) {
   if (!docId) return ''
-  return `${docId} — Summarize the updates on this document (POC changes, BUFM comments, and what is pending for KMT)`
+  return `${docId} — Summarize the updates on this document (POC changes, BUFM comments)`
 }
 
 const POC_OPS_STEP_LABELS = ['Analyse the fields', 'Checking the fields', 'Update the fields', 'Completed']
