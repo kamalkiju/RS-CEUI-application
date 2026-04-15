@@ -26,8 +26,10 @@ import {
   buildPocUpdateFlagSets,
   buildReviewerFlagSets,
   isFieldFlagged,
+  isFieldFlaggedExact,
   isReviewerHighlightingWholeStep,
   isSectionFlagged,
+  isSectionFlaggedExact,
   lastRejectTrailEntry,
   normalizeLabel,
 } from '../../utils/reviewFeedback.js'
@@ -53,6 +55,11 @@ export default function KmtDocumentView() {
   const { docs, getDocumentById, updateDoc, countDocumentsByUserId } = useDocs()
   const doc = id ? getDocumentById(id) : null
   const [chatWorkflowExtras] = useState(() => location.state?.fromChatWorkflow ?? null)
+  const chatHasHighlightPayload = Boolean(
+    chatWorkflowExtras &&
+      (chatWorkflowExtras.sections?.length > 0 || chatWorkflowExtras.fields?.length > 0),
+  )
+  const chatHighlightSession = chatHasHighlightPayload
 
   useEffect(() => {
     if (!location.state?.fromChatWorkflow) return
@@ -60,7 +67,13 @@ export default function KmtDocumentView() {
     navigate(location.pathname, { replace: true, state: Object.keys(rest).length ? rest : undefined })
   }, [])
 
-  const effectiveDoc = useMemo(() => mergeChatWorkflowHighlights(doc, chatWorkflowExtras), [doc, chatWorkflowExtras])
+  const effectiveDoc = useMemo(
+    () =>
+      mergeChatWorkflowHighlights(doc, chatWorkflowExtras, {
+        replacePocHighlights: chatHasHighlightPayload,
+      }),
+    [doc, chatWorkflowExtras, chatHasHighlightPayload],
+  )
 
   const [activeStep, setActiveStep] = useState(1)
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -450,8 +463,9 @@ export default function KmtDocumentView() {
                   const tabRev =
                     isReviewerHighlightingWholeStep(s.n, reviewerSets.sections) ||
                     reviewerStepsWithHits.has(s.n)
-                  const tabPoc =
-                    isReviewerHighlightingWholeStep(s.n, pocSets.sections) || pocStepsWithUpdates.has(s.n)
+                  const tabPoc = chatHighlightSession
+                    ? pocStepsWithUpdates.has(s.n)
+                    : isReviewerHighlightingWholeStep(s.n, pocSets.sections) || pocStepsWithUpdates.has(s.n)
                   return (
                     <button
                       key={s.n}
@@ -514,9 +528,18 @@ export default function KmtDocumentView() {
                         badge={sec.badge}
                         fields={sec.fields || []}
                         sectionFlagged={wholeStepReviewer || isSectionFlagged(sec.title, reviewerSets.sections)}
-                        pocSectionFlagged={wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)}
+                        pocSectionFlagged={
+                          chatHighlightSession
+                            ? isSectionFlaggedExact(sec.title, pocSets.sections)
+                            : wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)
+                        }
                         fieldFlags={label => isFieldFlagged(label, reviewerSets.fields)}
-                        pocFieldFlags={label => isFieldFlagged(label, pocSets.fields)}
+                        pocFieldFlags={
+                          chatHighlightSession
+                            ? label => isFieldFlaggedExact(label, pocSets.fields)
+                            : label => isFieldFlagged(label, pocSets.fields)
+                        }
+                        pocFieldHighlightsOnly={chatHighlightSession}
                         flagPickerMode={showReviewActions}
                         sectionPickActive={isRejectPick('section', sec.title)}
                         onFlagSection={() => toggleRejectPick('section', sec.title)}

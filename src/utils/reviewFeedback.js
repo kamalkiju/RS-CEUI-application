@@ -88,6 +88,19 @@ export function isFieldFlagged(fieldLabel, fields) {
   return false
 }
 
+/** Set membership on normalized labels only (no substring) — workflow chat overlay / precise POC. */
+export function isSectionFlaggedExact(title, sections) {
+  const t = normalizeLabel(title)
+  if (!t || !sections?.size) return false
+  return sections.has(t)
+}
+
+export function isFieldFlaggedExact(fieldLabel, fields) {
+  const t = normalizeLabel(fieldLabel)
+  if (!t || !fields?.size) return false
+  return fields.has(t)
+}
+
 /**
  * @param {unknown} payload — string or { comment, feedbackItems?, highlightSections?, highlightFields? }
  */

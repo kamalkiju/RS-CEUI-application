@@ -10,8 +10,10 @@ import {
   buildPocUpdateFlagSets,
   buildReviewerFlagSets,
   isFieldFlagged,
+  isFieldFlaggedExact,
   isReviewerHighlightingWholeStep,
   isSectionFlagged,
+  isSectionFlaggedExact,
 } from '../../../utils/reviewFeedback.js'
 
 function ChevronSvg() {
@@ -63,8 +65,8 @@ export default function DocumentReadOnlySteps({ doc, step, precisePocHighlightsO
   )
   const wholeStepPoc = useMemo(
     () =>
-      pocStepHits.has(step) ||
-      (!precisePocHighlightsOnly && isReviewerHighlightingWholeStep(step, pocSets.sections)),
+      !precisePocHighlightsOnly &&
+      (pocStepHits.has(step) || isReviewerHighlightingWholeStep(step, pocSets.sections)),
     [step, pocSets.sections, pocStepHits, precisePocHighlightsOnly],
   )
   const [openIds, setOpenIds] = useState(() => sections.map((_, i) => `rs-${step}-${i}`))
@@ -80,15 +82,20 @@ export default function DocumentReadOnlySteps({ doc, step, precisePocHighlightsO
     next.forEach((sec, i) => {
       const id = `rs-${step}-${i}`
       const secRev = wholeStepReviewer || isSectionFlagged(sec.title, secSet)
-      const secPoc = wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)
-      const anyFld =
-        (sec.fields || []).some(
-          f => isFieldFlagged(f.label, fldSet) || isFieldFlagged(f.label, pocSets.fields),
-        )
+      const secPoc = precisePocHighlightsOnly
+        ? isSectionFlaggedExact(sec.title, pocSets.sections)
+        : wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)
+      const anyFld = (sec.fields || []).some(f => {
+        const rev = isFieldFlagged(f.label, fldSet)
+        const poc = precisePocHighlightsOnly
+          ? isFieldFlaggedExact(f.label, pocSets.fields)
+          : isFieldFlagged(f.label, pocSets.fields)
+        return rev || poc
+      })
       if (secRev || secPoc || anyFld) extra.push(id)
     })
     if (extra.length) setOpenIds(prev => Array.from(new Set([...prev, ...extra])))
-  }, [doc, step, secSet, fldSet, pocSets, wholeStepReviewer, wholeStepPoc])
+  }, [doc, step, secSet, fldSet, pocSets, wholeStepReviewer, wholeStepPoc, precisePocHighlightsOnly])
 
   const toggle = (id) => {
     setOpenIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
@@ -122,7 +129,9 @@ export default function DocumentReadOnlySteps({ doc, step, precisePocHighlightsO
         {sections.map((sec, i) => {
           const id = `rs-${step}-${i}`
           const secRev = wholeStepReviewer || isSectionFlagged(sec.title, secSet)
-          const secPoc = wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)
+          const secPoc = precisePocHighlightsOnly
+            ? isSectionFlaggedExact(sec.title, pocSets.sections)
+            : wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)
           return (
             <ReadOnlyAccordion
               key={id}
@@ -142,7 +151,11 @@ export default function DocumentReadOnlySteps({ doc, step, precisePocHighlightsO
                     value={f.value}
                     multiline={f.multiline}
                     highlighted={secRev || isFieldFlagged(f.label, fldSet)}
-                    pocUpdated={secPoc || isFieldFlagged(f.label, pocSets.fields)}
+                    pocUpdated={
+                      precisePocHighlightsOnly
+                        ? isFieldFlaggedExact(f.label, pocSets.fields)
+                        : secPoc || isFieldFlagged(f.label, pocSets.fields)
+                    }
                   />
                 ))}
               </div>

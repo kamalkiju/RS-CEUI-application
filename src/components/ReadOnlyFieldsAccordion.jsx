@@ -22,7 +22,8 @@ function ChevronSvg({ open }) {
 
 /**
  * Read-only accordion: title + label/value fields (not inputs).
- * @param {{ flagPickerMode?: boolean, sectionPickActive?: boolean, onFlagSection?: () => void, onFlagField?: (fieldLabel: string) => void, fieldPickActive?: (label: string) => boolean }} props
+ * @param {{ flagPickerMode?: boolean, sectionPickActive?: boolean, onFlagSection?: () => void, onFlagField?: (fieldLabel: string) => void, fieldPickActive?: (label: string) => boolean, pocFieldHighlightsOnly?: boolean }} props
+ * When `pocFieldHighlightsOnly`, green field highlights follow `pocFieldFlags` only (section flag does not paint every field in the accordion).
  */
 export default function ReadOnlyFieldsAccordion({
   title,
@@ -33,6 +34,7 @@ export default function ReadOnlyFieldsAccordion({
   pocSectionFlagged = false,
   fieldFlags = null,
   pocFieldFlags = null,
+  pocFieldHighlightsOnly = false,
   flagPickerMode = false,
   sectionPickActive = false,
   onFlagSection = null,
@@ -90,7 +92,11 @@ export default function ReadOnlyFieldsAccordion({
                   value={f.value}
                   multiline={f.multiline}
                   highlighted={sectionFlagged || (fieldFlags ? fieldFlags(f.label) : false)}
-                  pocUpdated={pocSectionFlagged || (pocFieldFlags ? pocFieldFlags(f.label) : false)}
+                  pocUpdated={
+                    pocFieldHighlightsOnly && pocFieldFlags
+                      ? pocFieldFlags(f.label)
+                      : pocSectionFlagged || (pocFieldFlags ? pocFieldFlags(f.label) : false)
+                  }
                 />
               </div>
             ))}

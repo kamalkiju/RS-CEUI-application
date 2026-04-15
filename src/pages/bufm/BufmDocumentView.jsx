@@ -21,8 +21,10 @@ import {
   buildPocUpdateFlagSets,
   buildReviewerFlagSets,
   isFieldFlagged,
+  isFieldFlaggedExact,
   isReviewerHighlightingWholeStep,
   isSectionFlagged,
+  isSectionFlaggedExact,
   lastRejectTrailEntry,
   normalizeLabel,
 } from '../../utils/reviewFeedback.js'
@@ -44,13 +46,24 @@ export default function BufmDocumentView() {
   const { getDocumentById, updateDoc } = useDocs()
   const doc = id ? getDocumentById(id) : null
   const [chatWorkflowExtras] = useState(() => location.state?.fromChatWorkflow ?? null)
+  const chatHasHighlightPayload = Boolean(
+    chatWorkflowExtras &&
+      (chatWorkflowExtras.sections?.length > 0 || chatWorkflowExtras.fields?.length > 0),
+  )
+  const chatHighlightSession = chatHasHighlightPayload
 
   useEffect(() => {
     if (!location.state?.fromChatWorkflow) return
     navigate(location.pathname, { replace: true, state: {} })
   }, [])
 
-  const effectiveDoc = useMemo(() => mergeChatWorkflowHighlights(doc, chatWorkflowExtras), [doc, chatWorkflowExtras])
+  const effectiveDoc = useMemo(
+    () =>
+      mergeChatWorkflowHighlights(doc, chatWorkflowExtras, {
+        replacePocHighlights: chatHasHighlightPayload,
+      }),
+    [doc, chatWorkflowExtras, chatHasHighlightPayload],
+  )
 
   const [activeStep, setActiveStep] = useState(1)
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -82,12 +95,12 @@ export default function BufmDocumentView() {
       isReviewerHighlightingWholeStep(activeStep, reviewerSets.sections),
     [activeStep, reviewerSets.sections, reviewerStepsWithHits],
   )
-  const wholeStepPoc = useMemo(
-    () =>
-      pocStepsWithUpdates.has(activeStep) ||
-      isReviewerHighlightingWholeStep(activeStep, pocSets.sections),
-    [activeStep, pocSets.sections, pocStepsWithUpdates],
-  )
+  const wholeStepPoc = useMemo(() => {
+    if (chatHighlightSession) return false
+    return (
+      pocStepsWithUpdates.has(activeStep) || isReviewerHighlightingWholeStep(activeStep, pocSets.sections)
+    )
+  }, [activeStep, pocSets.sections, pocStepsWithUpdates, chatHighlightSession])
   const lastBufmReject = useMemo(
     () => lastRejectTrailEntry(effectiveDoc?.reviewAuditTrail, 'BUFM'),
     [effectiveDoc?.reviewAuditTrail],
@@ -305,8 +318,9 @@ export default function BufmDocumentView() {
                 const tabRev =
                   isReviewerHighlightingWholeStep(s.n, reviewerSets.sections) ||
                   reviewerStepsWithHits.has(s.n)
-                const tabPoc =
-                  isReviewerHighlightingWholeStep(s.n, pocSets.sections) || pocStepsWithUpdates.has(s.n)
+                const tabPoc = chatHighlightSession
+                  ? pocStepsWithUpdates.has(s.n)
+                  : isReviewerHighlightingWholeStep(s.n, pocSets.sections) || pocStepsWithUpdates.has(s.n)
                 return (
                   <button
                     key={s.n}
@@ -341,9 +355,18 @@ export default function BufmDocumentView() {
                       badge={sec.badge}
                       fields={sec.fields || []}
                       sectionFlagged={wholeStepReviewer || isSectionFlagged(sec.title, reviewerSets.sections)}
-                      pocSectionFlagged={wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)}
+                      pocSectionFlagged={
+                        chatHighlightSession
+                          ? isSectionFlaggedExact(sec.title, pocSets.sections)
+                          : wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)
+                      }
                       fieldFlags={label => isFieldFlagged(label, reviewerSets.fields)}
-                      pocFieldFlags={label => isFieldFlagged(label, pocSets.fields)}
+                      pocFieldFlags={
+                        chatHighlightSession
+                          ? label => isFieldFlaggedExact(label, pocSets.fields)
+                          : label => isFieldFlagged(label, pocSets.fields)
+                      }
+                      pocFieldHighlightsOnly={chatHighlightSession}
                       flagPickerMode={showReviewActions}
                       sectionPickActive={isRejectPick('section', sec.title)}
                       onFlagSection={() => toggleRejectPick('section', sec.title)}
