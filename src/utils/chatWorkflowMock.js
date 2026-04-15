@@ -15,6 +15,60 @@ export function extractDocumentId(text, docs = []) {
   return null
 }
 
+/**
+ * Fuzzy match: significant tokens from document title appear in the message (demo).
+ */
+function fuzzyMatchDocumentId(text, docs = []) {
+  const t = String(text || '').toLowerCase()
+  if (!t.trim()) return null
+  let bestId = null
+  let bestScore = 0
+  for (const d of docs) {
+    const tokens = String(d.sub || '')
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(x => x.length >= 5)
+    const uniq = [...new Set(tokens)]
+    let score = 0
+    for (const tok of uniq) {
+      if (t.includes(tok)) score += tok.length >= 8 ? 4 : 2
+    }
+    if (String(d.area || '').length > 4 && t.includes(String(d.area).toLowerCase().slice(0, 12))) score += 3
+    if (score > bestScore) {
+      bestScore = score
+      bestId = d.id
+    }
+  }
+  return bestScore >= 2 ? bestId : null
+}
+
+/**
+ * Prefer sidebar selection, then explicit ID / title substring, then fuzzy title match.
+ */
+export function resolveChatDocumentId(text, selectedDocId, docs = []) {
+  if (selectedDocId && docs.some(d => d.id === selectedDocId)) return selectedDocId
+  const byExtract = extractDocumentId(text, docs)
+  if (byExtract) return byExtract
+  return fuzzyMatchDocumentId(text, docs)
+}
+
+/** When the message does not map to wizard areas, use a small default patch so the demo always has highlights. */
+export function ensurePocDemoPatches(patches) {
+  const has = (patches?.sections?.length || 0) + (patches?.fields?.length || 0) > 0
+  if (has) {
+    return {
+      sections: [...new Set(patches.sections || [])],
+      fields: [...new Set(patches.fields || [])],
+      usedFallback: false,
+    }
+  }
+  return {
+    sections: ['Basic Information'],
+    fields: ['Document title', 'Review notes'],
+    usedFallback: true,
+  }
+}
+
 /** User message has substantive change request (not only a title/id). */
 export function hasChangeIntent(text) {
   const s = String(text || '').toLowerCase()

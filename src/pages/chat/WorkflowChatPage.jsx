@@ -4,9 +4,9 @@ import Layout from '../../components/Layout.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useDocs, generateDocId } from '../../context/DocContext.jsx'
 import {
-  extractDocumentId,
-  hasChangeIntent,
+  resolveChatDocumentId,
   inferSimulatedPocPatches,
+  ensurePocDemoPatches,
   defaultChatSummary,
   delay,
   wantsPocChangeSummary,
@@ -32,7 +32,7 @@ function pocWelcomeMessages(user) {
       role: 'assistant',
       id: 'welcome',
       content:
-        'Welcome to **document chat**. Pick a document (sidebar or dropdown), describe changes (e.g. “K-5031 — update payment terms”), then **Confirm & apply**. You will see **what changed**, then **Open document** for highlights. Use **Save as draft** or **Submit for approval** when ready.',
+        'Welcome to **document chat**. Choose a document in the bar below (next to Attach), or mention its title or ID in your message. Any message starts the **Confirm & apply** demo so you always get highlight areas; then **Open document** to see them in green. Use **Save as draft** or **Submit for approval** when ready.',
     },
   ]
 }
@@ -349,7 +349,7 @@ export default function WorkflowChatPage() {
   }
 
   const handleCloneDocument = () => {
-    const src = resolveDoc(selectedDocId || extractDocumentId(input, docs))
+    const src = resolveDoc(resolveChatDocumentId(input, selectedDocId, docs))
     if (!src) {
       if (role === 'POC') {
         pushAssistantPoc('Select a document in the dropdown first, or include a document ID like K-5031.')
@@ -382,24 +382,28 @@ export default function WorkflowChatPage() {
     }
   }
 
-  const executePocPipeline = async (doc, text) => {
-    const patches = inferSimulatedPocPatches(text)
+  const executePocPipeline = async pend => {
+    const { doc, patches } = pend
+    if (!doc) return
+    const { sections, fields, usedFallback } = patches
     const summary = defaultChatSummary(doc)
     await runProgress()
     const extras = {
-      sections: patches.sections,
-      fields: patches.fields,
+      sections,
+      fields,
       summary,
     }
     lastPocChatPatchRef.current = {
       docId: doc.id,
-      sections: patches.sections,
-      fields: patches.fields,
+      sections,
+      fields,
     }
-    const detail =
-      patches.sections.length || patches.fields.length
-        ? `**What we will highlight (demo)**\n\n**Sections**\n${patches.sections.length ? patches.sections.map(x => `• ${x}`).join('\n') : '• —'}\n\n**Fields**\n${patches.fields.length ? patches.fields.map(x => `• ${x}`).join('\n') : '• —'}`
-        : '**What we will highlight**\n• No wizard areas were inferred — open the document to edit manually, or describe fees, payment, title, etc.'
+    const sectionLines = sections.length ? sections.map(x => `• ${x}`).join('\n') : '• —'
+    const fieldLines = fields.length ? fields.map(x => `• ${x}`).join('\n') : '• —'
+    const fallbackNote = usedFallback
+      ? '\n\n*(Demo used default **Basic Information** highlights because your message did not match fee/payment/basic cues.)*\n'
+      : ''
+    const detail = `**What we will highlight (demo)**${fallbackNote}\n\n**Sections**\n${sectionLines}\n\n**Fields**\n${fieldLines}`
     pushAssistantPoc(
       `${detail}\n\n---\n\n**Summary (demo)**\n${summary}\n\nOpen the document to see these areas in **green** in the wizard. Then **Save as draft** or **Submit for approval** below or on the document page.`,
       {
@@ -416,7 +420,7 @@ export default function WorkflowChatPage() {
   const handleConfirmPoc = async () => {
     const p = pendingPocRef.current
     if (!p) return
-    await executePocPipeline(p.doc, p.text)
+    await executePocPipeline(p)
   }
 
   const confirmSubmitToBufm = () => {
@@ -448,10 +452,11 @@ export default function WorkflowChatPage() {
     if (!text && !attachedName) return
     const userLine = [text, attachedName ? `[attachment: ${attachedName}]` : ''].filter(Boolean).join('\n')
 
+    const docId = resolveChatDocumentId(userLine, selectedDocId, docs)
+    const doc = resolveDoc(docId)
+
     if (role === 'POC') {
       pushUserPoc(userLine)
-      const docId = selectedDocId || extractDocumentId(userLine, docs)
-      const doc = resolveDoc(docId)
       updatePocSessionMeta(docId, doc)
     } else {
       pushUser(userLine)
@@ -461,35 +466,21 @@ export default function WorkflowChatPage() {
     setAttachedName(null)
     setVoiceNote(null)
 
-    const docId = selectedDocId || extractDocumentId(userLine, docs)
-    const doc = resolveDoc(docId)
-
     if (role === 'POC') {
       if (!docId || !doc) {
         pushAssistantPoc(
-          'I could not match a document. Choose one in the **Document** dropdown or type an ID like **K-5031**, then describe your changes.',
+          'I could not match a document. Pick one in the **Document** menu next to Attach, type an ID like **K-5031**, or paste enough of the document title so we can match it.',
         )
         return
       }
-      if (!hasChangeIntent(userLine)) {
-        pushAssistantPoc(
-          `Matched **${doc.sub || doc.id}** (\`${doc.id}\`). What would you like to change?\n\nYou can **clone** this document to start a new draft with the same baseline.`,
-          {
-            actions: [
-              { type: 'clone', label: 'Clone this document' },
-              { type: 'hint', label: 'Example prompt' },
-            ],
-          },
-        )
-        return
-      }
-      const patches = inferSimulatedPocPatches(userLine)
+      const patches = ensurePocDemoPatches(inferSimulatedPocPatches(userLine))
       const pend = { doc, text: userLine, patches }
       pendingPocRef.current = pend
-      const preview =
-        patches.sections.length || patches.fields.length
-          ? `**Planned highlights (demo)**\n\n**Sections**\n${patches.sections.map(x => `• ${x}`).join('\n')}\n\n**Fields**\n${patches.fields.map(x => `• ${x}`).join('\n')}`
-          : '**Planned highlights**\n• No areas inferred from wording — try “update fees” or “K-5031 — change payment terms”. You can still confirm to continue.'
+      const sectionBlock = patches.sections.map(x => `• ${x}`).join('\n')
+      const fieldBlock = patches.fields.map(x => `• ${x}`).join('\n')
+      const preview = patches.usedFallback
+        ? `**Planned highlights (demo — sample)**\nYour message did not match specific fee/payment/basic wording, so the walkthrough uses **Basic Information** with sample fields. You can still confirm.\n\n**Sections**\n${sectionBlock}\n\n**Fields**\n${fieldBlock}`
+        : `**Planned highlights (demo)**\n\n**Sections**\n${sectionBlock}\n\n**Fields**\n${fieldBlock}`
       pushAssistantPoc(
         `${preview}\n\nConfirm to generate the preview and actions below, or edit your message and send again.`,
         {
@@ -780,27 +771,8 @@ export default function WorkflowChatPage() {
                 <div className="workflow-chat-poc__hero">
                   <h1 className="workflow-chat-poc__hero-title">Document chat</h1>
                   <p className="workflow-chat-poc__hero-sub">
-                    Pick a document, describe your updates, then confirm. Opening the document shows matching sections and fields highlighted in green.
+                    Use the Document menu next to Attach (or mention title or ID in chat). Send any message to start Confirm & apply; opening the document shows the planned sections and fields highlighted in green.
                   </p>
-                </div>
-
-                <div className="workflow-chat-poc__doc-bar">
-                  <label className="workflow-chat-poc__doc-label" htmlFor="chat-doc-select-poc">
-                    Active document
-                  </label>
-                  <select
-                    id="chat-doc-select-poc"
-                    className="workflow-chat-poc__doc-select"
-                    value={selectedDocId}
-                    onChange={e => setSelectedDocId(e.target.value)}
-                  >
-                    <option value="">Select a document…</option>
-                    {docOptions.map(d => (
-                      <option key={d.id} value={d.id}>
-                        {d.id} · {d.sub?.slice(0, 48) || '—'}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
                 {attachedName && (
@@ -828,6 +800,25 @@ export default function WorkflowChatPage() {
 
               <div className="workflow-chat-poc__composer-wrap">
                 <div className="workflow-chat-poc__composer-tools">
+                  <div className="workflow-chat-poc__composer-doc-wrap">
+                    <label className="workflow-chat-poc__composer-doc-label" htmlFor="chat-doc-select-poc-composer">
+                      Document
+                    </label>
+                    <select
+                      id="chat-doc-select-poc-composer"
+                      className="workflow-chat-poc__composer-select"
+                      value={selectedDocId}
+                      onChange={e => setSelectedDocId(e.target.value)}
+                      aria-label="Active document for this chat"
+                    >
+                      <option value="">Select document…</option>
+                      {docOptions.map(d => (
+                        <option key={d.id} value={d.id}>
+                          {d.id} · {d.sub?.slice(0, 40) || '—'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <label className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" title="Attach file">
                     <input type="file" className="workflow-chat__file-input" onChange={onFile} accept=".pdf,.doc,.docx,.txt,.csv" />
                     Attach

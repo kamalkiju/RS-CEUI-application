@@ -6545,9 +6545,41 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 }
 .workflow-chat-poc__composer-tools {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 10px;
   margin-bottom: 8px;
+}
+.workflow-chat-poc__composer-doc-wrap {
+  flex: 1 1 160px;
+  min-width: 140px;
+  max-width: min(100%, 400px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.workflow-chat-poc__composer-doc-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.workflow-chat-poc__composer-select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-family: inherit;
+  background: #f8fafc;
+  color: var(--text-primary);
+  outline: none;
+}
+.workflow-chat-poc__composer-select:focus {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.12);
 }
 .workflow-chat-poc__icon-btn {
   display: inline-flex;
