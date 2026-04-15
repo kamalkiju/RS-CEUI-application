@@ -28,37 +28,22 @@ const PHASES = {
 const POC_CHAT_STORAGE_KEY = 'rs-poc-workflow-chat-v1'
 const POC_CHAT_PATH = '/poc/chat'
 
-function pocWelcomeMessages(user) {
+/** Shown in the composer after the user says hi — user can Send to run the workflow. */
+const POC_DEFAULT_PROMPT = 'K-5031 — update document title and contract activation date'
+
+function pocWelcomeMessages() {
   return [
-    {
-      role: 'assistant',
-      id: 'welcome',
-      content:
-        'Welcome to **document chat**. Pick a document in the **Document** menu (or type its **ID** or enough of the **title** to match). Your message is interpreted only as plain text to **plan highlight previews** — nothing runs as code. After you send, use **Confirm & apply**, then **Open document** to review highlights in green. **Save as draft** or **Submit for approval** when ready.',
-    },
+    { role: 'assistant', id: 'welcome', content: 'Welcome to Ops Agent.' },
+    { role: 'assistant', id: 'greeting', content: 'Hi! What can I help you with?' },
   ]
 }
 
 function bufmWelcomeMessages() {
-  return [
-    {
-      role: 'assistant',
-      id: 'welcome',
-      content:
-        'Welcome to **BUFM document chat**. Select a document in the **Document** menu (or type its ID or title), then send a message. You will get one **summary of POC-related changes** (and inferred review focus from your text when needed), plus **Open document**, **Approve**, and **Reject** after the flow completes.',
-    },
-  ]
+  return [{ role: 'assistant', id: 'welcome', content: 'Welcome to Ops Agent.' }]
 }
 
 function kmtWelcomeMessages() {
-  return [
-    {
-      role: 'assistant',
-      id: 'welcome',
-      content:
-        'Welcome to **KMT document chat**. You can send **any text** — a **document ID** (e.g. K-5031), part of the **title**, a **city or division name**, or casual notes. If the **Document** menu is set, that catalog entry wins; otherwise we **match** your message to the best knowledge document and show an **Initialization** line plus the **summary**. Actions: **Open document**, **Edit details**, **Publish**, **Reject**, **Release task** (when shown).',
-    },
-  ]
+  return [{ role: 'assistant', id: 'welcome', content: 'Welcome to Ops Agent.' }]
 }
 
 function serializeSessions(sessions) {
@@ -93,7 +78,7 @@ function hydrateSessions(sessions, docs) {
   }))
 }
 
-function loadPocChatState(user) {
+function loadPocChatState() {
   try {
     const raw = localStorage.getItem(POC_CHAT_STORAGE_KEY)
     if (!raw) throw new Error('empty')
@@ -101,7 +86,14 @@ function loadPocChatState(user) {
     if (!Array.isArray(parsed.sessions) || !parsed.sessions.length) throw new Error('bad')
     let activeSessionId = parsed.activeSessionId || parsed.sessions[0].id
     if (!parsed.sessions.some(s => s.id === activeSessionId)) activeSessionId = parsed.sessions[0].id
-    return { sessions: parsed.sessions, activeSessionId }
+    const sessions = parsed.sessions.map(s => ({
+      ...s,
+      pocHiGatePassed:
+        typeof s.pocHiGatePassed === 'boolean'
+          ? s.pocHiGatePassed
+          : Boolean(s.messages?.some(m => m.role === 'user')),
+    }))
+    return { sessions, activeSessionId }
   } catch {
     const id = `s-${Date.now()}`
     return {
@@ -109,9 +101,10 @@ function loadPocChatState(user) {
         {
           id,
           docId: null,
-          title: 'New document chat',
+          title: 'New chat',
+          pocHiGatePassed: false,
           updatedAt: Date.now(),
-          messages: pocWelcomeMessages(user),
+          messages: pocWelcomeMessages(),
         },
       ],
       activeSessionId: id,
@@ -156,7 +149,7 @@ export default function WorkflowChatPage() {
 
   const role = user?.role || 'POC'
 
-  const pocInit = useMemo(() => loadPocChatState(user), [user?.id])
+  const pocInit = useMemo(() => loadPocChatState(), [])
   const [pocSessions, setPocSessions] = useState(() =>
     pocInit.sessions.map(s => ({ ...s, messages: s.messages.map(m => ({ ...m })) })),
   )
@@ -247,9 +240,10 @@ export default function WorkflowChatPage() {
             {
               id,
               docId: null,
-              title: 'New document chat',
+              title: 'New chat',
+              pocHiGatePassed: false,
               updatedAt: Date.now(),
-              messages: pocWelcomeMessages(user),
+              messages: pocWelcomeMessages(),
             },
           ]
         }
@@ -402,9 +396,10 @@ export default function WorkflowChatPage() {
       {
         id,
         docId: null,
-        title: 'New document chat',
+        title: 'New chat',
+        pocHiGatePassed: false,
         updatedAt: Date.now(),
-        messages: pocWelcomeMessages(user),
+        messages: pocWelcomeMessages(),
       },
       ...prev,
     ])
@@ -517,25 +512,47 @@ export default function WorkflowChatPage() {
     const text = [input, voiceNote].filter(Boolean).join('\n').trim()
     if (!text && !attachedName) return
     const userLine = [text, attachedName ? `[attachment: ${attachedName}]` : ''].filter(Boolean).join('\n')
-
-    const docId = resolveChatDocumentId(userLine, selectedDocId, docs)
+    const userSnippet = String(userLine || '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .slice(0, 180)
+    const { docId, matchSource } = resolveChatDocumentIdWithMeta(userLine, selectedDocId, docs)
     const doc = resolveDoc(docId)
 
     if (role === 'POC') {
+      const active = pocSessions.find(s => s.id === pocActiveSessionId)
+      const gatePassed = active?.pocHiGatePassed === true
+
+      if (!gatePassed) {
+        const plain = text.trim()
+        const isHi = /^\s*(hi|hello|hey)\b/i.test(plain)
+        pushUserPoc(userLine)
+        setInput('')
+        setAttachedName(null)
+        setVoiceNote(null)
+        if (!isHi) {
+          pushAssistantPoc('Please say **hi** first to continue.')
+          return
+        }
+        setPocSessions(prev =>
+          prev.map(s =>
+            s.id === pocActiveSessionId ? { ...s, pocHiGatePassed: true, updatedAt: Date.now() } : s,
+          ),
+        )
+        pushAssistantPoc('Suggested message — press **Send** to continue:')
+        setInput(POC_DEFAULT_PROMPT)
+        return
+      }
+
       pushUserPoc(userLine)
       updatePocSessionMeta(docId, doc)
-    } else {
-      pushUser(userLine)
-    }
+      setInput('')
+      setAttachedName(null)
+      setVoiceNote(null)
 
-    setInput('')
-    setAttachedName(null)
-    setVoiceNote(null)
-
-    if (role === 'POC') {
       if (!docId || !doc) {
         pushAssistantPoc(
-          `I could not match a document to: “${userSnippet || '(empty)'}”. Pick one in the **Document** menu, type a catalog ID like **K-5031**, or paste more of the **document title** (city, division, or key words).`,
+          `I could not match a document to: “${userSnippet || '(empty)'}”. Pick a catalog row, type an ID like **K-5031**, or paste more of the **title** (city, division, or key words).`,
         )
         return
       }
@@ -556,10 +573,15 @@ export default function WorkflowChatPage() {
       return
     }
 
+    pushUser(userLine)
+    setInput('')
+    setAttachedName(null)
+    setVoiceNote(null)
+
     if (role === 'BUFM') {
       if (!doc) {
         pushAssistant(
-          `No catalog document matched: “${userSnippet || '(empty)'}”. Use the **Document** menu, an ID like **K-5031**, or more words from the **title** (e.g. city or “DIV …”).`,
+          `No catalog document matched: “${userSnippet || '(empty)'}”. Use the catalog picker, an ID like **K-5031**, or more words from the **title** (e.g. city or “DIV …”).`,
         )
         return
       }
@@ -586,7 +608,7 @@ export default function WorkflowChatPage() {
     if (role === 'KMT') {
       if (!doc) {
         pushAssistant(
-          `**Initialization** — No knowledge document matched your text: “${userSnippet || '(empty)'}”.\n\nUse the **Document** menu for an exact catalog row, type an ID (**K-5031**), or paste **more words from the document title** (division, city, “MUNI”, etc.).`,
+          `**Initialization** — No knowledge document matched your text: “${userSnippet || '(empty)'}”.\n\nUse the catalog picker, type an ID (**K-5031**), or paste **more words from the document title** (division, city, “MUNI”, etc.).`,
         )
         return
       }
@@ -823,6 +845,7 @@ export default function WorkflowChatPage() {
 
   if (role === 'POC') {
     const sortedSessions = [...pocSessions].sort((a, b) => b.updatedAt - a.updatedAt)
+    const pocGateOk = pocSessions.find(s => s.id === pocActiveSessionId)?.pocHiGatePassed === true
     return (
       <Layout>
         <main className="workflow-chat workflow-chat--poc">
@@ -857,14 +880,14 @@ export default function WorkflowChatPage() {
           )}
 
           <div className="workflow-chat-poc__shell">
-            <aside className="workflow-chat-poc__sidebar" aria-label="Chat history">
+            <aside className="workflow-chat-poc__sidebar" aria-label="Ops Agent">
               <Link to="/poc" className="workflow-chat-poc__back-link">
                 ← Knowledge documents
               </Link>
 
               <div className="workflow-chat-poc__nav-section">
                 <button type="button" className="workflow-chat-poc__nav-head" aria-expanded="true">
-                  <span>Document chat</span>
+                  <span>Ops Agent</span>
                   <span className="workflow-chat-poc__chevron" aria-hidden>
                     ▾
                   </span>
@@ -902,20 +925,12 @@ export default function WorkflowChatPage() {
                 </ul>
               </div>
 
-              <div className="workflow-chat-poc__sidebar-foot">
-                <p className="workflow-chat-poc__hint-block">
-                  Attachments stay in this browser session only (not uploaded to a server).
-                </p>
-              </div>
             </aside>
 
             <div className="workflow-chat-poc__main">
               <div className="workflow-chat-poc__main-scroll">
                 <div className="workflow-chat-poc__hero">
-                  <h1 className="workflow-chat-poc__hero-title">Document chat</h1>
-                  <p className="workflow-chat-poc__hero-sub">
-                    Use the Document menu next to Attach (or mention title or ID in chat). Send to preview highlights, then Confirm & apply. Opening the document shows the planned sections and fields in green.
-                  </p>
+                  <h1 className="workflow-chat-poc__hero-title">Ops Agent</h1>
                 </div>
 
                 {attachedName && (
@@ -945,16 +960,16 @@ export default function WorkflowChatPage() {
                 <div className="workflow-chat-poc__composer-tools">
                   <div className="workflow-chat-poc__composer-doc-wrap">
                     <label className="workflow-chat-poc__composer-doc-label" htmlFor="chat-doc-select-poc-composer">
-                      Document
+                      Catalog
                     </label>
                     <select
                       id="chat-doc-select-poc-composer"
                       className="workflow-chat-poc__composer-select"
                       value={selectedDocId}
                       onChange={e => setSelectedDocId(e.target.value)}
-                      aria-label="Active document for this chat"
+                      aria-label="Catalog row to match"
                     >
-                      <option value="">Select document…</option>
+                      <option value="">Select…</option>
                       {docOptions.map(d => (
                         <option key={d.id} value={d.id}>
                           {d.id} · {d.sub?.slice(0, 40) || '—'}
@@ -974,7 +989,7 @@ export default function WorkflowChatPage() {
                   <input
                     type="text"
                     className="workflow-chat-poc__input"
-                    placeholder="Describe your request (document ID + changes)…"
+                    placeholder={pocGateOk ? 'Message…' : 'Type hi first, then send…'}
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={e => {
@@ -997,7 +1012,7 @@ export default function WorkflowChatPage() {
                     </svg>
                   </button>
                 </div>
-                <p className="workflow-chat-poc__composer-hint">Enter to send · Workflow assistant</p>
+                <p className="workflow-chat-poc__composer-hint">Enter to send · Ops Agent</p>
               </div>
             </div>
           </div>
@@ -1006,23 +1021,18 @@ export default function WorkflowChatPage() {
     )
   }
 
-  const reviewerHeroSub =
-    role === 'BUFM'
-      ? 'Select a document in the Document menu (or mention title or ID), then send a message. You get a **summary of POC-related changes** in one reply, with **Open document**, **Approve**, and **Reject**.'
-      : 'Send **any text** — ID, **document name**, city, division, or notes. The app **matches** a catalog document (menu overrides), then one reply shows **Initialization** + **POC / BUFM / KMT** context. Actions: **open**, **edit details**, **publish**, **reject**, **release** (when applicable).'
-
   return (
     <Layout>
       <main className="workflow-chat workflow-chat--poc">
         <div className="workflow-chat-poc__shell">
-          <aside className="workflow-chat-poc__sidebar" aria-label="Chat">
+          <aside className="workflow-chat-poc__sidebar" aria-label="Ops Agent">
             <Link to={reviewerChatBack.to} className="workflow-chat-poc__back-link">
               {reviewerChatBack.label}
             </Link>
 
             <div className="workflow-chat-poc__nav-section">
               <button type="button" className="workflow-chat-poc__nav-head" aria-expanded="true">
-                <span>Document chat</span>
+                <span>Ops Agent</span>
                 <span className="workflow-chat-poc__chevron" aria-hidden>
                   ▾
                 </span>
@@ -1050,18 +1060,12 @@ export default function WorkflowChatPage() {
               </ul>
             </div>
 
-            <div className="workflow-chat-poc__sidebar-foot">
-              <p className="workflow-chat-poc__hint-block">
-                Attachments stay in this browser session only (not uploaded to a server).
-              </p>
-            </div>
           </aside>
 
           <div className="workflow-chat-poc__main">
             <div className="workflow-chat-poc__main-scroll">
               <div className="workflow-chat-poc__hero">
-                <h1 className="workflow-chat-poc__hero-title">Document chat</h1>
-                <p className="workflow-chat-poc__hero-sub">{reviewerHeroSub}</p>
+                <h1 className="workflow-chat-poc__hero-title">Ops Agent</h1>
               </div>
 
               {attachedName && (
@@ -1091,16 +1095,16 @@ export default function WorkflowChatPage() {
               <div className="workflow-chat-poc__composer-tools">
                 <div className="workflow-chat-poc__composer-doc-wrap">
                   <label className="workflow-chat-poc__composer-doc-label" htmlFor="chat-doc-select-reviewer-composer">
-                    Document
+                    Catalog
                   </label>
                   <select
                     id="chat-doc-select-reviewer-composer"
                     className="workflow-chat-poc__composer-select"
                     value={selectedDocId}
                     onChange={e => setSelectedDocId(e.target.value)}
-                    aria-label="Active document for this chat"
+                    aria-label="Catalog row to match"
                   >
-                    <option value="">Select document…</option>
+                    <option value="">Select…</option>
                     {docOptions.map(d => (
                       <option key={d.id} value={d.id}>
                         {d.id} · {d.sub?.slice(0, 40) || '—'}
@@ -1120,11 +1124,7 @@ export default function WorkflowChatPage() {
                 <input
                   type="text"
                   className="workflow-chat-poc__input"
-                  placeholder={
-                    role === 'BUFM'
-                      ? 'e.g. K-5031 — summarize POC updates for my review'
-                      : 'e.g. K-5031 — summarize POC and reviewer context'
-                  }
+                  placeholder="Message…"
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => {
@@ -1147,7 +1147,7 @@ export default function WorkflowChatPage() {
                   </svg>
                 </button>
               </div>
-              <p className="workflow-chat-poc__composer-hint">Enter to send · Workflow assistant</p>
+              <p className="workflow-chat-poc__composer-hint">Enter to send · Ops Agent</p>
             </div>
           </div>
         </div>

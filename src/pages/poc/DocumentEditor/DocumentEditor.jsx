@@ -510,7 +510,7 @@ export default function DocumentEditor() {
 
       {chatHighlightSession && (
         <div className="doc-chat-workflow-banner" role="status">
-          From document chat: sections and fields below are highlighted in <strong>green</strong> for this review. Use <strong>Save Draft</strong> or <strong>Submit for Approval</strong> in the bar above, or return to chat to continue.
+          From Ops Agent: sections and fields below are highlighted in <strong>green</strong> for this review. Use <strong>Save Draft</strong> or <strong>Submit for Approval</strong> in the bar above, or return to Ops Agent to continue.
         </div>
       )}
 

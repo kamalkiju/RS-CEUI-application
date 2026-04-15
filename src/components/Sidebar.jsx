@@ -69,7 +69,7 @@ const NAV_ITEMS_POC = [
   { label: 'Knowledge Documents', path: '/poc', icon: ICON_DOC },
   { label: 'RSAUI Documents', path: '/poc/document-review', icon: ICON_REPORT },
   { label: 'Settings', path: '/poc/settings', icon: ICON_SETTINGS },
-  { label: 'Chat', path: '/poc/chat', icon: ICON_CHAT },
+  { label: 'Ops Agent', path: '/poc/chat', icon: ICON_CHAT },
 ]
 
 const NAV_ITEMS_BUFM = [
@@ -77,7 +77,7 @@ const NAV_ITEMS_BUFM = [
   { label: 'Document Review', path: '/bufm/document-review', icon: ICON_REPORT },
   { label: 'Users', path: '/bufm/users', icon: ICON_USERS },
   { label: 'Settings', path: '/bufm/settings', icon: ICON_SETTINGS },
-  { label: 'Chat', path: '/bufm/chat', icon: ICON_CHAT },
+  { label: 'Ops Agent', path: '/bufm/chat', icon: ICON_CHAT },
 ]
 
 /** KMT: documents & templates before document review (per unified nav order) */
@@ -97,7 +97,7 @@ const NAV_ITEMS_KMT = [
   { label: 'Users', path: '/kmt/users', icon: ICON_USERS },
   { label: 'Delegations', path: '/kmt/delegations', icon: ICON_DELEGATION },
   { label: 'Settings', path: '/kmt/settings', icon: ICON_SETTINGS },
-  { label: 'Chat', path: '/kmt/chat', icon: ICON_CHAT },
+  { label: 'Ops Agent', path: '/kmt/chat', icon: ICON_CHAT },
 ]
 
 function getNavItems(role) {

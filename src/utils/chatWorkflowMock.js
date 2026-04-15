@@ -133,7 +133,7 @@ export function formatChatDocumentResolutionLine(userLine, doc, matchSource) {
   const label = doc.sub || doc.id
   switch (matchSource) {
     case 'menu':
-      return `**Initialization** — Using the document selected in the **Document** menu: **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
+      return `**Initialization** — Using the **catalog** row selected in the picker: **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
     case 'explicit_id':
       return `**Initialization** — Matched **catalog ID** in your message: **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
     case 'title_prefix':
