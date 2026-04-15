@@ -4,52 +4,147 @@
 
 const DOC_ID_RE = /\b(K-[A-Za-z0-9]+)\b/
 
+function norm(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function extractDocumentId(text, docs = []) {
   const m = String(text || '').match(DOC_ID_RE)
-  if (m) return m[1]
-  const t = String(text || '').toLowerCase()
+  if (m) {
+    const id = m[1]
+    if (docs.some(d => d.id === id)) return id
+  }
+  const t = norm(text)
   for (const d of docs) {
-    const sub = (d.sub || '').toLowerCase()
-    if (sub && t.includes(sub.slice(0, Math.min(24, sub.length)))) return d.id
+    const sub = norm(d.sub || '')
+    if (!sub) continue
+    if (t.includes(sub.slice(0, Math.min(24, sub.length)))) return d.id
+    if (sub.length >= 8 && t.includes(sub.slice(0, Math.min(12, sub.length)))) return d.id
   }
   return null
 }
 
 /**
- * Fuzzy match: significant tokens from document title appear in the message.
+ * Longest substring of catalog title (or whole title) that appears in the user message, or user phrase contained in title.
  */
-function fuzzyMatchDocumentId(text, docs = []) {
-  const t = String(text || '').toLowerCase()
-  if (!t.trim()) return null
+function matchByTitlePhrase(text, docs = []) {
+  const t = norm(text)
+  if (t.length < 3) return null
+  let bestId = null
+  let bestScore = 0
+  for (const d of docs) {
+    const sub = norm(d.sub || '')
+    if (!sub) continue
+    let score = 0
+    if (t.length >= 4 && sub.includes(t)) score = Math.max(score, 55 + Math.min(t.length, 40))
+    if (sub.length >= 6 && t.includes(sub)) score = Math.max(score, 70 + Math.min(sub.length, 30))
+    const maxLen = Math.min(sub.length, 64)
+    for (let len = maxLen; len >= 5; len--) {
+      for (let i = 0; i + len <= sub.length; i++) {
+        const chunk = sub.slice(i, i + len)
+        if (t.includes(chunk)) score = Math.max(score, len * 2 + (i === 0 ? 4 : 0))
+      }
+    }
+    const area = norm(d.area || '')
+    if (area.length > 5) {
+      const ap = area.slice(0, Math.min(24, area.length))
+      if (t.includes(ap)) score += 12
+    }
+    if (score > bestScore) {
+      bestScore = score
+      bestId = d.id
+    }
+  }
+  return bestScore >= 10 ? { docId: bestId, matchSource: 'title_phrase' } : null
+}
+
+/**
+ * Fuzzy match: tokens from document title appear in the message (shorter tokens allowed for casual queries).
+ */
+function fuzzyMatchDocumentMeta(text, docs = []) {
+  const t = norm(text)
+  if (!t) return null
   let bestId = null
   let bestScore = 0
   for (const d of docs) {
     const tokens = String(d.sub || '')
       .toLowerCase()
       .split(/[^a-z0-9]+/)
-      .filter(x => x.length >= 5)
+      .filter(x => x.length >= 4)
     const uniq = [...new Set(tokens)]
     let score = 0
     for (const tok of uniq) {
       if (t.includes(tok)) score += tok.length >= 8 ? 4 : 2
     }
-    if (String(d.area || '').length > 4 && t.includes(String(d.area).toLowerCase().slice(0, 12))) score += 3
+    if (String(d.area || '').length > 4 && t.includes(String(d.area).toLowerCase().slice(0, 14))) score += 3
     if (score > bestScore) {
       bestScore = score
       bestId = d.id
     }
   }
-  return bestScore >= 2 ? bestId : null
+  return bestScore >= 2 ? { docId: bestId, matchSource: 'fuzzy_tokens' } : null
+}
+
+/**
+ * Prefer sidebar selection, then explicit ID / title substring, then title phrase overlap, then fuzzy tokens.
+ * @returns {{ docId: string | null, matchSource: 'menu' | 'explicit_id' | 'title_prefix' | 'title_phrase' | 'fuzzy_tokens' | null }}
+ */
+export function resolveChatDocumentIdWithMeta(text, selectedDocId, docs = []) {
+  if (selectedDocId && docs.some(d => d.id === selectedDocId)) {
+    return { docId: selectedDocId, matchSource: 'menu' }
+  }
+  const raw = String(text || '')
+  const idMatch = raw.match(DOC_ID_RE)
+  if (idMatch) {
+    const id = idMatch[1]
+    if (docs.some(d => d.id === id)) return { docId: id, matchSource: 'explicit_id' }
+  }
+  const byExtract = extractDocumentId(text, docs)
+  if (byExtract) {
+    return { docId: byExtract, matchSource: idMatch ? 'explicit_id' : 'title_prefix' }
+  }
+  const phrase = matchByTitlePhrase(text, docs)
+  if (phrase) return phrase
+  const fuzzy = fuzzyMatchDocumentMeta(text, docs)
+  if (fuzzy) return fuzzy
+  return { docId: null, matchSource: null }
 }
 
 /**
  * Prefer sidebar selection, then explicit ID / title substring, then fuzzy title match.
  */
 export function resolveChatDocumentId(text, selectedDocId, docs = []) {
-  if (selectedDocId && docs.some(d => d.id === selectedDocId)) return selectedDocId
-  const byExtract = extractDocumentId(text, docs)
-  if (byExtract) return byExtract
-  return fuzzyMatchDocumentId(text, docs)
+  return resolveChatDocumentIdWithMeta(text, selectedDocId, docs).docId
+}
+
+/**
+ * Human-readable line for chat: how the catalog document was chosen from free text.
+ */
+export function formatChatDocumentResolutionLine(userLine, doc, matchSource) {
+  if (!doc) return ''
+  const snippet = String(userLine || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, 220)
+  const safe = snippet || '(empty)'
+  const label = doc.sub || doc.id
+  switch (matchSource) {
+    case 'menu':
+      return `**Initialization** — Using the document selected in the **Document** menu: **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
+    case 'explicit_id':
+      return `**Initialization** — Matched **catalog ID** in your message: **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
+    case 'title_prefix':
+      return `**Initialization** — Matched a **title prefix** from your text: **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
+    case 'title_phrase':
+      return `**Initialization** — Matched **document name / phrase** overlap: **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
+    case 'fuzzy_tokens':
+      return `**Initialization** — Matched **keywords** against catalog titles (best fit): **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
+    default:
+      return `**Initialization** — **${label}** (\`${doc.id}\`).\n\n**Your message:** “${safe}”\n`
+  }
 }
 
 /** When the message does not map to wizard areas, use a small default patch so the chat session always has highlight targets. */

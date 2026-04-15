@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { useDocs, generateDocId } from '../../context/DocContext.jsx'
 import {
   resolveChatDocumentId,
+  resolveChatDocumentIdWithMeta,
+  formatChatDocumentResolutionLine,
   inferSimulatedPocPatches,
   ensurePocChatPatches,
   defaultChatSummary,
@@ -54,7 +56,7 @@ function kmtWelcomeMessages() {
       role: 'assistant',
       id: 'welcome',
       content:
-        'Welcome to **KMT document chat**. Select a document in the **Document** menu (or type its ID or title), then send any message. You get one consolidated **summary**: POC updates, **BUFM** notes or approval state, prior **KMT** feedback when present, plus inferred review focus from your text. Use **Open document** (POC highlights in green), **Edit details**, **Publish**, **Reject**, or **Release task** when shown.',
+        'Welcome to **KMT document chat**. You can send **any text** — a **document ID** (e.g. K-5031), part of the **title**, a **city or division name**, or casual notes. If the **Document** menu is set, that catalog entry wins; otherwise we **match** your message to the best knowledge document and show an **Initialization** line plus the **summary**. Actions: **Open document**, **Edit details**, **Publish**, **Reject**, **Release task** (when shown).',
     },
   ]
 }
@@ -533,7 +535,7 @@ export default function WorkflowChatPage() {
     if (role === 'POC') {
       if (!docId || !doc) {
         pushAssistantPoc(
-          'I could not match a document. Pick one in the **Document** menu next to Attach, type an ID like **K-5031**, or paste enough of the document title so we can match it.',
+          `I could not match a document to: “${userSnippet || '(empty)'}”. Pick one in the **Document** menu, type a catalog ID like **K-5031**, or paste more of the **document title** (city, division, or key words).`,
         )
         return
       }
@@ -557,19 +559,20 @@ export default function WorkflowChatPage() {
     if (role === 'BUFM') {
       if (!doc) {
         pushAssistant(
-          'Select a document in the menu next to **Attach**, or type an ID such as **K-5031** and enough of the document title to match.',
+          `No catalog document matched: “${userSnippet || '(empty)'}”. Use the **Document** menu, an ID like **K-5031**, or more words from the **title** (e.g. city or “DIV …”).`,
         )
         return
       }
       const extrasNav = buildNavigationExtrasForReviewer(doc, userLine)
       const storedExtras = buildChatWorkflowExtrasFromDoc(doc)
       await runProgress()
+      const initLine = formatChatDocumentResolutionLine(userLine, doc, matchSource)
       const body = formatPocChangesForChat(doc, { roleLabel: 'POC' })
       let inferredAppend = ''
       if (!storedExtras && extrasNav.sections?.length) {
         inferredAppend = `\n\n---\n\n**Review focus (from your message)** — highlight targets for this visit:\n\n**Sections**\n${extrasNav.sections.map(s => `• ${s}`).join('\n')}\n\n**Fields**\n${extrasNav.fields.map(f => `• ${f}`).join('\n')}`
       }
-      const summaryBlock = `**Summary — POC-related changes**\nInitializing → processing → **completed** for **${doc.sub || doc.id}** (\`${doc.id}\`).\n\n${body}${inferredAppend}\n\n---\n\nUse the buttons below to **open the document** (green POC highlights), **approve**, or **reject** (when this document is awaiting BUFM approval).`
+      const summaryBlock = `**Summary — POC-related changes**\n${initLine}\nInitializing → processing → **completed** for **${doc.sub || doc.id}** (\`${doc.id}\`).\n\n${body}${inferredAppend}\n\n---\n\nUse the buttons below to **open the document** (green POC highlights), **approve**, or **reject** (when this document is awaiting BUFM approval).`
       pushAssistant(summaryBlock, {
         actions: [
           { type: 'openBufm', label: 'Open document', docId: doc.id, extras: extrasNav },
@@ -583,19 +586,20 @@ export default function WorkflowChatPage() {
     if (role === 'KMT') {
       if (!doc) {
         pushAssistant(
-          'Select a document in the menu next to **Attach**, or type an ID and enough of the title to match.',
+          `**Initialization** — No knowledge document matched your text: “${userSnippet || '(empty)'}”.\n\nUse the **Document** menu for an exact catalog row, type an ID (**K-5031**), or paste **more words from the document title** (division, city, “MUNI”, etc.).`,
         )
         return
       }
       const extrasNav = buildNavigationExtrasForReviewer(doc, userLine)
       const storedExtras = buildChatWorkflowExtrasFromDoc(doc)
       await runProgress()
+      const initLine = formatChatDocumentResolutionLine(userLine, doc, matchSource)
       const body = formatPocChangesForChat(doc, { roleLabel: 'POC' }) + formatKmtReviewerContext(doc)
       let inferredAppend = ''
       if (!storedExtras && extrasNav.sections?.length) {
         inferredAppend = `\n\n---\n\n**Review focus (from your message)** — temporary highlight targets for this visit:\n\n**Sections**\n${extrasNav.sections.map(s => `• ${s}`).join('\n')}\n\n**Fields**\n${extrasNav.fields.map(f => `• ${f}`).join('\n')}`
       }
-      const summaryBlock = `**Summary — KMT document review**\nInitializing → processing → **completed** for **${doc.sub || doc.id}** (\`${doc.id}\`).\n\n${body}${inferredAppend}\n\n---\n\nUse the buttons below to **open the document** (green POC highlights where metadata exists), **edit catalog details** (title, geography, service area), **publish** or **reject** when pending KMT, or **release task** (demo).`
+      const summaryBlock = `**Summary — KMT document review**\n${initLine}\nInitializing → processing → **completed** for **${doc.sub || doc.id}** (\`${doc.id}\`).\n\n${body}${inferredAppend}\n\n---\n\nUse the buttons below to **open the document** (green POC highlights where metadata exists), **edit catalog details** (title, geography, service area), **publish** or **reject** when pending KMT, or **release task** (demo).`
       pushAssistant(summaryBlock, {
         actions: [
           { type: 'openKmt', label: 'Open document', docId: doc.id, extras: extrasNav },
@@ -1005,7 +1009,7 @@ export default function WorkflowChatPage() {
   const reviewerHeroSub =
     role === 'BUFM'
       ? 'Select a document in the Document menu (or mention title or ID), then send a message. You get a **summary of POC-related changes** in one reply, with **Open document**, **Approve**, and **Reject**.'
-      : 'Select a document in the Document menu (or mention title or ID). One reply summarizes **POC**, **BUFM**, and **KMT** context, with actions to **open**, **edit details**, **publish**, **reject**, or **release** (when applicable).'
+      : 'Send **any text** — ID, **document name**, city, division, or notes. The app **matches** a catalog document (menu overrides), then one reply shows **Initialization** + **POC / BUFM / KMT** context. Actions: **open**, **edit details**, **publish**, **reject**, **release** (when applicable).'
 
   return (
     <Layout>
