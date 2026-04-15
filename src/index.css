@@ -6337,13 +6337,13 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   border-radius: 50%;
   background: #1d4ed8;
   opacity: 0.28;
-  animation: poc-ops-dot-wave 1.85s ease-in-out infinite;
+  animation: poc-ops-dot-wave 3.1s ease-in-out infinite;
 }
 .poc-ops-stepper__dot:nth-child(2) {
-  animation-delay: 0.28s;
+  animation-delay: 0.5s;
 }
 .poc-ops-stepper__dot:nth-child(3) {
-  animation-delay: 0.56s;
+  animation-delay: 1s;
 }
 @keyframes poc-ops-dot-wave {
   0%,
@@ -6353,7 +6353,7 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   }
   50% {
     opacity: 1;
-    transform: translateY(-3px);
+    transform: translateY(-2px);
   }
 }
 @keyframes poc-ops-pulse {

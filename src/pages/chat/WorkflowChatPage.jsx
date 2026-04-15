@@ -53,7 +53,12 @@ function defaultKmtPromptForDocId(docId) {
   return `${docId} — Summarize the updates on this document (POC changes, BUFM comments)`
 }
 
-const POC_OPS_STEP_LABELS = ['Analyzing document', 'Checking the fields', 'Updating the fields', 'Completed']
+const POC_OPS_STEP_LABELS = [
+  'Analyzing the documents',
+  'Checking the details',
+  'Updating the fields',
+  'Completed',
+]
 
 function PocOpsStepper({ stepIndex }) {
   return (
@@ -513,7 +518,7 @@ export default function WorkflowChatPage() {
   const runOpsAnalysisSteps = async () => {
     for (let s = 0; s < 4; s++) {
       setOpsAnalysisStep(s)
-      await delay(s === 3 ? 900 : 980)
+      await delay(s === 3 ? 1200 : 1350)
     }
   }
 
