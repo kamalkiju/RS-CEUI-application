@@ -106,7 +106,7 @@ export default function DocumentEditor() {
   const { updateDoc, getDocumentById } = useDocs()
 
   // Document data passed from the list or create flow (must be before liveDoc — avoids TDZ crash / white screen)
-  const { doc, mode, previewOnly, fromChatWorkflow } = location.state || {}
+  const { doc, mode, previewOnly, fromChatWorkflow, returnToChat, pocChatSessionId } = location.state || {}
   const [chatWorkflowExtras] = useState(() => fromChatWorkflow ?? null)
   const liveDoc = doc?.id ? getDocumentById(doc.id) : doc
   const effectiveDoc = useMemo(
@@ -319,7 +319,15 @@ export default function DocumentEditor() {
     <Layout>
       {/* Sub topbar */}
       <div className="topbar">
-        <button className="back-btn" onClick={() => navigate('/poc')} aria-label="Back">
+        <button
+          className="back-btn"
+          onClick={() =>
+            returnToChat
+              ? navigate(returnToChat, { state: { chatSessionFocus: pocChatSessionId } })
+              : navigate('/poc')
+          }
+          aria-label="Back"
+        >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <div className="doc-title-group">

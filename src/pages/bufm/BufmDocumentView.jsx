@@ -191,82 +191,100 @@ export default function BufmDocumentView() {
                   <polyline points="15 18 9 12 15 6" />
                 </svg>
               </button>
-              <div className="bufm-doc-view__header-main">
-                <div className="bufm-doc-view__title-row">
-                  <h1 className="bufm-doc-view__title">{doc.sub || doc.id}</h1>
-                  <VersionBadge doc={doc} />
+              <div className="bufm-doc-view__header-cluster">
+                <div className="bufm-doc-view__header-top">
+                  <div className="bufm-doc-view__header-main">
+                    <div className="bufm-doc-view__title-row">
+                      <h1 className="bufm-doc-view__title">{doc.sub || doc.id}</h1>
+                      <VersionBadge doc={doc} />
+                    </div>
+                    <p className="bufm-doc-view__subline">
+                      {doc.id} · {doc.lob || '—'} · {doc.market || '—'}
+                    </p>
+                    <div className="bufm-doc-view__version-links">
+                      <button type="button" className="btn btn-text btn-sm" onClick={() => window.alert('Mock: open previous version (no backend).')}>
+                        {getPreviousVersionLinkLabel(doc)}
+                      </button>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={() => window.alert('Mock compare: diff vs previous version (UI only).')}>
+                        Compare with Previous Version
+                      </button>
+                      <button type="button" className="btn btn-text btn-sm" onClick={() => setHistoryOpen(true)}>
+                        View Version History
+                      </button>
+                    </div>
+                    <p className="bufm-doc-view__case-line">
+                      Case status: <strong>{getCaseStageDisplay(doc)}</strong>
+                    </p>
+                    <dl className="bufm-doc-view__meta-grid" aria-label="Document summary">
+                      <div className="bufm-doc-view__meta-item">
+                        <dt>Service area</dt>
+                        <dd>{serviceAreaLabel}</dd>
+                      </div>
+                      <div className="bufm-doc-view__meta-item">
+                        <dt>Market</dt>
+                        <dd>{doc.market || '—'}</dd>
+                      </div>
+                      <div className="bufm-doc-view__meta-item">
+                        <dt>Status</dt>
+                        <dd>
+                          <span className={`bufm-status bufm-status--${disp?.statusClass || 'draft'}`}>{disp?.label}</span>
+                        </dd>
+                      </div>
+                      <div className="bufm-doc-view__meta-item">
+                        <dt>Version</dt>
+                        <dd className="bufm-doc-view__review-version">Reviewing {inferDocVersion(doc)}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                  {showReviewActions && (
+                    <div className="bufm-doc-view__header-actions">
+                      <button type="button" className="btn btn-primary" onClick={handleApprove}>
+                        Approve
+                      </button>
+                      <button type="button" className="btn btn-outline bufm-doc-view__reject" onClick={() => setRejectOpen(true)}>
+                        Reject
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div className="bufm-doc-view__version-links">
-                  <button type="button" className="btn btn-text btn-sm" onClick={() => window.alert('Mock: open previous version (no backend).')}>
-                    {getPreviousVersionLinkLabel(doc)}
-                  </button>
-                  <button type="button" className="btn btn-outline btn-sm" onClick={() => window.alert('Mock compare: diff vs previous version (UI only).')}>
-                    Compare with Previous Version
-                  </button>
-                  <button type="button" className="btn btn-text btn-sm" onClick={() => setHistoryOpen(true)}>
-                    View Version History
-                  </button>
-                </div>
-                <p className="bufm-doc-view__case-line">
-                  Case status: <strong>{getCaseStageDisplay(doc)}</strong>
-                </p>
-                <div className="bufm-doc-view__header-meta">
-                  <span>{serviceAreaLabel}</span>
-                  <span className="bufm-doc-view__dot">·</span>
-                  <span>Market: {doc.market || '—'}</span>
-                  <span className="bufm-doc-view__dot">·</span>
-                  <span className={`bufm-status bufm-status--${disp?.statusClass || 'draft'}`}>{disp?.label}</span>
-                  <span className="bufm-doc-view__dot">·</span>
-                  <span className="bufm-doc-view__review-version">Reviewing {inferDocVersion(doc)}</span>
-                </div>
+                {showReviewActions && rejectPicks.length > 0 && (
+                  <div className="reviewer-pick-hint" role="status">
+                    <strong>{rejectPicks.length}</strong> item{rejectPicks.length === 1 ? '' : 's'} flagged on the document — click <strong>Reject</strong> to add comments for each row and return to the POC.
+                  </div>
+                )}
+                {showReviewActions && (doc.pocResubmissionNote || lastBufmReject) && (
+                  <div className="bufm-doc-view__resubmit-context">
+                    {doc.pocResubmissionNote && (
+                      <div className="rsa-poc-resubmit-note" role="status">
+                        <strong>POC resubmission note</strong>
+                        {doc.pocResubmissionNote}
+                      </div>
+                    )}
+                    {lastBufmReject && (lastBufmReject.feedbackItems?.length > 0 || lastBufmReject.comment) && (
+                      <div className="rsa-reviewer-verify" role="region" aria-label="Previous rejection feedback">
+                        <strong>Verify prior feedback</strong>
+                        {lastBufmReject.comment && <p style={{ margin: '0 0 8px' }}>{lastBufmReject.comment}</p>}
+                        {lastBufmReject.feedbackItems?.length > 0 && (
+                          <ul>
+                            {lastBufmReject.feedbackItems.map((it, i) => (
+                              <li key={it.id || i}>
+                                <strong>{it.label}</strong>
+                                {it.comment ? ` — ${it.comment}` : ''}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              {showReviewActions && rejectPicks.length > 0 && (
-                <div className="reviewer-pick-hint" role="status">
-                  <strong>{rejectPicks.length}</strong> item{rejectPicks.length === 1 ? '' : 's'} flagged on the document — click <strong>Reject</strong> to add comments for each row and return to the POC.
-                </div>
-              )}
-              {showReviewActions && (
-                <div className="bufm-doc-view__header-actions">
-                  <button type="button" className="btn btn-primary" onClick={handleApprove}>
-                    Approve
-                  </button>
-                  <button type="button" className="btn btn-outline bufm-doc-view__reject" onClick={() => setRejectOpen(true)}>
-                    Reject
-                  </button>
-                </div>
-              )}
-              {showReviewActions && (doc.pocResubmissionNote || lastBufmReject) && (
-                <div className="bufm-doc-view__resubmit-context" style={{ marginTop: 12 }}>
-                  {doc.pocResubmissionNote && (
-                    <div className="rsa-poc-resubmit-note" role="status">
-                      <strong>POC resubmission note</strong>
-                      {doc.pocResubmissionNote}
-                    </div>
-                  )}
-                  {lastBufmReject && (lastBufmReject.feedbackItems?.length > 0 || lastBufmReject.comment) && (
-                    <div className="rsa-reviewer-verify" role="region" aria-label="Previous rejection feedback">
-                      <strong>Verify prior feedback</strong>
-                      {lastBufmReject.comment && <p style={{ margin: '0 0 8px' }}>{lastBufmReject.comment}</p>}
-                      {lastBufmReject.feedbackItems?.length > 0 && (
-                        <ul>
-                          {lastBufmReject.feedbackItems.map((it, i) => (
-                            <li key={it.id || i}>
-                              <strong>{it.label}</strong>
-                              {it.comment ? ` — ${it.comment}` : ''}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
             </header>
           </div>
 
           {chatWorkflowExtras && (
             <div className="doc-chat-workflow-banner doc-chat-workflow-banner--bufm" role="status">
-              Workflow chat: merged simulated POC highlights for this visit (not persisted).
+              From workflow chat: temporary POC highlight overlay for this visit (not saved until the document is updated in the system).
             </div>
           )}
 
@@ -305,67 +323,69 @@ export default function BufmDocumentView() {
           </div>
 
           <div className="bufm-doc-view__scroll">
-          <section className="bufm-doc-view__step-content">
-            <h2
-              className={`bufm-doc-view__step-heading${wholeStepReviewer ? ' bufm-doc-view__step-heading--reviewer-flag' : ''}${
-                wholeStepPoc ? ' bufm-doc-view__step-heading--poc-update' : ''
-              }`}
-            >
-              {heading.title}
-            </h2>
-            <p className="bufm-doc-view__step-sub">{heading.subtitle}</p>
-            <div className="bufm-doc-view__accordions">
-              {sections.map((sec, i) => (
-                <ReadOnlyFieldsAccordion
-                  key={`${activeStep}-${i}-${sec.title}`}
-                  title={sec.title}
-                  badge={sec.badge}
-                  fields={sec.fields || []}
-                  sectionFlagged={wholeStepReviewer || isSectionFlagged(sec.title, reviewerSets.sections)}
-                  pocSectionFlagged={wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)}
-                  fieldFlags={label => isFieldFlagged(label, reviewerSets.fields)}
-                  pocFieldFlags={label => isFieldFlagged(label, pocSets.fields)}
-                  flagPickerMode={showReviewActions}
-                  sectionPickActive={isRejectPick('section', sec.title)}
-                  onFlagSection={() => toggleRejectPick('section', sec.title)}
-                  onFlagField={fld => toggleRejectPick('field', fld)}
-                  fieldPickActive={lbl => isRejectPick('field', lbl)}
-                />
-              ))}
-            </div>
-          </section>
+            <div className="bufm-doc-view__preview">
+              <section className="bufm-doc-view__step-content">
+                <h2
+                  className={`bufm-doc-view__step-heading${wholeStepReviewer ? ' bufm-doc-view__step-heading--reviewer-flag' : ''}${
+                    wholeStepPoc ? ' bufm-doc-view__step-heading--poc-update' : ''
+                  }`}
+                >
+                  {heading.title}
+                </h2>
+                <p className="bufm-doc-view__step-sub">{heading.subtitle}</p>
+                <div className="bufm-doc-view__accordions">
+                  {sections.map((sec, i) => (
+                    <ReadOnlyFieldsAccordion
+                      key={`${activeStep}-${i}-${sec.title}`}
+                      title={sec.title}
+                      badge={sec.badge}
+                      fields={sec.fields || []}
+                      sectionFlagged={wholeStepReviewer || isSectionFlagged(sec.title, reviewerSets.sections)}
+                      pocSectionFlagged={wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)}
+                      fieldFlags={label => isFieldFlagged(label, reviewerSets.fields)}
+                      pocFieldFlags={label => isFieldFlagged(label, pocSets.fields)}
+                      flagPickerMode={showReviewActions}
+                      sectionPickActive={isRejectPick('section', sec.title)}
+                      onFlagSection={() => toggleRejectPick('section', sec.title)}
+                      onFlagField={fld => toggleRejectPick('field', fld)}
+                      fieldPickActive={lbl => isRejectPick('field', lbl)}
+                    />
+                  ))}
+                </div>
+              </section>
 
-          <footer className="bufm-doc-view__footer">
-            <div className="bufm-doc-view__footer-nav">
-              <button
-                type="button"
-                className="btn btn-outline"
-                disabled={activeStep <= 1}
-                onClick={() => setActiveStep(s => Math.max(1, s - 1))}
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline"
-                disabled={activeStep >= 5}
-                onClick={() => setActiveStep(s => Math.min(5, s + 1))}
-              >
-                Next
-              </button>
+              <footer className="bufm-doc-view__footer">
+                <div className="bufm-doc-view__footer-nav">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    disabled={activeStep <= 1}
+                    onClick={() => setActiveStep(s => Math.max(1, s - 1))}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    disabled={activeStep >= 5}
+                    onClick={() => setActiveStep(s => Math.min(5, s + 1))}
+                  >
+                    Next
+                  </button>
+                </div>
+              </footer>
             </div>
-          </footer>
 
-          <section className="bufm-doc-view__pulse-wrap">
-            <DocumentPulseComments
-              documentId={doc.id}
-              getDocumentById={getDocumentById}
-              updateDoc={updateDoc}
-              viewerName={viewerName}
-              revision={pulseRevision}
-              allowAddComment
-            />
-          </section>
+            <section className="bufm-doc-view__pulse-wrap">
+              <DocumentPulseComments
+                documentId={doc.id}
+                getDocumentById={getDocumentById}
+                updateDoc={updateDoc}
+                viewerName={viewerName}
+                revision={pulseRevision}
+                allowAddComment
+              />
+            </section>
           </div>
         </div>
 

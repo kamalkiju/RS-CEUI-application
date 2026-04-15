@@ -283,102 +283,127 @@ export default function KmtDocumentView() {
                   <polyline points="15 18 9 12 15 6" />
                 </svg>
               </button>
-              <div className="bufm-doc-view__header-main">
-                <div className="bufm-doc-view__title-row">
-                  <h1 className="bufm-doc-view__title">
-                    {kmtEdit ? (basicSub.trim() || doc.sub || doc.id) : (doc.sub || doc.id)}
-                  </h1>
-                  <VersionBadge doc={doc} />
+              <div className="bufm-doc-view__header-cluster">
+                <div className="bufm-doc-view__header-top">
+                  <div className="bufm-doc-view__header-main">
+                    <div className="bufm-doc-view__title-row">
+                      <h1 className="bufm-doc-view__title">
+                        {kmtEdit ? (basicSub.trim() || doc.sub || doc.id) : (doc.sub || doc.id)}
+                      </h1>
+                      <VersionBadge doc={doc} />
+                    </div>
+                    <p className="bufm-doc-view__subline">
+                      {doc.id} ·{' '}
+                      {kmtEdit ? (basicLob || doc.lob || doc.market || '—') : (doc.lob || doc.market || '—')} ·{' '}
+                      {kmtEdit ? (basicMarket || doc.market || '—') : (doc.market || '—')}
+                    </p>
+                    {showBufmApprovedLine && (
+                      <p className="bufm-doc-view__bufm-ok">Approved by BUFM ✔</p>
+                    )}
+                    <div className="bufm-doc-view__version-links">
+                      <button
+                        type="button"
+                        className="btn btn-text btn-sm"
+                        disabled={!previousVersionDocId}
+                        title={
+                          previousVersionDocId
+                            ? 'Open the earlier submission from the same creator (demo catalog).'
+                            : 'No earlier version is linked for this document in the demo.'
+                        }
+                        onClick={() => previousVersionDocId && openDocumentDetail(previousVersionDocId)}
+                      >
+                        {getPreviousVersionLinkLabel(doc)}
+                      </button>
+                      <button type="button" className="btn btn-text btn-sm" onClick={() => setHistoryOpen(true)}>
+                        View Version History
+                      </button>
+                    </div>
+                    <p className="bufm-doc-view__case-line">
+                      Case status: <strong>{getCaseStageDisplay(doc)}</strong>
+                    </p>
+                    <dl className="bufm-doc-view__meta-grid" aria-label="Document summary">
+                      <div className="bufm-doc-view__meta-item">
+                        <dt>Service area</dt>
+                        <dd>{serviceAreaLabel}</dd>
+                      </div>
+                      <div className="bufm-doc-view__meta-item">
+                        <dt>Market</dt>
+                        <dd>{kmtEdit ? (basicMarket || doc.market || '—') : (doc.market || '—')}</dd>
+                      </div>
+                      <div className="bufm-doc-view__meta-item">
+                        <dt>LOB</dt>
+                        <dd>{kmtEdit ? (basicLob || doc.lob || '—') : (doc.lob || '—')}</dd>
+                      </div>
+                      <div className="bufm-doc-view__meta-item">
+                        <dt>Status</dt>
+                        <dd className="bufm-doc-view__meta-item-status">
+                          <span className={`bufm-status bufm-status--${disp?.statusClass || 'draft'}`}>
+                            {headerStatusLabel}
+                          </span>
+                          {showKmtRejectReason && (
+                            <span
+                              className="bufm-comment-indicator bufm-comment-indicator--header"
+                              title={doc.rejection_comment_KMT}
+                              aria-label="Rejection reason"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                <line x1="12" y1="9" x2="12" y2="13" />
+                                <line x1="12" y1="17" x2="12.01" y2="17" />
+                              </svg>
+                            </span>
+                          )}
+                        </dd>
+                      </div>
+                      <div className="bufm-doc-view__meta-item">
+                        <dt>Version</dt>
+                        <dd className="bufm-doc-view__review-version">Reviewing {inferDocVersion(doc)}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                  {showReviewActions && (
+                    <div className="bufm-doc-view__header-actions">
+                      <button type="button" className="btn btn-primary" onClick={handleApprove}>
+                        Publish
+                      </button>
+                      <button type="button" className="btn btn-outline bufm-doc-view__reject" onClick={() => setRejectOpen(true)}>
+                        Reject
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <p className="bufm-doc-view__subline">
-                  {doc.id} ·{' '}
-                  {kmtEdit ? (basicLob || doc.lob || doc.market || '—') : (doc.lob || doc.market || '—')} ·{' '}
-                  {kmtEdit ? (basicMarket || doc.market || '—') : (doc.market || '—')}
-                </p>
-                {showBufmApprovedLine && (
-                  <p className="bufm-doc-view__bufm-ok">Approved by BUFM ✔</p>
+                {showReviewActions && rejectPicks.length > 0 && (
+                  <div className="reviewer-pick-hint" role="status">
+                    <strong>{rejectPicks.length}</strong> item{rejectPicks.length === 1 ? '' : 's'} flagged on the document — click <strong>Reject</strong> to add comments for each row and return to the POC.
+                  </div>
                 )}
-                <div className="bufm-doc-view__version-links">
-                  <button
-                    type="button"
-                    className="btn btn-text btn-sm"
-                    disabled={!previousVersionDocId}
-                    title={
-                      previousVersionDocId
-                        ? 'Open the earlier submission from the same creator (demo catalog).'
-                        : 'No earlier version is linked for this document in the demo.'
-                    }
-                    onClick={() => previousVersionDocId && openDocumentDetail(previousVersionDocId)}
-                  >
-                    {getPreviousVersionLinkLabel(doc)}
-                  </button>
-                  <button type="button" className="btn btn-text btn-sm" onClick={() => setHistoryOpen(true)}>
-                    View Version History
-                  </button>
-                </div>
-                <p className="bufm-doc-view__case-line">
-                  Case status: <strong>{getCaseStageDisplay(doc)}</strong>
-                </p>
-                <div className="bufm-doc-view__header-meta">
-                  <span>{serviceAreaLabel}</span>
-                  <span className="bufm-doc-view__dot">·</span>
-                  <span>Market: {kmtEdit ? (basicMarket || doc.market || '—') : (doc.market || '—')}</span>
-                  <span className="bufm-doc-view__dot">·</span>
-                  <span>LOB: {kmtEdit ? (basicLob || doc.lob || '—') : (doc.lob || '—')}</span>
-                  <span className="bufm-doc-view__dot">·</span>
-                  <span className={`bufm-status bufm-status--${disp?.statusClass || 'draft'}`}>
-                    {headerStatusLabel}
-                  </span>
-                  {showKmtRejectReason && (
-                    <span className="bufm-comment-indicator bufm-comment-indicator--header" title={doc.rejection_comment_KMT} aria-label="Rejection reason">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    </span>
-                  )}
-                  <span className="bufm-doc-view__dot">·</span>
-                  <span className="bufm-doc-view__review-version">Reviewing {inferDocVersion(doc)}</span>
-                </div>
+                {showReviewActions && (doc.pocResubmissionNote || lastKmtReject) && (
+                  <div className="bufm-doc-view__resubmit-context">
+                    {doc.pocResubmissionNote && (
+                      <div className="rsa-poc-resubmit-note" role="status">
+                        <strong>POC resubmission note</strong>
+                        {doc.pocResubmissionNote}
+                      </div>
+                    )}
+                    {lastKmtReject && (lastKmtReject.feedbackItems?.length > 0 || lastKmtReject.comment) && (
+                      <div className="rsa-reviewer-verify" role="region" aria-label="Previous rejection feedback">
+                        <strong>Verify prior feedback</strong>
+                        {lastKmtReject.comment && <p style={{ margin: '0 0 8px' }}>{lastKmtReject.comment}</p>}
+                        {lastKmtReject.feedbackItems?.length > 0 && (
+                          <ul>
+                            {lastKmtReject.feedbackItems.map((it, i) => (
+                              <li key={it.id || i}>
+                                <strong>{it.label}</strong>
+                                {it.comment ? ` — ${it.comment}` : ''}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              {showReviewActions && rejectPicks.length > 0 && (
-                <div className="reviewer-pick-hint" role="status">
-                  <strong>{rejectPicks.length}</strong> item{rejectPicks.length === 1 ? '' : 's'} flagged on the document — click <strong>Reject</strong> to add comments for each row and return to the POC.
-                </div>
-              )}
-              {showReviewActions && (
-                <div className="bufm-doc-view__header-actions">
-                  <button type="button" className="btn btn-primary" onClick={handleApprove}>
-                    Publish
-                  </button>
-                  <button type="button" className="btn btn-outline bufm-doc-view__reject" onClick={() => setRejectOpen(true)}>
-                    Reject
-                  </button>
-                </div>
-              )}
-              {showReviewActions && (doc.pocResubmissionNote || lastKmtReject) && (
-                <div className="bufm-doc-view__resubmit-context" style={{ marginTop: 12 }}>
-                  {doc.pocResubmissionNote && (
-                    <div className="rsa-poc-resubmit-note" role="status">
-                      <strong>POC resubmission note</strong>
-                      {doc.pocResubmissionNote}
-                    </div>
-                  )}
-                  {lastKmtReject && (lastKmtReject.feedbackItems?.length > 0 || lastKmtReject.comment) && (
-                    <div className="rsa-reviewer-verify" role="region" aria-label="Previous rejection feedback">
-                      <strong>Verify prior feedback</strong>
-                      {lastKmtReject.comment && <p style={{ margin: '0 0 8px' }}>{lastKmtReject.comment}</p>}
-                      {lastKmtReject.feedbackItems?.length > 0 && (
-                        <ul>
-                          {lastKmtReject.feedbackItems.map((it, i) => (
-                            <li key={it.id || i}>
-                              <strong>{it.label}</strong>
-                              {it.comment ? ` — ${it.comment}` : ''}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
             </header>
 
             <section className="bufm-doc-view__poc-card">
@@ -406,7 +431,7 @@ export default function KmtDocumentView() {
 
           {chatWorkflowExtras && (
             <div className="doc-chat-workflow-banner doc-chat-workflow-banner--kmt" role="status">
-              Workflow chat: merged simulated highlights for this visit (not persisted).
+              From workflow chat: temporary POC highlight overlay for this visit (not saved until the document is updated in the system).
             </div>
           )}
 
@@ -465,13 +490,13 @@ export default function KmtDocumentView() {
                     })
                   }
                 >
-                  Show document review (highlights)
+                  Open document preview
                 </button>
               </div>
             )}
 
             {!kmtEdit && (
-              <>
+              <div className="bufm-doc-view__preview">
                 <section className="bufm-doc-view__step-content">
                   <h2
                     className={`bufm-doc-view__step-heading${wholeStepReviewer ? ' bufm-doc-view__step-heading--reviewer-flag' : ''}${
@@ -522,7 +547,7 @@ export default function KmtDocumentView() {
                     </button>
                   </div>
                 </footer>
-              </>
+              </div>
             )}
 
             {kmtEdit && (
