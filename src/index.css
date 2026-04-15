@@ -6524,16 +6524,18 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .workflow-chat-poc__hero {
   padding: 20px 22px;
   border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 55%, #0d47a1 100%);
-  color: #fff;
+  background: #f3f5f7;
+  border: 1px solid var(--border-subtle, #e2e6ea);
+  color: var(--text, #1a1d21);
   margin-bottom: 20px;
-  box-shadow: 0 8px 28px rgba(25, 118, 210, 0.22);
+  box-shadow: none;
 }
 .workflow-chat-poc__hero-title {
   margin: 0 0 8px;
   font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+  color: var(--text, #1a1d21);
 }
 .workflow-chat-poc__hero-sub {
   margin: 0;

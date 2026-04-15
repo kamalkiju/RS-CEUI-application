@@ -28,14 +28,8 @@ const PHASES = {
 const POC_CHAT_STORAGE_KEY = 'rs-poc-workflow-chat-v1'
 const POC_CHAT_PATH = '/poc/chat'
 
-/** Shown in the composer after the user says hi — user can Send to run the workflow. */
-const POC_DEFAULT_PROMPT = 'K-5031 — update document title and contract activation date'
-
 function pocWelcomeMessages() {
-  return [
-    { role: 'assistant', id: 'welcome', content: 'Welcome to Ops Agent.' },
-    { role: 'assistant', id: 'greeting', content: 'Hi! What can I help you with?' },
-  ]
+  return [{ role: 'assistant', id: 'welcome', content: 'Welcome to Ops Agent.' }]
 }
 
 function bufmWelcomeMessages() {
@@ -155,7 +149,6 @@ export default function WorkflowChatPage() {
   )
   const [pocActiveSessionId, setPocActiveSessionId] = useState(() => pocInit.activeSessionId)
   const [submitModalDocId, setSubmitModalDocId] = useState(null)
-  const [uploadPct, setUploadPct] = useState(0)
 
   const [messages, setMessages] = useState(() => {
     if (user?.role === 'BUFM') return bufmWelcomeMessages()
@@ -165,8 +158,6 @@ export default function WorkflowChatPage() {
 
   const [input, setInput] = useState('')
   const [phase, setPhase] = useState(PHASES.idle)
-  const [attachedName, setAttachedName] = useState(null)
-  const [voiceNote, setVoiceNote] = useState(null)
   const [selectedDocId, setSelectedDocId] = useState('')
   const pendingPocRef = useRef(null)
   const lastPocChatPatchRef = useRef(null)
@@ -215,8 +206,6 @@ export default function WorkflowChatPage() {
     if (role === 'BUFM') setMessages(bufmWelcomeMessages())
     else if (role === 'KMT') setMessages(kmtWelcomeMessages())
     setSelectedDocId('')
-    setAttachedName(null)
-    setVoiceNote(null)
     setPhase(PHASES.idle)
   }
 
@@ -257,24 +246,6 @@ export default function WorkflowChatPage() {
     },
     [user],
   )
-
-  useEffect(() => {
-    if (!attachedName || (role !== 'POC' && role !== 'BUFM' && role !== 'KMT')) {
-      setUploadPct(0)
-      return
-    }
-    setUploadPct(8)
-    const t0 = window.setInterval(() => {
-      setUploadPct(p => {
-        if (p >= 100) {
-          window.clearInterval(t0)
-          return 100
-        }
-        return Math.min(100, p + 12 + Math.round(Math.random() * 8))
-      })
-    }, 220)
-    return () => window.clearInterval(t0)
-  }, [attachedName, role])
 
   const reviewerChatBack =
     role === 'BUFM' ? { to: '/bufm/document-review', label: '← Document review' } : { to: '/kmt/documents', label: '← Documents' }
@@ -405,8 +376,6 @@ export default function WorkflowChatPage() {
     ])
     setPocActiveSessionId(id)
     setSelectedDocId('')
-    setAttachedName(null)
-    setVoiceNote(null)
   }
 
   const handleCloneDocument = () => {
@@ -509,9 +478,9 @@ export default function WorkflowChatPage() {
   }
 
   const handleSend = async () => {
-    const text = [input, voiceNote].filter(Boolean).join('\n').trim()
-    if (!text && !attachedName) return
-    const userLine = [text, attachedName ? `[attachment: ${attachedName}]` : ''].filter(Boolean).join('\n')
+    const text = input.trim()
+    if (!text) return
+    const userLine = text
     const userSnippet = String(userLine || '')
       .trim()
       .replace(/\s+/g, ' ')
@@ -528,8 +497,6 @@ export default function WorkflowChatPage() {
         const isHi = /^\s*(hi|hello|hey)\b/i.test(plain)
         pushUserPoc(userLine)
         setInput('')
-        setAttachedName(null)
-        setVoiceNote(null)
         if (!isHi) {
           pushAssistantPoc('Please say **hi** first to continue.')
           return
@@ -539,16 +506,12 @@ export default function WorkflowChatPage() {
             s.id === pocActiveSessionId ? { ...s, pocHiGatePassed: true, updatedAt: Date.now() } : s,
           ),
         )
-        pushAssistantPoc('Suggested message — press **Send** to continue:')
-        setInput(POC_DEFAULT_PROMPT)
         return
       }
 
       pushUserPoc(userLine)
       updatePocSessionMeta(docId, doc)
       setInput('')
-      setAttachedName(null)
-      setVoiceNote(null)
 
       if (!docId || !doc) {
         pushAssistantPoc(
@@ -575,8 +538,6 @@ export default function WorkflowChatPage() {
 
     pushUser(userLine)
     setInput('')
-    setAttachedName(null)
-    setVoiceNote(null)
 
     if (role === 'BUFM') {
       if (!doc) {
@@ -789,21 +750,6 @@ export default function WorkflowChatPage() {
     }
   }
 
-  const onFile = e => {
-    const f = e.target.files?.[0]
-    if (f) setAttachedName(f.name)
-    e.target.value = ''
-  }
-
-  const onVoice = () => {
-    setVoiceNote('Voice transcript: please summarize POC updates and fees for this document.')
-    if (role === 'POC') {
-      pushAssistantPoc('Voice captured. The transcript is included when you press **Send**.')
-    } else {
-      pushAssistant('Voice captured. The transcript is added to your next message — press **Send** to continue.')
-    }
-  }
-
   const renderMessageList = (msgList, isPoc) => (
     <>
       {msgList.map(m => (
@@ -933,26 +879,6 @@ export default function WorkflowChatPage() {
                   <h1 className="workflow-chat-poc__hero-title">Ops Agent</h1>
                 </div>
 
-                {attachedName && (
-                  <div className="workflow-chat-poc__upload-card">
-                    <div className="workflow-chat-poc__upload-row">
-                      <span className="workflow-chat-poc__upload-name">{attachedName}</span>
-                      <button
-                        type="button"
-                        className="workflow-chat-poc__upload-dismiss"
-                        aria-label="Remove attachment"
-                        onClick={() => setAttachedName(null)}
-                      >
-                        ×
-                      </button>
-                    </div>
-                    <div className="workflow-chat-poc__upload-bar" role="progressbar" aria-valuenow={uploadPct} aria-valuemin={0} aria-valuemax={100}>
-                      <div className="workflow-chat-poc__upload-bar-fill" style={{ width: `${uploadPct}%` }} />
-                    </div>
-                    <p className="workflow-chat-poc__upload-status">Uploading — {uploadPct}%</p>
-                  </div>
-                )}
-
                 <div className="workflow-chat-poc__messages">{renderMessageList(pocMessages, true)}</div>
               </div>
 
@@ -977,13 +903,6 @@ export default function WorkflowChatPage() {
                       ))}
                     </select>
                   </div>
-                  <label className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" title="Attach file">
-                    <input type="file" className="workflow-chat__file-input" onChange={onFile} accept=".pdf,.doc,.docx,.txt,.csv" />
-                    Attach
-                  </label>
-                  <button type="button" className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" onClick={onVoice} title="Voice note">
-                    Voice
-                  </button>
                 </div>
                 <div className="workflow-chat-poc__input-row">
                   <input
@@ -1068,26 +987,6 @@ export default function WorkflowChatPage() {
                 <h1 className="workflow-chat-poc__hero-title">Ops Agent</h1>
               </div>
 
-              {attachedName && (
-                <div className="workflow-chat-poc__upload-card">
-                  <div className="workflow-chat-poc__upload-row">
-                    <span className="workflow-chat-poc__upload-name">{attachedName}</span>
-                    <button
-                      type="button"
-                      className="workflow-chat-poc__upload-dismiss"
-                      aria-label="Remove attachment"
-                      onClick={() => setAttachedName(null)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className="workflow-chat-poc__upload-bar" role="progressbar" aria-valuenow={uploadPct} aria-valuemin={0} aria-valuemax={100}>
-                    <div className="workflow-chat-poc__upload-bar-fill" style={{ width: `${uploadPct}%` }} />
-                  </div>
-                  <p className="workflow-chat-poc__upload-status">Uploading — {uploadPct}%</p>
-                </div>
-              )}
-
               <div className="workflow-chat-poc__messages">{renderMessageList(messages, false)}</div>
             </div>
 
@@ -1112,13 +1011,6 @@ export default function WorkflowChatPage() {
                     ))}
                   </select>
                 </div>
-                <label className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" title="Attach file">
-                  <input type="file" className="workflow-chat__file-input" onChange={onFile} accept=".pdf,.doc,.docx,.txt,.csv" />
-                  Attach
-                </label>
-                <button type="button" className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" onClick={onVoice} title="Voice note">
-                  Voice
-                </button>
               </div>
               <div className="workflow-chat-poc__input-row">
                 <input
