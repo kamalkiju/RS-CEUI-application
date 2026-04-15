@@ -74,6 +74,12 @@ const INITIAL_DOCS = [
     pocName: 'Jordan Lee',
     pocEmail: 'jordan.lee@republicservices.com',
     pocRegion: 'Southeast',
+    poc_review_date_before: '15 Jan 2024',
+    readOnlyWizard: {
+      step1: {
+        reviewDate: '20 Feb 2024',
+      },
+    },
   },
   {
     id: 'K-5013',

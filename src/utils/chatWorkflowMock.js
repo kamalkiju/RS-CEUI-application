@@ -213,6 +213,13 @@ export function inferSimulatedPocPatches(text) {
   let body = raw
   const dashParts = raw.split(/\s*[—–]\s*/)
   if (dashParts.length >= 2) body = dashParts.slice(1).join(' — ').trim()
+  const bodyLower = body.toLowerCase()
+  if (/summarize|summary/.test(bodyLower) && /document|poc|bufm|update/.test(bodyLower)) {
+    return {
+      sections: ['Basic Information'],
+      fields: ['Document title', 'Document review date'],
+    }
+  }
   const chunks = body
     .split(/\s+,\s*|\s+and\s+/i)
     .map(c => c.trim())
@@ -284,7 +291,7 @@ export function formatPocChangesForChat(doc, { roleLabel = 'POC' } = {}) {
 }
 
 /**
- * BUFM/KMT chat: document name, POC before/after where known, then sections/fields/note. Crisp; no prompt or UI hints.
+ * BUFM/KMT chat: document name, POC before/after where known, then sections/fields/note.
  */
 export function formatBufmChatPocChangeSummary(doc) {
   if (!doc) return ''
@@ -301,19 +308,13 @@ export function formatBufmChatPocChangeSummary(doc) {
     (before != null && String(before).trim() !== '') ||
     (after != null && String(after).trim() !== '')
 
-  const parts = [header]
+  const parts = [header, '', '**POC changes**']
 
   if (showDateBlock) {
     parts.push('')
-    parts.push('**Document review date (POC)**')
+    parts.push('**Document review date**')
     parts.push(`- **Before:** ${before != null && String(before).trim() !== '' ? before : '—'}`)
     parts.push(`- **After:** ${after != null && String(after).trim() !== '' ? after : '—'}`)
-  }
-
-  if (!hasAny && !showDateBlock) {
-    parts.push('')
-    parts.push('*No POC changes are recorded on this document yet.*')
-    return parts.join('\n')
   }
 
   if (hasAny) {
@@ -330,27 +331,38 @@ export function formatBufmChatPocChangeSummary(doc) {
     }
   }
 
+  if (!hasAny && !showDateBlock) {
+    parts.push('')
+    parts.push(
+      '*No POC section/field list or resubmission note is stored on this catalog row. If the POC edited the wizard, use **Open document** to review — highlights follow the chat targets when available.*',
+    )
+  }
+
   return parts.join('\n')
 }
 
 /**
- * KMT chat: same POC block as BUFM, then BUFM / prior KMT lines only when data exists (no duplicate fluff).
+ * KMT chat: same POC block as BUFM, then BUFM (always: comment or explicit none), optional prior KMT.
  */
 export function formatKmtChatReviewSummary(doc) {
   if (!doc) return ''
   const pocBlock = formatBufmChatPocChangeSummary(doc)
 
-  const bufmParts = []
+  const bufmDetail = []
   if (doc.rejection_comment_BUFM?.trim()) {
-    bufmParts.push(`**BUFM comment:** ${String(doc.rejection_comment_BUFM).trim()}`)
+    bufmDetail.push(`**BUFM comment:** ${String(doc.rejection_comment_BUFM).trim()}`)
+  } else if (doc.approved_by_BUFM) {
+    bufmDetail.push('**BUFM comment:** — *(none on file; approved toward KMT)*')
+  } else {
+    bufmDetail.push('**BUFM comment:** — *(none on file)*')
   }
   const hs = doc.rejection_highlight_sections
   if (Array.isArray(hs) && hs.length) {
-    bufmParts.push(`**Sections BUFM flagged**\n${hs.map(s => `- ${s}`).join('\n')}`)
+    bufmDetail.push(`**Sections BUFM flagged**\n${hs.map(s => `- ${s}`).join('\n')}`)
   }
   const hf = doc.rejection_highlight_fields
   if (Array.isArray(hf) && hf.length) {
-    bufmParts.push(`**Fields BUFM flagged**\n${hf.map(s => `- ${s}`).join('\n')}`)
+    bufmDetail.push(`**Fields BUFM flagged**\n${hf.map(s => `- ${s}`).join('\n')}`)
   }
 
   const kmtParts = []
@@ -358,10 +370,10 @@ export function formatKmtChatReviewSummary(doc) {
     kmtParts.push(`**Prior KMT comment:** ${String(doc.rejection_comment_KMT).trim()}`)
   }
 
-  const out = [pocBlock]
-  if (bufmParts.length) {
-    out.push(['**BUFM review**', '', bufmParts.join('\n\n')].join('\n'))
-  }
+  const out = [
+    pocBlock,
+    ['**BUFM review**', '', bufmDetail.join('\n\n')].join('\n'),
+  ]
   if (kmtParts.length) {
     out.push(['**KMT (prior)**', '', kmtParts.join('\n\n')].join('\n'))
   }
@@ -372,13 +384,24 @@ export function formatKmtChatReviewSummary(doc) {
  * Payload for navigation: merge real POC highlights for the viewer session.
  */
 export function buildChatWorkflowExtrasFromDoc(doc) {
+  if (!doc) return null
   const { sections, fields, note, hasAny } = getPocUpdateDataFromDoc(doc)
-  if (!hasAny) return null
-  return {
-    sections,
-    fields,
-    summary: note || 'POC-updated sections and fields from document metadata.',
+  if (hasAny) {
+    return {
+      sections,
+      fields,
+      summary: note || 'POC-updated sections and fields from document metadata.',
+    }
   }
+  const reviewDate = doc.readOnlyWizard?.step1?.reviewDate
+  if (reviewDate != null && String(reviewDate).trim() !== '') {
+    return {
+      sections: ['Basic Information'],
+      fields: ['Document review date'],
+      summary: `Document review date in wizard: ${reviewDate}`,
+    }
+  }
+  return null
 }
 
 /**
