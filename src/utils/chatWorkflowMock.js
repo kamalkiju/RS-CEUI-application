@@ -284,13 +284,13 @@ export function getPocUpdateDataFromDoc(doc) {
 }
 
 /**
- * Markdown-style text for chat: only sections / fields / note actually stored on the document.
+ * Markdown-style text for chat: sections / fields / note stored on the document (generic helper).
  */
 export function formatPocChangesForChat(doc, { roleLabel = 'POC' } = {}) {
   const { sections, fields, note, hasAny } = getPocUpdateDataFromDoc(doc)
   const title = doc ? `**${doc.sub || doc.id}** (\`${doc.id}\`)` : '**Document**'
   if (!hasAny) {
-    return `${title}\n\nNo **${roleLabel} update metadata** on this document yet (no \`poc_updated_sections\` / \`poc_updated_fields\` / resubmission note). After a POC resubmits following rejection, those lists populate and highlights appear on the document view.\n\nYou can still open the document to review the full content and any reviewer flags.`
+    return `${title}\n\nNo **${roleLabel} update metadata** on this document yet.`
   }
   let out = `${title}\n\n**Sections ${roleLabel} updated**\n`
   out += sections.length ? sections.map(s => `• ${s}`).join('\n') : '• — (none listed)'
@@ -299,53 +299,92 @@ export function formatPocChangesForChat(doc, { roleLabel = 'POC' } = {}) {
   if (note) {
     out += `\n\n**${roleLabel} resubmission note**\n> ${note}`
   }
-  out +=
-    '\n\nOpen the document below — **green** styling marks POC-touched areas; **orange** marks reviewer-flagged items where applicable.'
   return out
 }
 
 /**
- * BUFM chat: review-date before/after (when stored) + full POC change lists (includes document title).
+ * BUFM/KMT chat: document name, POC before/after where known, then sections/fields/note. Crisp; no prompt or UI hints.
  */
 export function formatBufmChatPocChangeSummary(doc) {
   if (!doc) return ''
-  const fields = doc.poc_updated_fields || []
-  const hasReviewDate = fields.some(f => /document review date/i.test(String(f)))
+  const name = (doc.sub || '').trim() || doc.id
+  const header = `**Document name:** ${name}\n**Document ID:** \`${doc.id}\``
+
+  const { sections, fields, note, hasAny } = getPocUpdateDataFromDoc(doc)
+  const fieldsListed = doc.poc_updated_fields || []
+  const hasReviewDateInFields = fieldsListed.some(f => /document review date/i.test(String(f)))
   const before = doc.poc_review_date_before
   const after = doc.readOnlyWizard?.step1?.reviewDate
-  const dateBlock =
-    hasReviewDate && (before != null || after)
-      ? `**Document review date (POC)**\n**Previous:** ${before ?? '—'}\n**Updated to:** **${after ?? '—'}**`
-      : ''
-  const body = formatPocChangesForChat(doc, { roleLabel: 'POC' })
-  return dateBlock ? `${dateBlock}\n\n---\n\n${body}` : body
+  const showDateBlock =
+    hasReviewDateInFields ||
+    (before != null && String(before).trim() !== '') ||
+    (after != null && String(after).trim() !== '')
+
+  const parts = [header]
+
+  if (showDateBlock) {
+    parts.push('')
+    parts.push('**Document review date (POC)**')
+    parts.push(`- **Before:** ${before != null && String(before).trim() !== '' ? before : '—'}`)
+    parts.push(`- **After:** ${after != null && String(after).trim() !== '' ? after : '—'}`)
+  }
+
+  if (!hasAny && !showDateBlock) {
+    parts.push('')
+    parts.push('*No POC changes are recorded on this document yet.*')
+    return parts.join('\n')
+  }
+
+  if (hasAny) {
+    parts.push('')
+    parts.push('**Sections updated by POC**')
+    parts.push(sections.length ? sections.map(s => `- ${s}`).join('\n') : '- *(none listed)*')
+    parts.push('')
+    parts.push('**Fields updated by POC**')
+    parts.push(fields.length ? fields.map(f => `- ${f}`).join('\n') : '- *(none listed)*')
+    if (note) {
+      parts.push('')
+      parts.push('**POC resubmission note**')
+      parts.push(`> ${note}`)
+    }
+  }
+
+  return parts.join('\n')
 }
 
 /**
- * KMT chat: POC before/after, BUFM comments / flagged sections, then KMT context.
+ * KMT chat: same POC block as BUFM, then BUFM / prior KMT lines only when data exists (no duplicate fluff).
  */
 export function formatKmtChatReviewSummary(doc) {
   if (!doc) return ''
   const pocBlock = formatBufmChatPocChangeSummary(doc)
+
   const bufmParts = []
   if (doc.rejection_comment_BUFM?.trim()) {
-    bufmParts.push(`**BUFM comment (prior review):** ${String(doc.rejection_comment_BUFM).trim()}`)
+    bufmParts.push(`**BUFM comment:** ${String(doc.rejection_comment_BUFM).trim()}`)
   }
   const hs = doc.rejection_highlight_sections
   if (Array.isArray(hs) && hs.length) {
-    bufmParts.push(`**Sections BUFM flagged (before POC resubmission):**\n${hs.map(s => `• ${s}`).join('\n')}`)
+    bufmParts.push(`**Sections BUFM flagged**\n${hs.map(s => `- ${s}`).join('\n')}`)
   }
   const hf = doc.rejection_highlight_fields
   if (Array.isArray(hf) && hf.length) {
-    bufmParts.push(`**Fields BUFM flagged:**\n${hf.map(s => `• ${s}`).join('\n')}`)
+    bufmParts.push(`**Fields BUFM flagged**\n${hf.map(s => `- ${s}`).join('\n')}`)
   }
-  const bufmBlock =
-    bufmParts.length > 0 ? `### BUFM review (reference)\n\n${bufmParts.join('\n\n')}` : ''
-  const kmtCtx = formatKmtReviewerContext(doc)?.trim()
-  const parts = [`### POC updates\n\n${pocBlock}`]
-  if (bufmBlock) parts.push(bufmBlock)
-  if (kmtCtx) parts.push(kmtCtx)
-  return parts.join('\n\n---\n\n')
+
+  const kmtParts = []
+  if (doc.rejection_comment_KMT?.trim()) {
+    kmtParts.push(`**Prior KMT comment:** ${String(doc.rejection_comment_KMT).trim()}`)
+  }
+
+  const out = [pocBlock]
+  if (bufmParts.length) {
+    out.push(['**BUFM review**', '', bufmParts.join('\n\n')].join('\n'))
+  }
+  if (kmtParts.length) {
+    out.push(['**KMT (prior)**', '', kmtParts.join('\n\n')].join('\n'))
+  }
+  return out.join('\n\n---\n\n')
 }
 
 /**

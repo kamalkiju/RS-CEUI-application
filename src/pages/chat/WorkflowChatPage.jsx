@@ -6,12 +6,10 @@ import { useDocs, generateDocId } from '../../context/DocContext.jsx'
 import {
   resolveChatDocumentId,
   resolveChatDocumentIdWithMeta,
-  formatChatDocumentResolutionLine,
   inferSimulatedPocPatches,
   ensurePocChatPatches,
   defaultChatSummary,
   delay,
-  formatPocChangesForChat,
   buildChatWorkflowExtrasFromDoc,
   buildNavigationExtrasForReviewer,
   isDuplicateReviewDateWorkflow,
@@ -515,9 +513,8 @@ export default function WorkflowChatPage() {
       await runOpsAnalysisSteps()
       const d = resolveDoc(doc.id) || doc
       const extrasNav = buildNavigationExtrasForReviewer(d, userLine)
-      const initLine = formatChatDocumentResolutionLine(userLine, d, matchSource)
       const changeBlock = formatBufmChatPocChangeSummary(d)
-      const summaryBlock = `**Summary — POC changes (this document)**\n\n${changeBlock}\n\n---\n\n${initLine}\n\nUse **Open document** to see the **same** POC highlights on the document page.`
+      const summaryBlock = `**BUFM — summary**\n\n${changeBlock}`
       pushAssistant(summaryBlock, {
         actions: [
           { type: 'openBufm', label: 'Open document', docId: d.id, extras: extrasNav },
@@ -535,14 +532,8 @@ export default function WorkflowChatPage() {
       await runOpsAnalysisSteps()
       const d = resolveDoc(doc.id) || doc
       const extrasNav = buildNavigationExtrasForReviewer(d, userLine)
-      const storedExtras = buildChatWorkflowExtrasFromDoc(d)
-      const initLine = formatChatDocumentResolutionLine(userLine, d, matchSource)
       const reviewBody = formatKmtChatReviewSummary(d)
-      let inferredAppend = ''
-      if (!storedExtras && extrasNav.sections?.length) {
-        inferredAppend = `\n\n---\n\n**Review focus (from your message)** — temporary highlight targets for this visit:\n\n**Sections**\n${extrasNav.sections.map(s => `• ${s}`).join('\n')}\n\n**Fields**\n${extrasNav.fields.map(f => `• ${f}`).join('\n')}`
-      }
-      const summaryBlock = `**Summary — KMT review (${d.sub || d.id} · \`${d.id}\`)**\n\n${initLine}\n\n${reviewBody}${inferredAppend}\n\n---\n\nUse **Open document** for the same highlights as in chat. **Edit details** updates catalog fields. **Publish**, **Reject**, or **Release** apply when you have a pending KMT task (or use this chat preview to jump to the page).`
+      const summaryBlock = `**KMT — summary**\n\n${reviewBody}`
       pushAssistant(summaryBlock, {
         actions: [
           { type: 'openKmt', label: 'Open document', docId: d.id, extras: extrasNav },
