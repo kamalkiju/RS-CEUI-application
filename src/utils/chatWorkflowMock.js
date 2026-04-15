@@ -11,6 +11,16 @@ function norm(s) {
     .trim()
 }
 
+/** Ops Agent chat: duplicate + document review date (demo applies only this field on the document). */
+export function isDuplicateReviewDateWorkflow(text) {
+  const s = norm(text)
+  if (!s.includes('duplicate')) return false
+  if (!/document review date|review date/.test(s)) return false
+  return /25|april|2016/.test(s)
+}
+
+export const OPS_REVIEW_DATE_DISPLAY = '25 April 2016'
+
 export function extractDocumentId(text, docs = []) {
   const m = String(text || '').match(DOC_ID_RE)
   if (m) {
@@ -213,6 +223,12 @@ function inferFromSingleClause(clause) {
 /** Simulated sections/fields inferred from the user message for chat preview highlights. */
 export function inferSimulatedPocPatches(text) {
   const raw = String(text || '').trim()
+  if (isDuplicateReviewDateWorkflow(raw)) {
+    return {
+      sections: ['Basic Information'],
+      fields: ['Document review date'],
+    }
+  }
   let body = raw
   const dashParts = raw.split(/\s*[—–]\s*/)
   if (dashParts.length >= 2) body = dashParts.slice(1).join(' — ').trim()

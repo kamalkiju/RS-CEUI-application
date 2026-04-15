@@ -15,6 +15,8 @@ import {
   buildChatWorkflowExtrasFromDoc,
   buildNavigationExtrasForReviewer,
   formatKmtReviewerContext,
+  isDuplicateReviewDateWorkflow,
+  OPS_REVIEW_DATE_DISPLAY,
 } from '../../utils/chatWorkflowMock.js'
 
 const PHASES = {
@@ -29,15 +31,51 @@ const POC_CHAT_STORAGE_KEY = 'rs-poc-workflow-chat-v1'
 const POC_CHAT_PATH = '/poc/chat'
 
 /** Fallback when no catalog row is selected yet. */
-const DEFAULT_WORKFLOW_PROMPT = 'K-5031 — update document title and contract activation date'
+const DEFAULT_WORKFLOW_PROMPT =
+  'K-5008 — Duplicate this document and update the Document review date as 25th April 2016'
 
 function defaultPromptForDocId(docId) {
   if (!docId) return ''
-  return `${docId} — update document title and contract activation date`
+  return `${docId} — Duplicate this document and update the Document review date as 25th April 2016`
+}
+
+const POC_OPS_STEP_LABELS = ['Analyse the fields', 'Checking the fields', 'Update the fields', 'Completed']
+
+function PocOpsStepper({ stepIndex }) {
+  return (
+    <div className="poc-ops-stepper" role="status" aria-live="polite">
+      <p className="poc-ops-stepper__eyebrow">Ops Agent</p>
+      <ul className="poc-ops-stepper__list">
+        {POC_OPS_STEP_LABELS.map((label, i) => {
+          const isLast = i === 3
+          const doneEarly = i < stepIndex
+          const active = i === stepIndex && stepIndex < 3
+          const success = isLast && stepIndex === 3
+          const pending = i > stepIndex && !success
+          let mod = ''
+          if (success) mod = ' poc-ops-stepper__item--success'
+          else if (doneEarly) mod = ' poc-ops-stepper__item--done'
+          else if (active) mod = ' poc-ops-stepper__item--active'
+          else if (pending) mod = ' poc-ops-stepper__item--pending'
+          return (
+            <li key={label} className={`poc-ops-stepper__item${mod}`}>
+              <span className="poc-ops-stepper__text">{label}</span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
 }
 
 function pocWelcomeMessages() {
-  return [{ role: 'assistant', id: 'welcome', content: 'Welcome. Say **hi** below to start.' }]
+  return [
+    {
+      role: 'assistant',
+      id: 'welcome',
+      content: 'Welcome to Ops Agent! Let\'s get started.\n\nSay **hi** below to begin.',
+    },
+  ]
 }
 
 function bufmWelcomeMessages() {
@@ -165,6 +203,7 @@ export default function WorkflowChatPage() {
   })
 
   const [input, setInput] = useState('')
+  const [pocOpsStepperStep, setPocOpsStepperStep] = useState(null)
   const [reviewerHiGatePassed, setReviewerHiGatePassed] = useState(false)
   const [phase, setPhase] = useState(PHASES.idle)
   const [selectedDocId, setSelectedDocId] = useState('')
@@ -263,7 +302,7 @@ export default function WorkflowChatPage() {
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [pocMessages, messages, phase, pocActiveSessionId])
+  }, [pocMessages, messages, phase, pocActiveSessionId, pocOpsStepperStep])
 
   const docOptions = useMemo(
     () =>
@@ -442,38 +481,91 @@ export default function WorkflowChatPage() {
   }
 
   const executePocPipeline = async pend => {
-    const { doc, patches } = pend
+    const { doc, patches, text } = pend
     if (!doc) return
     const { sections, fields, usedFallback } = patches
-    const summary = defaultChatSummary(doc)
-    await runProgress()
-    const extras = {
-      sections,
-      fields,
-      summary,
+    const reviewFlow = isDuplicateReviewDateWorkflow(String(text || ''))
+
+    try {
+      for (let s = 0; s < 4; s++) {
+        setPocOpsStepperStep(s)
+        await delay(s === 3 ? 520 : 650)
+      }
+
+      if (reviewFlow) {
+        updateDoc(doc.id, {
+          poc_updated_sections: ['Basic Information'],
+          poc_updated_fields: ['Document review date'],
+          readOnlyWizard: {
+            ...(doc.readOnlyWizard || {}),
+            step1: {
+              ...(doc.readOnlyWizard?.step1 || {}),
+              reviewDate: OPS_REVIEW_DATE_DISPLAY,
+            },
+          },
+        })
+      }
+
+      let resolved = resolveDoc(doc.id) || doc
+      if (reviewFlow) {
+        resolved = {
+          ...resolved,
+          poc_updated_sections: ['Basic Information'],
+          poc_updated_fields: ['Document review date'],
+          readOnlyWizard: {
+            ...(resolved.readOnlyWizard || {}),
+            step1: {
+              ...(resolved.readOnlyWizard?.step1 || {}),
+              reviewDate: OPS_REVIEW_DATE_DISPLAY,
+            },
+          },
+        }
+      }
+      const extras = {
+        sections,
+        fields,
+        summary: reviewFlow ? `Document review date → ${OPS_REVIEW_DATE_DISPLAY}` : defaultChatSummary(resolved),
+      }
+      lastPocChatPatchRef.current = {
+        docId: resolved.id,
+        sections,
+        fields,
+      }
+
+      if (reviewFlow) {
+        pushAssistantPoc(
+          `**Summary — what changed**\n\n• **Document review date** updated to **${OPS_REVIEW_DATE_DISPLAY}** in **Basic Information**.\n\nOpen the document to see this field highlighted in **green** in the wizard.`,
+          {
+            actions: [
+              { type: 'openDoc', label: 'Open document', docId: resolved.id, doc: resolved, extras },
+              { type: 'pocChatSaveDraft', label: 'Save as draft', docId: resolved.id },
+              { type: 'pocChatSubmitApproval', label: 'Submit for approval', docId: resolved.id },
+            ],
+          },
+        )
+      } else {
+        const summary = defaultChatSummary(resolved)
+        const sectionLines = sections.length ? sections.map(x => `• ${x}`).join('\n') : '• —'
+        const fieldLines = fields.length ? fields.map(x => `• ${x}`).join('\n') : '• —'
+        const fallbackNote = usedFallback
+          ? '\n\n*(Using **Basic Information** sample highlights because your message did not match fee, payment, or basic cues.)*\n'
+          : ''
+        const detail = `**Planned highlights**${fallbackNote}\n\n**Sections**\n${sectionLines}\n\n**Fields**\n${fieldLines}`
+        pushAssistantPoc(
+          `${detail}\n\n---\n\n**Summary**\n${summary}\n\nOpen the document to see these areas in **green** in the wizard. Then **Save as draft** or **Submit for approval** below or on the document page.`,
+          {
+            actions: [
+              { type: 'openDoc', label: 'Open document', docId: resolved.id, doc: resolved, extras },
+              { type: 'pocChatSaveDraft', label: 'Save as draft', docId: resolved.id },
+              { type: 'pocChatSubmitApproval', label: 'Submit for approval', docId: resolved.id },
+            ],
+          },
+        )
+      }
+    } finally {
+      setPocOpsStepperStep(null)
+      pendingPocRef.current = null
     }
-    lastPocChatPatchRef.current = {
-      docId: doc.id,
-      sections,
-      fields,
-    }
-    const sectionLines = sections.length ? sections.map(x => `• ${x}`).join('\n') : '• —'
-    const fieldLines = fields.length ? fields.map(x => `• ${x}`).join('\n') : '• —'
-    const fallbackNote = usedFallback
-      ? '\n\n*(Using **Basic Information** sample highlights because your message did not match fee, payment, or basic cues.)*\n'
-      : ''
-    const detail = `**Planned highlights**${fallbackNote}\n\n**Sections**\n${sectionLines}\n\n**Fields**\n${fieldLines}`
-    pushAssistantPoc(
-      `${detail}\n\n---\n\n**Summary**\n${summary}\n\nOpen the document to see these areas in **green** in the wizard. Then **Save as draft** or **Submit for approval** below or on the document page.`,
-      {
-        actions: [
-          { type: 'openDoc', label: 'Open document', docId: doc.id, doc, extras },
-          { type: 'pocChatSaveDraft', label: 'Save as draft', docId: doc.id },
-          { type: 'pocChatSubmitApproval', label: 'Submit for approval', docId: doc.id },
-        ],
-      },
-    )
-    pendingPocRef.current = null
   }
 
   const handleConfirmPoc = async () => {
@@ -830,6 +922,13 @@ export default function WorkflowChatPage() {
           </div>
         </div>
       ))}
+      {isPoc && pocOpsStepperStep !== null && (
+        <div className="workflow-chat__msg workflow-chat__msg--assistant">
+          <div className="workflow-chat__bubble workflow-chat__bubble--poc-stepper">
+            <PocOpsStepper stepIndex={pocOpsStepperStep} />
+          </div>
+        </div>
+      )}
       <ProgressPill phase={phase} />
       <div ref={listEndRef} />
     </>

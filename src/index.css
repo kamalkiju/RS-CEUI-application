@@ -6229,6 +6229,96 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
+
+/* POC Ops Agent — vertical analysis stepper (after Confirm & apply) */
+.workflow-chat__bubble--poc-stepper {
+  max-width: min(100%, 400px);
+  padding: 16px 18px 14px;
+  background: #fff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+}
+.poc-ops-stepper__eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #64748b;
+  margin: 0 0 14px;
+}
+.poc-ops-stepper__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.poc-ops-stepper__item {
+  position: relative;
+  padding: 0 0 14px 30px;
+  min-height: 26px;
+}
+.poc-ops-stepper__item:last-child {
+  padding-bottom: 0;
+}
+.poc-ops-stepper__item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  border: 2px solid #cbd5e1;
+  box-sizing: border-box;
+  z-index: 1;
+}
+.poc-ops-stepper__item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 19px;
+  bottom: -2px;
+  width: 2px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+.poc-ops-stepper__item--pending::before {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+.poc-ops-stepper__item--done::before {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.poc-ops-stepper__item--active::before {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.2);
+  animation: poc-ops-pulse 1.05s ease-in-out infinite;
+}
+.poc-ops-stepper__item--success::before {
+  background: #22c55e;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.28);
+  animation: none;
+}
+.poc-ops-stepper__item--success .poc-ops-stepper__text {
+  color: #15803d;
+  font-weight: 800;
+}
+.poc-ops-stepper__text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.4;
+}
+@keyframes poc-ops-pulse {
+  50% {
+    opacity: 0.88;
+    transform: scale(0.94);
+  }
+}
 .workflow-chat__markdown p {
   margin: 0 0 8px;
 }
