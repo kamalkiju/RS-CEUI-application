@@ -17,6 +17,7 @@ import {
   formatKmtReviewerContext,
   isDuplicateReviewDateWorkflow,
   OPS_REVIEW_DATE_DISPLAY,
+  formatBufmChatPocChangeSummary,
 } from '../../utils/chatWorkflowMock.js'
 
 const PHASES = {
@@ -69,17 +70,11 @@ function PocOpsStepper({ stepIndex }) {
 }
 
 function pocWelcomeMessages() {
-  return [
-    {
-      role: 'assistant',
-      id: 'welcome',
-      content: 'Welcome to Ops Agent! Let\'s get started.\n\nSay **hi** below to begin.',
-    },
-  ]
+  return [{ role: 'assistant', id: 'welcome', content: "Welcome to Ops Agent! Let's get started." }]
 }
 
 function bufmWelcomeMessages() {
-  return [{ role: 'assistant', id: 'welcome', content: 'Welcome. Say **hi** below to start.' }]
+  return [{ role: 'assistant', id: 'welcome', content: "Welcome to Ops Agent! Let's get started." }]
 }
 
 function kmtWelcomeMessages() {
@@ -126,13 +121,7 @@ function loadPocChatState() {
     if (!Array.isArray(parsed.sessions) || !parsed.sessions.length) throw new Error('bad')
     let activeSessionId = parsed.activeSessionId || parsed.sessions[0].id
     if (!parsed.sessions.some(s => s.id === activeSessionId)) activeSessionId = parsed.sessions[0].id
-    const sessions = parsed.sessions.map(s => ({
-      ...s,
-      pocHiGatePassed:
-        typeof s.pocHiGatePassed === 'boolean'
-          ? s.pocHiGatePassed
-          : Boolean(s.messages?.some(m => m.role === 'user')),
-    }))
+    const sessions = parsed.sessions.map(s => ({ ...s }))
     return { sessions, activeSessionId }
   } catch {
     const id = `s-${Date.now()}`
@@ -142,7 +131,6 @@ function loadPocChatState() {
           id,
           docId: null,
           title: 'New chat',
-          pocHiGatePassed: false,
           updatedAt: Date.now(),
           messages: pocWelcomeMessages(),
         },
@@ -203,8 +191,7 @@ export default function WorkflowChatPage() {
   })
 
   const [input, setInput] = useState('')
-  const [pocOpsStepperStep, setPocOpsStepperStep] = useState(null)
-  const [reviewerHiGatePassed, setReviewerHiGatePassed] = useState(false)
+  const [opsAnalysisStep, setOpsAnalysisStep] = useState(null)
   const [phase, setPhase] = useState(PHASES.idle)
   const [selectedDocId, setSelectedDocId] = useState('')
   const pendingPocRef = useRef(null)
@@ -254,7 +241,6 @@ export default function WorkflowChatPage() {
     if (role === 'BUFM') setMessages(bufmWelcomeMessages())
     else if (role === 'KMT') setMessages(kmtWelcomeMessages())
     setSelectedDocId('')
-    setReviewerHiGatePassed(false)
     setInput('')
     setPhase(PHASES.idle)
   }
@@ -280,7 +266,6 @@ export default function WorkflowChatPage() {
               id,
               docId: null,
               title: 'New chat',
-              pocHiGatePassed: false,
               updatedAt: Date.now(),
               messages: pocWelcomeMessages(),
             },
@@ -302,7 +287,26 @@ export default function WorkflowChatPage() {
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [pocMessages, messages, phase, pocActiveSessionId, pocOpsStepperStep])
+  }, [pocMessages, messages, phase, pocActiveSessionId, opsAnalysisStep])
+
+  /** Pre-fill default Ops Agent prompt when only the welcome message is shown (POC). Catalog changes use onCatalogChange. */
+  useEffect(() => {
+    if (role !== 'POC') return
+    const msgs = pocSessions.find(s => s.id === pocActiveSessionId)?.messages ?? []
+    const onlyWelcome =
+      msgs.length === 1 && msgs[0]?.role === 'assistant' && msgs[0]?.id === 'welcome'
+    if (onlyWelcome) {
+      setInput(defaultPromptForDocId(selectedDocId) || DEFAULT_WORKFLOW_PROMPT)
+    }
+  }, [role, pocActiveSessionId, pocSessions])
+
+  /** Pre-fill default prompt for BUFM when the conversation is only the welcome line. */
+  useEffect(() => {
+    if (role !== 'BUFM') return
+    if (messages.length === 1 && messages[0]?.id === 'welcome') {
+      setInput(defaultPromptForDocId(selectedDocId) || DEFAULT_WORKFLOW_PROMPT)
+    }
+  }, [role, messages])
 
   const docOptions = useMemo(
     () =>
@@ -321,21 +325,18 @@ export default function WorkflowChatPage() {
     [docs],
   )
 
-  /** Catalog selection pre-fills the composer after the hi gate (user still sends the message). */
+  /** Catalog selection pre-fills the composer with the default Ops Agent prompt. */
   const onCatalogChange = useCallback(
     e => {
       const docId = e.target.value
       setSelectedDocId(docId)
-      const pocGate =
-        role === 'POC' && pocSessions.find(s => s.id === pocActiveSessionId)?.pocHiGatePassed === true
-      const reviewerGate = (role === 'BUFM' || role === 'KMT') && reviewerHiGatePassed
-      if (docId && (pocGate || reviewerGate)) {
+      if (docId) {
         setInput(defaultPromptForDocId(docId))
-      } else if (!docId) {
+      } else {
         setInput('')
       }
     },
-    [role, pocSessions, pocActiveSessionId, reviewerHiGatePassed],
+    [],
   )
 
   const pushAssistantPoc = useCallback((content, extra = {}) => {
@@ -435,7 +436,6 @@ export default function WorkflowChatPage() {
         id,
         docId: null,
         title: 'New chat',
-        pocHiGatePassed: false,
         updatedAt: Date.now(),
         messages: pocWelcomeMessages(),
       },
@@ -480,6 +480,33 @@ export default function WorkflowChatPage() {
     }
   }
 
+  const runOpsAnalysisSteps = async () => {
+    for (let s = 0; s < 4; s++) {
+      setOpsAnalysisStep(s)
+      await delay(s === 3 ? 520 : 650)
+    }
+  }
+
+  const runBufmOpsPipeline = async (doc, userLine, matchSource) => {
+    try {
+      await runOpsAnalysisSteps()
+      const d = resolveDoc(doc.id) || doc
+      const extrasNav = buildNavigationExtrasForReviewer(d, userLine)
+      const initLine = formatChatDocumentResolutionLine(userLine, d, matchSource)
+      const changeBlock = formatBufmChatPocChangeSummary(d)
+      const summaryBlock = `**Summary — POC changes (this document)**\n\n${changeBlock}\n\n---\n\n${initLine}\n\nUse **Open document** to see the **same** POC highlights on the document page.`
+      pushAssistant(summaryBlock, {
+        actions: [
+          { type: 'openBufm', label: 'Open document', docId: d.id, extras: extrasNav },
+          { type: 'bufmApprove', label: 'Approve', docId: d.id },
+          { type: 'bufmReject', label: 'Reject', docId: d.id, extras: extrasNav },
+        ],
+      })
+    } finally {
+      setOpsAnalysisStep(null)
+    }
+  }
+
   const executePocPipeline = async pend => {
     const { doc, patches, text } = pend
     if (!doc) return
@@ -487,13 +514,12 @@ export default function WorkflowChatPage() {
     const reviewFlow = isDuplicateReviewDateWorkflow(String(text || ''))
 
     try {
-      for (let s = 0; s < 4; s++) {
-        setPocOpsStepperStep(s)
-        await delay(s === 3 ? 520 : 650)
-      }
+      await runOpsAnalysisSteps()
 
       if (reviewFlow) {
+        const previousReviewDate = doc.readOnlyWizard?.step1?.reviewDate ?? '— (not set)'
         updateDoc(doc.id, {
+          poc_review_date_before: previousReviewDate,
           poc_updated_sections: ['Basic Information'],
           poc_updated_fields: ['Document review date'],
           readOnlyWizard: {
@@ -508,8 +534,10 @@ export default function WorkflowChatPage() {
 
       let resolved = resolveDoc(doc.id) || doc
       if (reviewFlow) {
+        const previousReviewDate = doc.readOnlyWizard?.step1?.reviewDate ?? '— (not set)'
         resolved = {
           ...resolved,
+          poc_review_date_before: previousReviewDate,
           poc_updated_sections: ['Basic Information'],
           poc_updated_fields: ['Document review date'],
           readOnlyWizard: {
@@ -563,7 +591,7 @@ export default function WorkflowChatPage() {
         )
       }
     } finally {
-      setPocOpsStepperStep(null)
+      setOpsAnalysisStep(null)
       pendingPocRef.current = null
     }
   }
@@ -580,7 +608,7 @@ export default function WorkflowChatPage() {
     const st = lastPocChatPatchRef.current
     if (!st || st.docId !== docId) {
       setSubmitModalDocId(null)
-      pushAssistantPoc('Confirm your update (**Confirm & apply**) before submitting for approval.')
+      pushAssistantPoc('Run an Ops Agent update in chat first (Send), then submit for approval.')
       return
     }
     const today = new Date().toISOString().slice(0, 10)
@@ -610,27 +638,6 @@ export default function WorkflowChatPage() {
     const doc = resolveDoc(docId)
 
     if (role === 'POC') {
-      const active = pocSessions.find(s => s.id === pocActiveSessionId)
-      const gatePassed = active?.pocHiGatePassed === true
-
-      if (!gatePassed) {
-        const plain = text.trim()
-        const isHi = /^\s*(hi|hello|hey)\b/i.test(plain)
-        pushUserPoc(userLine)
-        if (!isHi) {
-          setInput('')
-          pushAssistantPoc('Please say **hi** first to continue.')
-          return
-        }
-        setPocSessions(prev =>
-          prev.map(s =>
-            s.id === pocActiveSessionId ? { ...s, pocHiGatePassed: true, updatedAt: Date.now() } : s,
-          ),
-        )
-        setInput(defaultPromptForDocId(selectedDocId) || DEFAULT_WORKFLOW_PROMPT)
-        return
-      }
-
       pushUserPoc(userLine)
       updatePocSessionMeta(docId, doc)
       setInput('')
@@ -642,36 +649,9 @@ export default function WorkflowChatPage() {
         return
       }
       const patches = ensurePocChatPatches(inferSimulatedPocPatches(userLine))
-      const pend = { doc, text: userLine, patches }
-      pendingPocRef.current = pend
-      const sectionBlock = patches.sections.map(x => `• ${x}`).join('\n')
-      const fieldBlock = patches.fields.map(x => `• ${x}`).join('\n')
-      const preview = patches.usedFallback
-        ? `**Planned highlights (sample)**\nYour message did not match specific fee, payment, or basic wording, so **Basic Information** sample fields are used. You can still confirm.\n\n**Sections**\n${sectionBlock}\n\n**Fields**\n${fieldBlock}`
-        : `**Planned highlights**\n\n**Sections**\n${sectionBlock}\n\n**Fields**\n${fieldBlock}`
-      pushAssistantPoc(
-        `${preview}\n\nConfirm to generate the preview and actions below, or edit your message and send again.`,
-        {
-          actions: [{ type: 'confirmPoc', label: 'Confirm & apply' }],
-        },
-      )
+      pendingPocRef.current = { doc, text: userLine, patches }
+      await executePocPipeline({ doc, text: userLine, patches })
       return
-    }
-
-    if (role === 'BUFM' || role === 'KMT') {
-      if (!reviewerHiGatePassed) {
-        const plain = text.trim()
-        const isHi = /^\s*(hi|hello|hey)\b/i.test(plain)
-        pushUser(userLine)
-        if (!isHi) {
-          setInput('')
-          pushAssistant('Please say **hi** first to continue.')
-          return
-        }
-        setReviewerHiGatePassed(true)
-        setInput(defaultPromptForDocId(selectedDocId) || DEFAULT_WORKFLOW_PROMPT)
-        return
-      }
     }
 
     pushUser(userLine)
@@ -684,23 +664,7 @@ export default function WorkflowChatPage() {
         )
         return
       }
-      const extrasNav = buildNavigationExtrasForReviewer(doc, userLine)
-      const storedExtras = buildChatWorkflowExtrasFromDoc(doc)
-      await runProgress()
-      const initLine = formatChatDocumentResolutionLine(userLine, doc, matchSource)
-      const body = formatPocChangesForChat(doc, { roleLabel: 'POC' })
-      let inferredAppend = ''
-      if (!storedExtras && extrasNav.sections?.length) {
-        inferredAppend = `\n\n---\n\n**Review focus (from your message)** — highlight targets for this visit:\n\n**Sections**\n${extrasNav.sections.map(s => `• ${s}`).join('\n')}\n\n**Fields**\n${extrasNav.fields.map(f => `• ${f}`).join('\n')}`
-      }
-      const summaryBlock = `**Summary — POC-related changes**\n${initLine}\nInitializing → processing → **completed** for **${doc.sub || doc.id}** (\`${doc.id}\`).\n\n${body}${inferredAppend}\n\n---\n\nUse the buttons below to **open the document** (green POC highlights), **approve**, or **reject** (when this document is awaiting BUFM approval).`
-      pushAssistant(summaryBlock, {
-        actions: [
-          { type: 'openBufm', label: 'Open document', docId: doc.id, extras: extrasNav },
-          { type: 'bufmApprove', label: 'Approve', docId: doc.id },
-          { type: 'bufmReject', label: 'Reject', docId: doc.id, extras: extrasNav },
-        ],
-      })
+      await runBufmOpsPipeline(doc, userLine, matchSource)
       return
     }
 
@@ -851,7 +815,7 @@ export default function WorkflowChatPage() {
       if (!st || st.docId !== action.docId) {
         if (role === 'POC') {
           pushAssistantPoc(
-            'Confirm your update on the previous assistant message (**Confirm & apply**), then use **Save as draft** again.',
+            'Send an Ops Agent update in chat first, then use **Save as draft** again.',
           )
         }
         return
@@ -922,10 +886,10 @@ export default function WorkflowChatPage() {
           </div>
         </div>
       ))}
-      {isPoc && pocOpsStepperStep !== null && (
+      {opsAnalysisStep !== null && (
         <div className="workflow-chat__msg workflow-chat__msg--assistant">
           <div className="workflow-chat__bubble workflow-chat__bubble--poc-stepper">
-            <PocOpsStepper stepIndex={pocOpsStepperStep} />
+            <PocOpsStepper stepIndex={opsAnalysisStep} />
           </div>
         </div>
       )}
@@ -936,7 +900,6 @@ export default function WorkflowChatPage() {
 
   if (role === 'POC') {
     const sortedSessions = [...pocSessions].sort((a, b) => b.updatedAt - a.updatedAt)
-    const pocGateOk = pocSessions.find(s => s.id === pocActiveSessionId)?.pocHiGatePassed === true
     return (
       <Layout>
         <main className="workflow-chat workflow-chat--poc">
@@ -994,7 +957,15 @@ export default function WorkflowChatPage() {
                         className={`workflow-chat-poc__history-item${s.id === pocActiveSessionId ? ' workflow-chat-poc__history-item--active' : ''}`}
                         onClick={() => {
                           setPocActiveSessionId(s.id)
-                          setInput('')
+                          const onlyWelcome =
+                            s.messages?.length === 1 &&
+                            s.messages[0]?.role === 'assistant' &&
+                            s.messages[0]?.id === 'welcome'
+                          setInput(
+                            onlyWelcome
+                              ? defaultPromptForDocId(selectedDocId) || DEFAULT_WORKFLOW_PROMPT
+                              : '',
+                          )
                           pendingPocRef.current = null
                           lastPocChatPatchRef.current = null
                         }}
@@ -1006,11 +977,17 @@ export default function WorkflowChatPage() {
                       </button>
                       <button
                         type="button"
-                        className="workflow-chat-poc__history-delete"
+                        className="workflow-chat-poc__history-delete workflow-chat-poc__history-delete--icon"
                         aria-label={`Delete chat ${s.title}`}
+                        title="Delete chat"
                         onClick={e => deletePocSession(e, s.id)}
                       >
-                        Delete
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
                       </button>
                     </li>
                   ))}
@@ -1050,7 +1027,7 @@ export default function WorkflowChatPage() {
                   <input
                     type="text"
                     className="workflow-chat-poc__input"
-                    placeholder={pocGateOk ? 'Message…' : 'Type hi, then send…'}
+                    placeholder="Message…"
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={e => {
@@ -1081,8 +1058,6 @@ export default function WorkflowChatPage() {
       </Layout>
     )
   }
-
-  const reviewerGateOk = reviewerHiGatePassed
 
   return (
     <Layout>
@@ -1156,7 +1131,7 @@ export default function WorkflowChatPage() {
                 <input
                   type="text"
                   className="workflow-chat-poc__input"
-                  placeholder={reviewerGateOk ? 'Message…' : 'Type hi, then send…'}
+                  placeholder="Message…"
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => {

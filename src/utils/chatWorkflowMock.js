@@ -305,6 +305,23 @@ export function formatPocChangesForChat(doc, { roleLabel = 'POC' } = {}) {
 }
 
 /**
+ * BUFM chat: review-date before/after (when stored) + full POC change lists (includes document title).
+ */
+export function formatBufmChatPocChangeSummary(doc) {
+  if (!doc) return ''
+  const fields = doc.poc_updated_fields || []
+  const hasReviewDate = fields.some(f => /document review date/i.test(String(f)))
+  const before = doc.poc_review_date_before
+  const after = doc.readOnlyWizard?.step1?.reviewDate
+  const dateBlock =
+    hasReviewDate && (before != null || after)
+      ? `**Document review date (POC)**\n**Previous:** ${before ?? '—'}\n**Updated to:** **${after ?? '—'}**`
+      : ''
+  const body = formatPocChangesForChat(doc, { roleLabel: 'POC' })
+  return dateBlock ? `${dateBlock}\n\n---\n\n${body}` : body
+}
+
+/**
  * Payload for navigation: merge real POC highlights for the viewer session.
  */
 export function buildChatWorkflowExtrasFromDoc(doc) {

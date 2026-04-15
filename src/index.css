@@ -6547,6 +6547,19 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   background: #fee2e2;
   border-color: #f87171;
 }
+.workflow-chat-poc__history-delete--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  padding: 8px;
+  font-size: 0;
+  line-height: 0;
+}
+.workflow-chat-poc__history-delete--icon svg {
+  display: block;
+  flex-shrink: 0;
+}
 .workflow-chat-poc__history {
   list-style: none;
   margin: 0;
