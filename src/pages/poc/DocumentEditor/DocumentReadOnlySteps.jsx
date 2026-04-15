@@ -42,7 +42,7 @@ function ReadOnlyAccordion({ id, title, badge, openIds, onToggle, children, sect
 /**
  * Full five-step read-only wizard: same tabs as edit mode, plain-text fields only.
  */
-export default function DocumentReadOnlySteps({ doc, step }) {
+export default function DocumentReadOnlySteps({ doc, step, precisePocHighlightsOnly = false }) {
   const { title, subtitle } = getReadOnlyStepHeading(step)
   const sections = getReadOnlyStepSections(doc, step)
   const reviewerSets = useMemo(() => buildReviewerFlagSets(doc), [doc])
@@ -63,8 +63,9 @@ export default function DocumentReadOnlySteps({ doc, step }) {
   )
   const wholeStepPoc = useMemo(
     () =>
-      pocStepHits.has(step) || isReviewerHighlightingWholeStep(step, pocSets.sections),
-    [step, pocSets.sections, pocStepHits],
+      pocStepHits.has(step) ||
+      (!precisePocHighlightsOnly && isReviewerHighlightingWholeStep(step, pocSets.sections)),
+    [step, pocSets.sections, pocStepHits, precisePocHighlightsOnly],
   )
   const [openIds, setOpenIds] = useState(() => sections.map((_, i) => `rs-${step}-${i}`))
 

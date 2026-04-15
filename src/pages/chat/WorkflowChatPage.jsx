@@ -780,7 +780,7 @@ export default function WorkflowChatPage() {
                 <div className="workflow-chat-poc__hero">
                   <h1 className="workflow-chat-poc__hero-title">Document chat</h1>
                   <p className="workflow-chat-poc__hero-sub">
-                    Read the guidelines, pick a document, then describe updates. We show what changed first; opening the document shows highlights.
+                    Pick a document, describe your updates, then confirm. Opening the document shows matching sections and fields highlighted in green.
                   </p>
                 </div>
 
@@ -822,25 +822,6 @@ export default function WorkflowChatPage() {
                     <p className="workflow-chat-poc__upload-status">Uploading — {uploadPct}%</p>
                   </div>
                 )}
-
-                <div className="workflow-chat-poc__guidelines">
-                  <div className="workflow-chat-poc__guide-col">
-                    <h3 className="workflow-chat-poc__guide-title">File & message tips</h3>
-                    <ul>
-                      <li>Accepted formats: PDF, Word, CSV, TXT (demo — file name only in chat).</li>
-                      <li>Keep requests under a few sentences; use an em dash after the ID (e.g. K-5031 — …).</li>
-                      <li>Name one main topic per message for clearer highlights.</li>
-                    </ul>
-                  </div>
-                  <div className="workflow-chat-poc__guide-col">
-                    <h3 className="workflow-chat-poc__guide-title">How to proceed</h3>
-                    <ul>
-                      <li>Select a document, send your change request, then <strong>Confirm & apply</strong>.</li>
-                      <li>Use <strong>Open document</strong> to review green highlights, then save or submit.</li>
-                      <li><strong>Submit for approval</strong> opens a confirmation before sending to BUFM.</li>
-                    </ul>
-                  </div>
-                </div>
 
                 <div className="workflow-chat-poc__messages">{renderMessageList(pocMessages, true)}</div>
               </div>

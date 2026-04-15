@@ -9,6 +9,9 @@ export function mergeChatWorkflowHighlights(doc, extras, options = {}) {
   if (!extras) return doc
   const uniq = arr => [...new Set((arr || []).map(s => String(s).trim()).filter(Boolean))]
   if (options.replacePocHighlights) {
+    const hasExtras =
+      (extras.sections && extras.sections.length > 0) || (extras.fields && extras.fields.length > 0)
+    if (!hasExtras) return doc
     return {
       ...doc,
       poc_updated_sections: uniq(extras.sections || []),
