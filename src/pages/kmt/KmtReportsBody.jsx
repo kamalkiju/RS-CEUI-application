@@ -77,7 +77,7 @@ export default function KmtReportsBody() {
 
   const publishKnowledgeDoc = doc => {
     if (doc.status !== 'Pending_KMT') return
-    if (!window.confirm('Publish this knowledge document? It will be recorded as final approved by KMT.')) return
+    if (!window.confirm('Approve this knowledge document? It will be recorded as final approved by KMT.')) return
     const today = new Date().toISOString().slice(0, 10)
     updateDoc(doc.id, {
       status: 'approved',
@@ -191,7 +191,7 @@ export default function KmtReportsBody() {
                             </button>
                             {showKnowledgePublish && doc.status === 'Pending_KMT' && (
                               <button type="button" className="btn btn-primary btn-sm" onClick={() => publishKnowledgeDoc(doc)}>
-                                Publish
+                                Approve
                               </button>
                             )}
                           </div>

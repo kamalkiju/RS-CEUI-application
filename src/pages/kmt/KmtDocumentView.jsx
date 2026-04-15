@@ -208,7 +208,7 @@ export default function KmtDocumentView() {
 
   const handleApprove = () => {
     if (doc.status !== 'Pending_KMT' && !chatHighlightSession) {
-      window.alert('Publish is only available when this document is pending KMT final review.')
+      window.alert('Approve is only available when this document is pending KMT final review.')
       return
     }
     const today = new Date().toISOString().slice(0, 10)
@@ -431,7 +431,7 @@ export default function KmtDocumentView() {
                           }
                           onClick={handleApprove}
                         >
-                          Publish
+                          Approve
                         </button>
                         <button
                           type="button"
@@ -569,7 +569,7 @@ export default function KmtDocumentView() {
             {kmtEdit && (
               <div className="kmt-doc-view__kmt-edit-banner" role="status">
                 <strong>KMT edit mode</strong> — update catalog fields below (same scope as POC header details). The document preview shows all steps with{' '}
-                <strong>POC updates in green</strong> and reviewer flags in orange. Use <strong>Publish</strong>, <strong>Reject</strong>, or <strong>Release task</strong> in the header when this document is pending KMT.
+                <strong>POC updates in green</strong> and reviewer flags in orange. Use <strong>Approve</strong>, <strong>Reject</strong>, or <strong>Release task</strong> in the header when this document is pending KMT.
               </div>
             )}
 

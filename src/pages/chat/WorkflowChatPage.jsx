@@ -537,13 +537,13 @@ export default function WorkflowChatPage() {
       const kmtFullActions = [
         { type: 'openKmt', label: 'Open document', docId: d.id, extras: extrasNav },
         { type: 'kmtEdit', label: 'Edit details', docId: d.id, extras: extrasNav },
-        { type: 'kmtApprove', label: 'Publish', docId: d.id },
+        { type: 'kmtApprove', label: 'Approve', docId: d.id },
         { type: 'kmtReject', label: 'Reject', docId: d.id, extras: extrasNav },
         { type: 'kmtRelease', label: 'Release task', docId: d.id },
       ]
       const kmtInitialActions = [
         { type: 'openKmt', label: 'Open document', docId: d.id, extras: extrasNav },
-        { type: 'kmtApprove', label: 'Publish', docId: d.id },
+        { type: 'kmtApprove', label: 'Approve', docId: d.id },
         { type: 'kmtReject', label: 'Reject', docId: d.id, extras: extrasNav },
       ]
       pushAssistant(summaryBlock, {
@@ -805,7 +805,7 @@ export default function WorkflowChatPage() {
       const d = resolveDoc(action.docId)
       if (!d || d.status !== 'Pending_KMT') {
         pushAssistant(
-          '**Publish** runs only when the document is **Pending KMT**. Open it from the KMT review queue, then use Publish on the document page.',
+          '**Approve** runs only when the document is **Pending KMT**. Open it from the KMT review queue, then use Approve on the document page.',
         )
         return
       }
@@ -819,7 +819,7 @@ export default function WorkflowChatPage() {
         pocResubmissionNote: undefined,
         tabs: Array.from(new Set([...(d.tabs || []), 'all'])),
       })
-      pushAssistant(`**${d.sub || action.docId}** was **published** (final approved).`)
+      pushAssistant(`**${d.sub || action.docId}** was **approved** by KMT (final).`)
       return
     }
     if (action.type === 'kmtReject' && action.docId) {
