@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout.jsx'
 import { useRsaUI } from '../context/RsaUIContext.jsx'
-import RejectModal from '../components/RejectModal.jsx'
+import { useDocs } from '../context/DocContext.jsx'
 
 const ROUTES = [
   { id: '#RT-4421', team: 'Team Alpha', zone: 'North District', pickups: '34 / 34', pct: 100, status: 'Completed', color: '#27ae60' },
@@ -18,9 +19,15 @@ const STATUS_STYLES = {
 }
 
 export default function BUFMDashboard() {
-  const { getPendingForBUFM, approveBUFM, rejectBUFM } = useRsaUI()
+  const navigate = useNavigate()
+  const { getPendingForBUFM } = useRsaUI()
+  const { docs } = useDocs()
   const pendingRsa = getPendingForBUFM()
-  const [rejectId, setRejectId] = useState(null)
+  const recentKnowledgeApprovals = useMemo(() => {
+    return docs
+      .filter(d => d.approved_by_BUFM && (d.status === 'Pending_KMT' || d.status === 'approved'))
+      .slice(0, 8)
+  }, [docs])
 
   return (
     <Layout>
@@ -49,11 +56,11 @@ export default function BUFMDashboard() {
           ))}
         </div>
 
-        {/* RSAUI — Pending BUFM */}
+        {/* RSAUI — pending BUFM (view opens full review; approve/reject on that page) */}
         <div style={{ background: '#fff', border: '1px solid #dce6f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,.08)', overflow: 'hidden', marginBottom: 28 }}>
           <div style={{ padding: '18px 20px', borderBottom: '1px solid #dce6f0' }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#1a2b3c' }}>RSAUI approvals</span>
-            <span style={{ marginLeft: 10, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#fef9e7', color: '#b45309', border: '1px solid #fde68a' }}>Pending_BUFM</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#1a2b3c' }}>Recent RSAUI approvals</span>
+            <span style={{ marginLeft: 10, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#fef9e7', color: '#b45309', border: '1px solid #fde68a' }}>Pending BUFM</span>
           </div>
           {pendingRsa.length === 0 ? (
             <p style={{ padding: 20, color: '#94a3b8', fontSize: 14 }}>No RSAUI submissions awaiting BUFM review.</p>
@@ -74,8 +81,55 @@ export default function BUFMDashboard() {
                     <td style={{ padding: '12px 16px' }}>{s.product?.name || '—'}</td>
                     <td style={{ padding: '12px 16px', color: '#64748b' }}>{s.updated}</td>
                     <td style={{ padding: '12px 16px' }}>
-                      <button type="button" className="btn btn-primary" style={{ marginRight: 8, padding: '6px 12px', fontSize: 12 }} onClick={() => approveBUFM(s.id)}>Approve</button>
-                      <button type="button" className="btn btn-outline" style={{ padding: '6px 12px', fontSize: 12, color: '#c0392b', borderColor: '#f5b7b1' }} onClick={() => setRejectId(s.id)}>Reject</button>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ padding: '6px 12px', fontSize: 12 }}
+                        onClick={() => navigate(`/bufm/review/${encodeURIComponent(s.id)}`)}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* CEUI knowledge — BUFM-approved / in KMT pipeline */}
+        <div style={{ background: '#fff', border: '1px solid #dce6f0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,.08)', overflow: 'hidden', marginBottom: 28 }}>
+          <div style={{ padding: '18px 20px', borderBottom: '1px solid #dce6f0' }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#1a2b3c' }}>Recent Knowledge docs approvals</span>
+            <span style={{ marginLeft: 10, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#eaf4fb', color: '#1a5276', border: '1px solid #aed6f1' }}>CEUI</span>
+          </div>
+          {recentKnowledgeApprovals.length === 0 ? (
+            <p style={{ padding: 20, color: '#94a3b8', fontSize: 14 }}>No knowledge documents in the BUFM → KMT approval path yet.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  {['Document ID', 'Title', 'Status', 'Updated', 'Actions'].map(h => (
+                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11.5, fontWeight: 700, color: '#5c7185', textTransform: 'uppercase', background: '#f8fafc', borderBottom: '1px solid #dce6f0' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {recentKnowledgeApprovals.map(d => (
+                  <tr key={d.id} style={{ borderBottom: '1px solid #f0f4f8' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 700 }}>{d.id}</td>
+                    <td style={{ padding: '12px 16px' }}>{d.sub || '—'}</td>
+                    <td style={{ padding: '12px 16px' }}>{d.status === 'approved' ? 'Final approved' : 'Pending KMT'}</td>
+                    <td style={{ padding: '12px 16px', color: '#64748b' }}>{d.updated || '—'}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ padding: '6px 12px', fontSize: 12 }}
+                        onClick={() => navigate(`/bufm/document/${encodeURIComponent(d.id)}`)}
+                      >
+                        View
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -124,17 +178,6 @@ export default function BUFMDashboard() {
         </div>
       </div>
 
-      <RejectModal
-        open={!!rejectId}
-        title="Reject RSAUI submission"
-        roleLabel="BUFM"
-        variant="rsa"
-        enableAuditTrail
-        onClose={() => setRejectId(null)}
-        onConfirm={payload => {
-          if (rejectId) rejectBUFM(rejectId, payload)
-        }}
-      />
     </Layout>
   )
 }

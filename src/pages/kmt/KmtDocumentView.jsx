@@ -34,9 +34,6 @@ import {
   normalizeLabel,
 } from '../../utils/reviewFeedback.js'
 import { mergeChatWorkflowHighlights } from '../../utils/chatWorkflowMerge.js'
-import KmtFormBuilder from './KmtFormBuilder.jsx'
-import { ensureFivePocTabs } from './kmtFormBuilderShared.js'
-import { normalizeTemplateForm } from './pocReferenceFormSeed.js'
 
 const STEPPER_STEPS = [
   { n: 1, short: 'Knowledge Area' },
@@ -89,7 +86,6 @@ export default function KmtDocumentView() {
   const [basicSaName, setBasicSaName] = useState('')
   const [basicSaId, setBasicSaId] = useState('')
   const [basicSaType, setBasicSaType] = useState('')
-  const [docForm, setDocForm] = useState(() => normalizeTemplateForm({ tabs: [] }))
 
   useEffect(() => {
     if (doc) setKmtNote(doc.kmtEditorialNote || '')
@@ -105,7 +101,6 @@ export default function KmtDocumentView() {
     setBasicSaName(a0?.name || '')
     setBasicSaId(a0?.id != null ? String(a0.id) : '')
     setBasicSaType(a0?.type || '')
-    setDocForm(normalizeTemplateForm(doc.form || {}))
   }, [doc?.id])
 
   const disp = useMemo(() => (doc ? getDisplayStatus(doc, 'KMT') : null), [doc])
@@ -290,10 +285,21 @@ export default function KmtDocumentView() {
       lob: basicLob.trim() || doc.lob,
       areas: [first, ...restAreas],
     })
+    window.alert('Details saved.')
   }
 
-  const saveKmtDocumentForm = () => {
-    updateDoc(doc.id, { form: ensureFivePocTabs(docForm) })
+  const handleReleaseTask = () => {
+    if (!canKmtDecide) {
+      window.alert('Release is only available while this document is pending KMT final review.')
+      return
+    }
+    if (
+      !window.confirm(
+        'Release this task to the assignment pool? (Demo — shows what reviewers would do; no routing change in the prototype.)',
+      )
+    )
+      return
+    window.alert('Task release recorded for demo purposes. Production would re-queue or reassign the review.')
   }
 
   return (
@@ -385,28 +391,64 @@ export default function KmtDocumentView() {
                       </div>
                     </dl>
                   </div>
-                  {showReviewActions && (
-                    <div className="bufm-doc-view__header-actions">
+                  <div className="bufm-doc-view__header-actions">
+                    {!kmtEdit ? (
                       <button
                         type="button"
-                        className="btn btn-primary"
-                        disabled={!canKmtDecide}
-                        title={!canKmtDecide ? 'Available when status is pending KMT review' : undefined}
-                        onClick={handleApprove}
+                        className="btn btn-outline"
+                        onClick={() =>
+                          navigate(`/kmt/document/${encodeURIComponent(doc.id)}`, {
+                            state: { ...(location.state || {}), kmtEdit: true },
+                          })
+                        }
                       >
-                        Publish
+                        Edit details
                       </button>
+                    ) : (
                       <button
                         type="button"
-                        className="btn btn-outline bufm-doc-view__reject"
-                        disabled={!canKmtDecide}
-                        title={!canKmtDecide ? 'Available when status is pending KMT review' : undefined}
-                        onClick={() => setRejectOpen(true)}
+                        className="btn btn-outline"
+                        onClick={() =>
+                          navigate(`/kmt/document/${encodeURIComponent(doc.id)}`, {
+                            state: { ...(location.state || {}), kmtEdit: false },
+                          })
+                        }
                       >
-                        Reject
+                        View only
                       </button>
-                    </div>
-                  )}
+                    )}
+                    {showReviewActions && (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          disabled={!canKmtDecide}
+                          title={!canKmtDecide ? 'Available when status is pending KMT review' : undefined}
+                          onClick={handleApprove}
+                        >
+                          Publish
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          disabled={!canKmtDecide}
+                          title={!canKmtDecide ? 'Available when status is pending KMT review' : undefined}
+                          onClick={handleReleaseTask}
+                        >
+                          Release task
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline bufm-doc-view__reject"
+                          disabled={!canKmtDecide}
+                          title={!canKmtDecide ? 'Available when status is pending KMT review' : undefined}
+                          onClick={() => setRejectOpen(true)}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 {showReviewActions && rejectPicks.length > 0 && (
                   <div className="reviewer-pick-hint" role="status">
@@ -479,183 +521,150 @@ export default function KmtDocumentView() {
             />
           )}
 
-          {!kmtEdit && (
-            <div className="bufm-doc-view__stepper-bar">
-              <nav className="bufm-stepper bufm-stepper--doc-view" aria-label="Document steps">
-                {STEPPER_STEPS.map(s => {
-                  const tabRev =
-                    isReviewerHighlightingWholeStep(s.n, reviewerSets.sections) ||
-                    reviewerStepsWithHits.has(s.n)
-                  const tabPoc = chatHighlightSession
-                    ? pocStepsWithUpdates.has(s.n)
-                    : isReviewerHighlightingWholeStep(s.n, pocSets.sections) || pocStepsWithUpdates.has(s.n)
-                  return (
-                    <button
-                      key={s.n}
-                      type="button"
-                      className={`bufm-stepper__tab${activeStep === s.n ? ' bufm-stepper__tab--active' : ''}${tabRev ? ' bufm-stepper__tab--reviewer-flag' : ''}${tabPoc ? ' bufm-stepper__tab--poc-update' : ''}`}
-                      onClick={() => setActiveStep(s.n)}
-                    >
-                      <span className="bufm-stepper__num">{s.n}</span>
-                      <span className="bufm-stepper__label">{s.short}</span>
-                    </button>
-                  )
-                })}
-              </nav>
+          {doc.rejection_comment_BUFM && (
+            <div className="rsa-reviewer-verify bufm-doc-view__bufm-prior-note" role="region" aria-label="BUFM prior feedback">
+              <strong>BUFM comments on file</strong>
+              <p style={{ margin: '8px 0 0' }}>{doc.rejection_comment_BUFM}</p>
             </div>
           )}
+
+          <div className="bufm-doc-view__stepper-bar">
+            <nav className="bufm-stepper bufm-stepper--doc-view" aria-label="Document steps">
+              {STEPPER_STEPS.map(s => {
+                const tabRev =
+                  isReviewerHighlightingWholeStep(s.n, reviewerSets.sections) ||
+                  reviewerStepsWithHits.has(s.n)
+                const tabPoc = chatHighlightSession
+                  ? pocStepsWithUpdates.has(s.n)
+                  : isReviewerHighlightingWholeStep(s.n, pocSets.sections) || pocStepsWithUpdates.has(s.n)
+                return (
+                  <button
+                    key={s.n}
+                    type="button"
+                    className={`bufm-stepper__tab${activeStep === s.n ? ' bufm-stepper__tab--active' : ''}${tabRev ? ' bufm-stepper__tab--reviewer-flag' : ''}${tabPoc ? ' bufm-stepper__tab--poc-update' : ''}`}
+                    onClick={() => setActiveStep(s.n)}
+                  >
+                    <span className="bufm-stepper__num">{s.n}</span>
+                    <span className="bufm-stepper__label">{s.short}</span>
+                  </button>
+                )
+              })}
+            </nav>
+          </div>
 
           <div className="bufm-doc-view__scroll">
             {kmtEdit && (
               <div className="kmt-doc-view__kmt-edit-banner" role="status">
-                KMT edit mode — header and POC details above; update catalog fields in the form builder below. Use <strong>Publish</strong> or <strong>Reject</strong> in the header when this document is pending KMT.
-              </div>
-            )}
-
-            {kmtEdit && showReviewActions && hasPocUpdatesForReview && (
-              <div className="kmt-doc-view__poc-review-hint" role="region" aria-label="POC change highlights">
-                <div className="kmt-doc-view__poc-review-hint__text">
-                  <strong>Section and field highlights</strong> for POC updates are shown in the read-only document steps (not in the form builder). Open document review to see green highlights on updated areas.
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={() =>
-                    navigate(`/kmt/document/${encodeURIComponent(doc.id)}`, {
-                      state: { kmtEdit: false },
-                      replace: true,
-                    })
-                  }
-                >
-                  Open document preview
-                </button>
-              </div>
-            )}
-
-            {!kmtEdit && (
-              <div className="bufm-doc-view__preview">
-                <section className="bufm-doc-view__step-content">
-                  <h2
-                    className={`bufm-doc-view__step-heading${wholeStepReviewer ? ' bufm-doc-view__step-heading--reviewer-flag' : ''}${
-                      wholeStepPoc ? ' bufm-doc-view__step-heading--poc-update' : ''
-                    }`}
-                  >
-                    {heading.title}
-                  </h2>
-                  <p className="bufm-doc-view__step-sub">{heading.subtitle}</p>
-                  <div className="bufm-doc-view__accordions">
-                    {sections.map((sec, i) => (
-                      <ReadOnlyFieldsAccordion
-                        key={`${activeStep}-${i}-${sec.title}`}
-                        title={sec.title}
-                        badge={sec.badge}
-                        fields={sec.fields || []}
-                        sectionFlagged={wholeStepReviewer || isSectionFlagged(sec.title, reviewerSets.sections)}
-                        pocSectionFlagged={
-                          chatHighlightSession
-                            ? isSectionFlaggedExact(sec.title, pocSets.sections)
-                            : wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)
-                        }
-                        fieldFlags={label => isFieldFlagged(label, reviewerSets.fields)}
-                        pocFieldFlags={
-                          chatHighlightSession
-                            ? label => isFieldFlaggedExact(label, pocSets.fields)
-                            : label => isFieldFlagged(label, pocSets.fields)
-                        }
-                        pocFieldHighlightsOnly={chatHighlightSession}
-                        flagPickerMode={showReviewActions}
-                        sectionPickActive={isRejectPick('section', sec.title)}
-                        onFlagSection={() => toggleRejectPick('section', sec.title)}
-                        onFlagField={fld => toggleRejectPick('field', fld)}
-                        fieldPickActive={lbl => isRejectPick('field', lbl)}
-                      />
-                    ))}
-                  </div>
-                </section>
-
-                <footer className="bufm-doc-view__footer">
-                  <div className="bufm-doc-view__footer-nav">
-                    <button
-                      type="button"
-                      className="btn btn-outline"
-                      disabled={activeStep <= 1}
-                      onClick={() => setActiveStep(s => Math.max(1, s - 1))}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-outline"
-                      disabled={activeStep >= 5}
-                      onClick={() => setActiveStep(s => Math.min(5, s + 1))}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </footer>
+                <strong>KMT edit mode</strong> — update catalog fields below (same scope as POC header details). The document preview shows all steps with{' '}
+                <strong>POC updates in green</strong> and reviewer flags in orange. Use <strong>Publish</strong>, <strong>Reject</strong>, or <strong>Release task</strong> in the header when this document is pending KMT.
               </div>
             )}
 
             {kmtEdit && (
-              <>
-                <section className="kmt-template-editor__section kmt-doc-kmt-edit__section">
-                  <div className="kmt-template-editor__section-head">
-                    <h2 className="kmt-template-editor__section-title">Basic information</h2>
-                    <p className="kmt-template-editor__section-sub">
-                      Document title, geography, market, LOB, and primary service area. Saved separately from the form builder below.
-                    </p>
-                  </div>
-                  <div className="kmt-template-editor__fields kmt-wizard__fields">
-                    <label className="kmt-field">
-                      <span>Document title</span>
-                      <input className="kmt-input" value={basicSub} onChange={e => setBasicSub(e.target.value)} />
-                    </label>
-                    <label className="kmt-field">
-                      <span>Primary geography / area label</span>
-                      <input className="kmt-input" value={basicArea} onChange={e => setBasicArea(e.target.value)} />
-                    </label>
-                    <label className="kmt-field">
-                      <span>Market type</span>
-                      <input className="kmt-input" value={basicMarket} onChange={e => setBasicMarket(e.target.value)} />
-                    </label>
-                    <label className="kmt-field">
-                      <span>Line of business</span>
-                      <input className="kmt-input" value={basicLob} onChange={e => setBasicLob(e.target.value)} />
-                    </label>
-                    <label className="kmt-field">
-                      <span>Service area name</span>
-                      <input className="kmt-input" value={basicSaName} onChange={e => setBasicSaName(e.target.value)} />
-                    </label>
-                    <label className="kmt-field">
-                      <span>Service area ID</span>
-                      <input className="kmt-input" value={basicSaId} onChange={e => setBasicSaId(e.target.value)} />
-                    </label>
-                    <label className="kmt-field">
-                      <span>Service area type</span>
-                      <input className="kmt-input" value={basicSaType} onChange={e => setBasicSaType(e.target.value)} />
-                    </label>
-                  </div>
-                  <button type="button" className="btn btn-primary" onClick={saveKmtBasicDetails}>
-                    Save basic information
-                  </button>
-                </section>
-
-                <section className="kmt-template-editor__section kmt-doc-kmt-edit__section kmt-doc-kmt-edit__section--form">
-                  <div className="kmt-template-editor__section-head">
-                    <h2 className="kmt-template-editor__section-title">Document form builder</h2>
-                    <p className="kmt-template-editor__section-sub">
-                      Edit tabs, groups, and fields only — same builder as template create, without repeating basic information above.
-                    </p>
-                  </div>
-                  <div className="kmt-template-editor__form-shell kmt-doc-kmt-edit__form-shell">
-                    <KmtFormBuilder embedded controlledForm={docForm} setControlledForm={setDocForm} />
-                  </div>
-                  <button type="button" className="btn btn-primary" style={{ marginTop: 16 }} onClick={saveKmtDocumentForm}>
-                    Save form structure
-                  </button>
-                </section>
-              </>
+              <section className="kmt-template-editor__section kmt-doc-kmt-edit__section">
+                <div className="kmt-template-editor__section-head">
+                  <h2 className="kmt-template-editor__section-title">Basic information</h2>
+                  <p className="kmt-template-editor__section-sub">
+                    Document title, geography, market, LOB, and primary service area — aligned with how a POC edits catalog identity (no template form builder here).
+                  </p>
+                </div>
+                <div className="kmt-template-editor__fields kmt-wizard__fields">
+                  <label className="kmt-field">
+                    <span>Document title</span>
+                    <input className="kmt-input" value={basicSub} onChange={e => setBasicSub(e.target.value)} />
+                  </label>
+                  <label className="kmt-field">
+                    <span>Primary geography / area label</span>
+                    <input className="kmt-input" value={basicArea} onChange={e => setBasicArea(e.target.value)} />
+                  </label>
+                  <label className="kmt-field">
+                    <span>Market type</span>
+                    <input className="kmt-input" value={basicMarket} onChange={e => setBasicMarket(e.target.value)} />
+                  </label>
+                  <label className="kmt-field">
+                    <span>Line of business</span>
+                    <input className="kmt-input" value={basicLob} onChange={e => setBasicLob(e.target.value)} />
+                  </label>
+                  <label className="kmt-field">
+                    <span>Service area name</span>
+                    <input className="kmt-input" value={basicSaName} onChange={e => setBasicSaName(e.target.value)} />
+                  </label>
+                  <label className="kmt-field">
+                    <span>Service area ID</span>
+                    <input className="kmt-input" value={basicSaId} onChange={e => setBasicSaId(e.target.value)} />
+                  </label>
+                  <label className="kmt-field">
+                    <span>Service area type</span>
+                    <input className="kmt-input" value={basicSaType} onChange={e => setBasicSaType(e.target.value)} />
+                  </label>
+                </div>
+                <button type="button" className="btn btn-primary" onClick={saveKmtBasicDetails}>
+                  Save details
+                </button>
+              </section>
             )}
+
+            <div className="bufm-doc-view__preview">
+              <section className="bufm-doc-view__step-content">
+                <h2
+                  className={`bufm-doc-view__step-heading${wholeStepReviewer ? ' bufm-doc-view__step-heading--reviewer-flag' : ''}${
+                    wholeStepPoc ? ' bufm-doc-view__step-heading--poc-update' : ''
+                  }`}
+                >
+                  {heading.title}
+                </h2>
+                <p className="bufm-doc-view__step-sub">{heading.subtitle}</p>
+                <div className="bufm-doc-view__accordions">
+                  {sections.map((sec, i) => (
+                    <ReadOnlyFieldsAccordion
+                      key={`${activeStep}-${i}-${sec.title}`}
+                      title={sec.title}
+                      badge={sec.badge}
+                      fields={sec.fields || []}
+                      sectionFlagged={wholeStepReviewer || isSectionFlagged(sec.title, reviewerSets.sections)}
+                      pocSectionFlagged={
+                        chatHighlightSession
+                          ? isSectionFlaggedExact(sec.title, pocSets.sections)
+                          : wholeStepPoc || isSectionFlagged(sec.title, pocSets.sections)
+                      }
+                      fieldFlags={label => isFieldFlagged(label, reviewerSets.fields)}
+                      pocFieldFlags={
+                        chatHighlightSession
+                          ? label => isFieldFlaggedExact(label, pocSets.fields)
+                          : label => isFieldFlagged(label, pocSets.fields)
+                      }
+                      pocFieldHighlightsOnly={chatHighlightSession}
+                      flagPickerMode={showReviewActions}
+                      sectionPickActive={isRejectPick('section', sec.title)}
+                      onFlagSection={() => toggleRejectPick('section', sec.title)}
+                      onFlagField={fld => toggleRejectPick('field', fld)}
+                      fieldPickActive={lbl => isRejectPick('field', lbl)}
+                    />
+                  ))}
+                </div>
+              </section>
+
+              <footer className="bufm-doc-view__footer">
+                <div className="bufm-doc-view__footer-nav">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    disabled={activeStep <= 1}
+                    onClick={() => setActiveStep(s => Math.max(1, s - 1))}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    disabled={activeStep >= 5}
+                    onClick={() => setActiveStep(s => Math.min(5, s + 1))}
+                  >
+                    Next
+                  </button>
+                </div>
+              </footer>
+            </div>
 
             {kmtEdit && (
               <section className="bufm-doc-view__pulse-wrap kmt-doc-kmt-edit__notes">

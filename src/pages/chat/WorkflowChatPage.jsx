@@ -15,50 +15,6 @@ import {
   formatKmtReviewerContext,
 } from '../../utils/chatWorkflowMock.js'
 
-const CHAT_PROMPT_NONE = '__none__'
-
-function WorkflowChatPromptSelect({ id, role, onPick }) {
-  const opts =
-    role === 'POC'
-      ? [
-          [CHAT_PROMPT_NONE, 'Quick prompt…'],
-          ['K-5031 — update document title and contract activation date', 'Title & contract date'],
-          ['K-5031 — update fees and standard fee schedule', 'Fees'],
-          ['K-5031 — update payment terms and billing', 'Payment terms'],
-        ]
-      : role === 'BUFM'
-        ? [
-            [CHAT_PROMPT_NONE, 'Quick prompt…'],
-            ['K-5031 — summarize POC updates for approval', 'Summarize POC updates'],
-            ['K-5031 — list sections and fields changed by POC', 'Sections & fields'],
-            ['K-5031 — need highlights for BUFM review', 'Review highlights'],
-          ]
-        : [
-            [CHAT_PROMPT_NONE, 'Quick prompt…'],
-            ['K-5031 — summarize POC and BUFM context', 'POC & BUFM context'],
-            ['K-5031 — final KMT review before publish', 'Final review'],
-          ]
-  return (
-    <select
-      id={id}
-      className="workflow-chat-poc__prompt-select"
-      aria-label="Insert sample prompt"
-      defaultValue={CHAT_PROMPT_NONE}
-      onChange={e => {
-        const v = e.target.value
-        if (v && v !== CHAT_PROMPT_NONE) onPick(v)
-        e.target.value = CHAT_PROMPT_NONE
-      }}
-    >
-      {opts.map(([value, label]) => (
-        <option key={label} value={value}>
-          {label}
-        </option>
-      ))}
-    </select>
-  )
-}
-
 const PHASES = {
   idle: 'idle',
   init: 'initializing',
@@ -76,7 +32,7 @@ function pocWelcomeMessages(user) {
       role: 'assistant',
       id: 'welcome',
       content:
-        'Welcome to **document chat**. Choose a document next to **Attach**, or mention its title or ID in your message. Send to preview planned highlights, then **Confirm & apply**. **Open document** to see them in green. Use **Save as draft** or **Submit for approval** when ready.',
+        'Welcome to **document chat**. Pick a document in the **Document** menu (or type its **ID** or enough of the **title** to match). Your message is interpreted only as plain text to **plan highlight previews** — nothing runs as code. After you send, use **Confirm & apply**, then **Open document** to review highlights in green. **Save as draft** or **Submit for approval** when ready.',
     },
   ]
 }
@@ -87,7 +43,7 @@ function bufmWelcomeMessages() {
       role: 'assistant',
       id: 'welcome',
       content:
-        'Welcome to **BUFM document chat**. Select a document next to **Attach** (or type its ID or title), then send **any text**. You will get one **summary of POC-related changes**, plus **Open document**, **Approve**, and **Reject** in the same reply after the flow completes.',
+        'Welcome to **BUFM document chat**. Select a document in the **Document** menu (or type its ID or title), then send a message. You will get one **summary of POC-related changes** (and inferred review focus from your text when needed), plus **Open document**, **Approve**, and **Reject** after the flow completes.',
     },
   ]
 }
@@ -98,7 +54,7 @@ function kmtWelcomeMessages() {
       role: 'assistant',
       id: 'welcome',
       content:
-        'Welcome to **KMT document chat**. Select a document next to **Attach** (or type its ID or title), then send any message. The flow runs **Initializing → Processing → Completed** with a summary of **POC updates** plus BUFM/KMT context. **Open document** for read-only highlights and final actions.',
+        'Welcome to **KMT document chat**. Select a document in the **Document** menu (or type its ID or title), then send any message. You get one consolidated **summary**: POC updates, **BUFM** notes or approval state, prior **KMT** feedback when present, plus inferred review focus from your text. Use **Open document** (POC highlights in green), **Edit details**, **Publish**, **Reject**, or **Release task** when shown.',
     },
   ]
 }
@@ -632,22 +588,23 @@ export default function WorkflowChatPage() {
         return
       }
       const extrasNav = buildNavigationExtrasForReviewer(doc, userLine)
+      const storedExtras = buildChatWorkflowExtrasFromDoc(doc)
       await runProgress()
       const body = formatPocChangesForChat(doc, { roleLabel: 'POC' }) + formatKmtReviewerContext(doc)
-      pushAssistant(`**Completed.** Initializing → processing → finished.\n\n${body}`)
-      await delay(380)
-      pushAssistant(
-        '**Next steps** — open the document for read-only highlights, then publish or reject when the document is pending KMT.',
-        {
-          actions: [
-            { type: 'openKmt', label: 'Open document', docId: doc.id, extras: extrasNav },
-            { type: 'kmtApprove', label: 'Publish', docId: doc.id },
-            { type: 'kmtReject', label: 'Reject', docId: doc.id, extras: extrasNav },
-            { type: 'delegate', label: 'Release to another BUFM' },
-            { type: 'history', label: 'View change history' },
-          ],
-        },
-      )
+      let inferredAppend = ''
+      if (!storedExtras && extrasNav.sections?.length) {
+        inferredAppend = `\n\n---\n\n**Review focus (from your message)** — temporary highlight targets for this visit:\n\n**Sections**\n${extrasNav.sections.map(s => `• ${s}`).join('\n')}\n\n**Fields**\n${extrasNav.fields.map(f => `• ${f}`).join('\n')}`
+      }
+      const summaryBlock = `**Summary — KMT document review**\nInitializing → processing → **completed** for **${doc.sub || doc.id}** (\`${doc.id}\`).\n\n${body}${inferredAppend}\n\n---\n\nUse the buttons below to **open the document** (green POC highlights where metadata exists), **edit catalog details** (title, geography, service area), **publish** or **reject** when pending KMT, or **release task** (demo).`
+      pushAssistant(summaryBlock, {
+        actions: [
+          { type: 'openKmt', label: 'Open document', docId: doc.id, extras: extrasNav },
+          { type: 'kmtEdit', label: 'Edit details', docId: doc.id, extras: extrasNav },
+          { type: 'kmtApprove', label: 'Publish', docId: doc.id },
+          { type: 'kmtReject', label: 'Reject', docId: doc.id, extras: extrasNav },
+          { type: 'kmtRelease', label: 'Release task', docId: doc.id },
+        ],
+      })
     }
   }
 
@@ -704,6 +661,18 @@ export default function WorkflowChatPage() {
     }
     if (action.type === 'openKmt' && action.docId) {
       navigateToDocKmt(action.docId, action.extras)
+      return
+    }
+    if (action.type === 'kmtEdit' && action.docId) {
+      navigate(`/kmt/document/${encodeURIComponent(action.docId)}`, {
+        state: { kmtEdit: true, ...(action.extras ? { fromChatWorkflow: action.extras } : {}) },
+      })
+      return
+    }
+    if (action.type === 'kmtRelease' && action.docId) {
+      window.alert(
+        'Release task: in production this would return the assignment to the review pool or hand off to another reviewer. (Demo — no data change.)',
+      )
       return
     }
     if (action.type === 'kmtApprove' && action.docId) {
@@ -996,7 +965,6 @@ export default function WorkflowChatPage() {
                   <button type="button" className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" onClick={onVoice} title="Voice note">
                     Voice
                   </button>
-                  <WorkflowChatPromptSelect id="chat-prompt-poc" role="POC" onPick={setInput} />
                 </div>
                 <div className="workflow-chat-poc__input-row">
                   <input
@@ -1036,8 +1004,8 @@ export default function WorkflowChatPage() {
 
   const reviewerHeroSub =
     role === 'BUFM'
-      ? 'Select a document next to Attach (or mention title or ID), then send any text. You get a **summary of POC-related changes** in one reply, with **Open document**, **Approve**, and **Reject**.'
-      : 'Select a document next to Attach (or mention title or ID). Send any message for the same flow plus BUFM/KMT context. Open the document for read-only highlights.'
+      ? 'Select a document in the Document menu (or mention title or ID), then send a message. You get a **summary of POC-related changes** in one reply, with **Open document**, **Approve**, and **Reject**.'
+      : 'Select a document in the Document menu (or mention title or ID). One reply summarizes **POC**, **BUFM**, and **KMT** context, with actions to **open**, **edit details**, **publish**, **reject**, or **release** (when applicable).'
 
   return (
     <Layout>
@@ -1143,7 +1111,6 @@ export default function WorkflowChatPage() {
                 <button type="button" className="workflow-chat-poc__icon-btn workflow-chat-poc__icon-btn--text" onClick={onVoice} title="Voice note">
                   Voice
                 </button>
-                <WorkflowChatPromptSelect id="chat-prompt-reviewer" role={role} onPick={setInput} />
               </div>
               <div className="workflow-chat-poc__input-row">
                 <input

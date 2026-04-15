@@ -114,7 +114,14 @@ function isNavPathActive(pathname, path) {
   if (path === '/poc/settings') return pathname.startsWith('/poc/settings')
   if (path === '/poc/chat') return pathname.startsWith('/poc/chat')
   if (path === '/bufm') return pathname === '/bufm' || pathname === '/bufm/'
-  if (path === '/bufm/document-review') return pathname.startsWith('/bufm/document-review')
+  if (path === '/bufm/document-review') {
+    return (
+      pathname.startsWith('/bufm/document-review') ||
+      pathname.startsWith('/bufm/document/') ||
+      pathname.startsWith('/bufm/review/') ||
+      pathname.startsWith('/bufm/reject/')
+    )
+  }
   if (path === '/bufm/users') return pathname.startsWith('/bufm/users')
   if (path === '/bufm/settings') return pathname.startsWith('/bufm/settings')
   if (path === '/bufm/chat') return pathname.startsWith('/bufm/chat')
@@ -123,6 +130,8 @@ function isNavPathActive(pathname, path) {
   if (path === '/kmt/document-review') {
     return (
       pathname.startsWith('/kmt/document-review') ||
+      pathname.startsWith('/kmt/document/') ||
+      pathname.startsWith('/kmt/rsaui-submission/') ||
       pathname.startsWith('/kmt/edit') ||
       pathname.startsWith('/kmt/escalate') ||
       pathname.startsWith('/kmt/extend') ||
