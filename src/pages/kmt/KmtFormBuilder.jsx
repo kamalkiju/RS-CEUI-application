@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect, Fragment } from 'react'
 import Layout from '../../components/Layout.jsx'
 import { FIELD_LIBRARY, uid, emptyField } from './kmtFormBuilderShared.js'
 import { normalizeTemplateForm } from './pocReferenceFormSeed.js'
@@ -52,15 +52,6 @@ export default function KmtFormBuilder({ embedded = false, controlledForm, setCo
     }))
   }, [])
 
-  const updateFieldHeader = useCallback((groupId, fieldId, patch) => {
-    setForm(prev => ({
-      ...prev,
-      headerGroups: (prev.headerGroups || []).map(g =>
-        g.id !== groupId ? g : { ...g, fields: g.fields.map(f => (f.id === fieldId ? { ...f, ...patch } : f)) },
-      ),
-    }))
-  }, [])
-
   const addTab = () => {
     const t = { id: uid(), title: 'New Tab', groups: [{ id: uid(), title: 'New Group', columns: 2, fields: [] }] }
     setForm(prev => ({ ...prev, tabs: [...prev.tabs, t] }))
@@ -95,13 +86,28 @@ export default function KmtFormBuilder({ embedded = false, controlledForm, setCo
     })
   }
 
-  const addGroup = () => {
-    const g = { id: uid(), title: 'New Group', columns: 2, fields: [] }
-    setForm(prev => ({
-      ...prev,
-      tabs: prev.tabs.map(t => (t.id === activeTabId ? { ...t, groups: [...t.groups, g] } : t)),
-    }))
-  }
+  const insertGroupAfter = useCallback(
+    afterGroupId => {
+      const title = window.prompt('Group name', 'New group')
+      if (title == null) return
+      const trimmed = title.trim() || 'New group'
+      const g = { id: uid(), title: trimmed, columns: 2, fields: [] }
+      setForm(prev => ({
+        ...prev,
+        tabs: prev.tabs.map(t => {
+          if (t.id !== activeTabId) return t
+          const groups = t.groups || []
+          if (afterGroupId == null) {
+            return { ...t, groups: [...groups, g] }
+          }
+          const idx = groups.findIndex(x => x.id === afterGroupId)
+          if (idx < 0) return { ...t, groups: [...groups, g] }
+          return { ...t, groups: [...groups.slice(0, idx + 1), g, ...groups.slice(idx + 1)] }
+        }),
+      }))
+    },
+    [activeTabId],
+  )
 
   const duplicateGroup = gid => {
     setForm(prev => ({
@@ -151,69 +157,6 @@ export default function KmtFormBuilder({ embedded = false, controlledForm, setCo
     }))
   }
 
-  const onDropOnHeaderGroup = (e, groupId) => {
-    e.preventDefault()
-    const type = e.dataTransfer.getData('application/x-kmt-field')
-    if (!type) return
-    const f = emptyField(type)
-    setForm(prev => ({
-      ...prev,
-      headerGroups: (prev.headerGroups || []).map(g =>
-        g.id !== groupId ? g : { ...g, fields: [...g.fields, f] },
-      ),
-    }))
-  }
-
-  const addHeaderGroup = () => {
-    const g = { id: uid(), title: 'Basic information', columns: 2, fields: [] }
-    setForm(prev => ({ ...prev, headerGroups: [...(prev.headerGroups || []), g] }))
-  }
-
-  const duplicateHeaderGroup = gid => {
-    setForm(prev => {
-      const list = prev.headerGroups || []
-      const g = list.find(x => x.id === gid)
-      if (!g) return prev
-      const copy = {
-        ...g,
-        id: uid(),
-        fields: g.fields.map(f => ({ ...f, id: uid(), options: (f.options || []).map(o => ({ ...o, id: uid() })) })),
-      }
-      const idx = list.findIndex(x => x.id === gid)
-      const headerGroups = [...list.slice(0, idx + 1), copy, ...list.slice(idx + 1)]
-      return { ...prev, headerGroups }
-    })
-  }
-
-  const deleteHeaderGroup = gid => {
-    setForm(prev => ({
-      ...prev,
-      headerGroups: (prev.headerGroups || []).filter(g => g.id !== gid),
-    }))
-  }
-
-  const moveFieldHeader = (fromG, toG, fieldId, newIndex) => {
-    setForm(prev => {
-      const list = prev.headerGroups || []
-      let field = null
-      const groups = list.map(g => {
-        if (g.id !== fromG) return g
-        field = g.fields.find(f => f.id === fieldId)
-        return { ...g, fields: g.fields.filter(f => f.id !== fieldId) }
-      })
-      if (!field) return prev
-      return {
-        ...prev,
-        headerGroups: groups.map(g => {
-          if (g.id !== toG) return g
-          const next = [...g.fields]
-          next.splice(newIndex, 0, field)
-          return { ...g, fields: next }
-        }),
-      }
-    })
-  }
-
   const moveField = (tabId, fromG, toG, fieldId, newIndex) => {
     setForm(prev => ({
       ...prev,
@@ -241,27 +184,19 @@ export default function KmtFormBuilder({ embedded = false, controlledForm, setCo
 
   const sel = selected
     ? (() => {
-        if (selected.scope === 'header') {
-          for (const g of form.headerGroups || []) {
-            const f = g.fields.find(x => x.id === selected.fieldId)
-            if (f) return { scope: 'header', groupId: g.id, field: f }
-          }
-          return null
-        }
         for (const t of form.tabs) {
           for (const g of t.groups) {
             const f = g.fields.find(x => x.id === selected.fieldId)
-            if (f) return { scope: 'tab', tabId: t.id, groupId: g.id, field: f }
+            if (f) return { tabId: t.id, groupId: g.id, field: f }
           }
         }
         return null
       })()
     : null
 
-  const applyFieldPatch = (patch) => {
+  const applyFieldPatch = patch => {
     if (!sel) return
-    if (sel.scope === 'header') updateFieldHeader(sel.groupId, sel.field.id, patch)
-    else updateField(sel.tabId, sel.groupId, sel.field.id, patch)
+    updateField(sel.tabId, sel.groupId, sel.field.id, patch)
   }
 
   const inner = (
@@ -303,172 +238,6 @@ export default function KmtFormBuilder({ embedded = false, controlledForm, setCo
           </aside>
 
           <main className="kmt-fb__canvas">
-            <div className="kmt-fb__toolbar">
-              <button type="button" className="btn btn-outline kmt-btn-compact" onClick={addGroup}>
-                + New Group
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline kmt-btn-compact"
-                onClick={() => {
-                  const gs = activeTab?.groups || []
-                  if (!gs.length) return
-                  duplicateGroup(gs[gs.length - 1].id)
-                }}
-              >
-                Duplicate last group
-              </button>
-            </div>
-
-            <div className="kmt-fb__above-tabs">
-              <div className="kmt-fb__above-tabs-bar">
-                <div>
-                  <h3 className="kmt-fb__above-tabs-heading">Above tabs</h3>
-                  <p className="kmt-fb__above-tabs-sub">Add sections (for example Basic information) and drag field types from the library.</p>
-                </div>
-                <button type="button" className="btn btn-outline kmt-btn-compact" onClick={addHeaderGroup}>
-                  + Add section
-                </button>
-              </div>
-              {(form.headerGroups || []).map(g => (
-                <section key={g.id} className="kmt-fb__group kmt-fb__group--header">
-                  <header className="kmt-fb__group-head">
-                    <span className="kmt-fb__grip">⋮⋮</span>
-                    <h3>{g.title}</h3>
-                    <div className="kmt-fb__group-actions">
-                      <button
-                        type="button"
-                        className="btn btn-outline kmt-btn-compact"
-                        onClick={() => {
-                          const t = window.prompt('Section title', g.title)
-                          if (t == null || !t.trim()) return
-                          setForm(prev => ({
-                            ...prev,
-                            headerGroups: (prev.headerGroups || []).map(x =>
-                              x.id === g.id ? { ...x, title: t.trim() } : x,
-                            ),
-                          }))
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button type="button" className="btn btn-outline kmt-btn-compact" onClick={() => duplicateHeaderGroup(g.id)}>
-                        Duplicate
-                      </button>
-                      <select
-                        className="kmt-input kmt-input--inline"
-                        value={g.columns}
-                        onChange={e =>
-                          setForm(prev => ({
-                            ...prev,
-                            headerGroups: (prev.headerGroups || []).map(x =>
-                              x.id === g.id ? { ...x, columns: +e.target.value } : x,
-                            ),
-                          }))
-                        }
-                      >
-                        <option value={1}>1 Column</option>
-                        <option value={2}>2 Column</option>
-                      </select>
-                      <button
-                        type="button"
-                        className="btn btn-outline kmt-btn-compact"
-                        style={{ color: 'var(--danger)', borderColor: '#fecaca' }}
-                        onClick={() => deleteHeaderGroup(g.id)}
-                      >
-                        Delete section
-                      </button>
-                    </div>
-                  </header>
-                  <div
-                    className="kmt-fb__fields"
-                    style={{ gridTemplateColumns: `repeat(${g.columns}, 1fr)` }}
-                    onDragOver={e => e.preventDefault()}
-                    onDrop={e => onDropOnHeaderGroup(e, g.id)}
-                  >
-                    {g.fields.map((f, idx) => (
-                      <div
-                        key={f.id}
-                        className="kmt-fb__field-card"
-                        draggable
-                        onDragStart={e => {
-                          e.dataTransfer.setData('application/x-kmt-move', JSON.stringify({ fieldId: f.id, fromGroup: g.id, idx, scope: 'header' }))
-                        }}
-                        onDragOver={e => e.preventDefault()}
-                        onDrop={e => {
-                          e.preventDefault()
-                          const raw = e.dataTransfer.getData('application/x-kmt-move')
-                          if (!raw) return
-                          const parsed = JSON.parse(raw)
-                          if (parsed.scope !== 'header') return
-                          moveFieldHeader(parsed.fromGroup, g.id, parsed.fieldId, idx)
-                        }}
-                      >
-                        <div className="kmt-fb__field-head">
-                          <span>{FIELD_LIBRARY.find(x => x.type === f.type)?.label || f.type}</span>
-                          <div className="kmt-fb__field-tools">
-                            <button type="button" className="kmt-icon-btn" aria-label="Edit" onClick={() => setSelected({ scope: 'header', fieldId: f.id })}>
-                              ✎
-                            </button>
-                            <button
-                              type="button"
-                              className="kmt-icon-btn"
-                              aria-label="Duplicate"
-                              onClick={() => {
-                                const copy = { ...f, id: uid(), options: (f.options || []).map(o => ({ ...o, id: uid() })) }
-                                setForm(prev => ({
-                                  ...prev,
-                                  headerGroups: (prev.headerGroups || []).map(gr =>
-                                    gr.id === g.id ? { ...gr, fields: [...gr.fields.slice(0, idx + 1), copy, ...gr.fields.slice(idx + 1)] } : gr,
-                                  ),
-                                }))
-                              }}
-                            >
-                              ⧉
-                            </button>
-                            <button
-                              type="button"
-                              className="kmt-icon-btn"
-                              aria-label="Delete"
-                              onClick={() =>
-                                setForm(prev => ({
-                                  ...prev,
-                                  headerGroups: (prev.headerGroups || []).map(gr =>
-                                    gr.id === g.id ? { ...gr, fields: gr.fields.filter(x => x.id !== f.id) } : gr,
-                                  ),
-                                }))
-                              }
-                            >
-                              ×
-                            </button>
-                          </div>
-                        </div>
-                        <div className="kmt-fb__field-body">
-                          <label className="kmt-fb__preview-label">
-                            {f.label}
-                            {f.mandatory && <span className="kmt-fb__req"> *</span>}
-                          </label>
-                          {f.type === 'date' && <input className="kmt-input" type="date" readOnly />}
-                          {f.type === 'button' && (
-                            <button type="button" className={`btn ${f.buttonStyle === 'secondary' ? 'btn-outline' : f.buttonStyle === 'tertiary' ? 'btn-outline' : 'btn-primary'}`}>
-                              {f.label}
-                            </button>
-                          )}
-                          {f.type === 'notes' && (
-                            <textarea className="kmt-input" readOnly rows={3} placeholder={f.placeholder || '…'} defaultValue={f.defaultValue || ''} />
-                          )}
-                          {!['date', 'button', 'notes'].includes(f.type) && (
-                            <input className="kmt-input" readOnly placeholder={f.placeholder || '…'} defaultValue={f.defaultValue || ''} />
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="kmt-fb__drop-hint">Drop fields here to add to this section</div>
-                </section>
-              ))}
-            </div>
-
             <div className="kmt-fb__tabs-row kmt-fb__tabs-row--with-add">
               <div className="kmt-fb__tabs-scroll">
                 {form.tabs.map(t => (
@@ -501,159 +270,210 @@ export default function KmtFormBuilder({ embedded = false, controlledForm, setCo
               </button>
             </div>
 
-            {(activeTab?.groups || []).map(g => (
-              <section key={g.id} className="kmt-fb__group">
-                <header className="kmt-fb__group-head">
-                  <span className="kmt-fb__grip">⋮⋮</span>
-                  <h3>{g.title}</h3>
-                  <div className="kmt-fb__group-actions">
-                    <button type="button" className="btn btn-outline kmt-btn-compact" onClick={() => {
-                      const t = window.prompt('Group title', g.title)
-                      if (t == null || !t.trim()) return
-                      setForm(prev => ({
-                        ...prev,
-                        tabs: prev.tabs.map(tab =>
-                          tab.id !== activeTabId
-                            ? tab
-                            : { ...tab, groups: tab.groups.map(x => (x.id === g.id ? { ...x, title: t.trim() } : x)) },
-                        ),
-                      }))
-                    }}
-                    >
-                      Edit
-                    </button>
-                    <button type="button" className="btn btn-outline kmt-btn-compact" onClick={() => duplicateGroup(g.id)}>
-                      Duplicate
-                    </button>
-                    <select
-                      className="kmt-input kmt-input--inline"
-                      value={g.columns}
-                      onChange={e =>
-                        setForm(prev => ({
-                          ...prev,
-                          tabs: prev.tabs.map(tab =>
-                            tab.id !== activeTabId
-                              ? tab
-                              : {
-                                  ...tab,
-                                  groups: tab.groups.map(x =>
-                                    x.id === g.id ? { ...x, columns: +e.target.value } : x,
-                                  ),
-                                },
-                          ),
-                        }))
-                      }
-                    >
-                      <option value={1}>1 Column</option>
-                      <option value={2}>2 Column</option>
-                    </select>
-                    <button type="button" className="btn btn-outline kmt-btn-compact" style={{ color: 'var(--danger)', borderColor: '#fecaca' }} onClick={() => deleteGroup(g.id)}>
-                      Delete group
-                    </button>
-                  </div>
-                </header>
-                <div
-                  className="kmt-fb__fields"
-                  style={{ gridTemplateColumns: `repeat(${g.columns}, 1fr)` }}
-                  onDragOver={e => e.preventDefault()}
-                  onDrop={e => onDropOnGroup(e, activeTabId, g.id)}
+            {(!activeTab?.groups || activeTab.groups.length === 0) && (
+              <div className="kmt-fb__add-group-wrap kmt-fb__add-group-wrap--solo">
+                <p className="kmt-fb__add-group-hint">No groups on this tab yet.</p>
+                <div className="kmt-fb__add-group-rule">
+                  <span>Add new group</span>
+                </div>
+                <button
+                  type="button"
+                  className="kmt-fb__add-group-btn"
+                  onClick={() => insertGroupAfter(null)}
                 >
-                  {g.fields.map((f, idx) => (
-                    <div
-                      key={f.id}
-                      className="kmt-fb__field-card"
-                      draggable
-                      onDragStart={e => {
-                        e.dataTransfer.setData(
-                          'application/x-kmt-move',
-                          JSON.stringify({ scope: 'tab', fieldId: f.id, fromGroup: g.id, idx }),
-                        )
-                      }}
-                      onDragOver={e => e.preventDefault()}
-                      onDrop={e => {
-                        e.preventDefault()
-                        const raw = e.dataTransfer.getData('application/x-kmt-move')
-                        if (!raw) return
-                        const parsed = JSON.parse(raw)
-                        if (parsed.scope === 'header') return
-                        const { fieldId, fromGroup } = parsed
-                        moveField(activeTabId, fromGroup, g.id, fieldId, idx)
-                      }}
-                    >
-                      <div className="kmt-fb__field-head">
-                        <span>{FIELD_LIBRARY.find(x => x.type === f.type)?.label || f.type}</span>
-                        <div className="kmt-fb__field-tools">
-                          <button type="button" className="kmt-icon-btn" aria-label="Edit" onClick={() => setSelected({ scope: 'tab', fieldId: f.id })}>✎</button>
-                          <button
-                            type="button"
-                            className="kmt-icon-btn"
-                            aria-label="Duplicate"
-                            onClick={() => {
-                              const copy = { ...f, id: uid(), options: (f.options || []).map(o => ({ ...o, id: uid() })) }
-                              setForm(prev => ({
-                                ...prev,
-                                tabs: prev.tabs.map(tab =>
-                                  tab.id !== activeTabId
-                                    ? tab
-                                    : {
-                                        ...tab,
-                                        groups: tab.groups.map(gr =>
-                                          gr.id === g.id ? { ...gr, fields: [...gr.fields.slice(0, idx + 1), copy, ...gr.fields.slice(idx + 1)] } : gr,
-                                        ),
-                                      },
-                                ),
-                              }))
-                            }}
-                          >
-                            ⧉
-                          </button>
-                          <button
-                            type="button"
-                            className="kmt-icon-btn"
-                            aria-label="Delete"
-                            onClick={() =>
-                              setForm(prev => ({
-                                ...prev,
-                                tabs: prev.tabs.map(tab =>
-                                  tab.id !== activeTabId
-                                    ? tab
-                                    : {
-                                        ...tab,
-                                        groups: tab.groups.map(gr =>
-                                          gr.id === g.id ? { ...gr, fields: gr.fields.filter(x => x.id !== f.id) } : gr,
-                                        ),
-                                      },
-                                ),
-                              }))
-                            }
-                          >
-                            ×
-                          </button>
+                  <span className="kmt-fb__add-group-icon" aria-hidden>
+                    +
+                  </span>
+                  <span>Add new group</span>
+                </button>
+              </div>
+            )}
+            {(activeTab?.groups || []).map(g => (
+              <Fragment key={g.id}>
+                <section className="kmt-fb__group">
+                  <header className="kmt-fb__group-head">
+                    <span className="kmt-fb__grip">⋮⋮</span>
+                    <h3>{g.title}</h3>
+                    <div className="kmt-fb__group-actions">
+                      <button
+                        type="button"
+                        className="btn btn-outline kmt-btn-compact"
+                        onClick={() => {
+                          const t = window.prompt('Group title', g.title)
+                          if (t == null || !t.trim()) return
+                          setForm(prev => ({
+                            ...prev,
+                            tabs: prev.tabs.map(tab =>
+                              tab.id !== activeTabId
+                                ? tab
+                                : { ...tab, groups: tab.groups.map(x => (x.id === g.id ? { ...x, title: t.trim() } : x)) },
+                            ),
+                          }))
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button type="button" className="btn btn-outline kmt-btn-compact" onClick={() => duplicateGroup(g.id)}>
+                        Duplicate
+                      </button>
+                      <select
+                        className="kmt-input kmt-input--inline"
+                        value={g.columns}
+                        onChange={e =>
+                          setForm(prev => ({
+                            ...prev,
+                            tabs: prev.tabs.map(tab =>
+                              tab.id !== activeTabId
+                                ? tab
+                                : {
+                                    ...tab,
+                                    groups: tab.groups.map(x =>
+                                      x.id === g.id ? { ...x, columns: +e.target.value } : x,
+                                    ),
+                                  },
+                            ),
+                          }))
+                        }
+                      >
+                        <option value={1}>1 Column</option>
+                        <option value={2}>2 Column</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="btn btn-outline kmt-btn-compact"
+                        style={{ color: 'var(--danger)', borderColor: '#fecaca' }}
+                        onClick={() => deleteGroup(g.id)}
+                      >
+                        Delete group
+                      </button>
+                    </div>
+                  </header>
+                  <div
+                    className="kmt-fb__fields"
+                    style={{ gridTemplateColumns: `repeat(${g.columns}, 1fr)` }}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={e => onDropOnGroup(e, activeTabId, g.id)}
+                  >
+                    {g.fields.map((f, idx) => (
+                      <div
+                        key={f.id}
+                        className="kmt-fb__field-card"
+                        draggable
+                        onDragStart={e => {
+                          e.dataTransfer.setData(
+                            'application/x-kmt-move',
+                            JSON.stringify({ scope: 'tab', fieldId: f.id, fromGroup: g.id, idx }),
+                          )
+                        }}
+                        onDragOver={e => e.preventDefault()}
+                        onDrop={e => {
+                          e.preventDefault()
+                          const raw = e.dataTransfer.getData('application/x-kmt-move')
+                          if (!raw) return
+                          const parsed = JSON.parse(raw)
+                          if (parsed.scope === 'header') return
+                          const { fieldId, fromGroup } = parsed
+                          moveField(activeTabId, fromGroup, g.id, fieldId, idx)
+                        }}
+                      >
+                        <div className="kmt-fb__field-head">
+                          <span>{FIELD_LIBRARY.find(x => x.type === f.type)?.label || f.type}</span>
+                          <div className="kmt-fb__field-tools">
+                            <button
+                              type="button"
+                              className="kmt-icon-btn"
+                              aria-label="Edit"
+                              onClick={() => setSelected({ fieldId: f.id })}
+                            >
+                              ✎
+                            </button>
+                            <button
+                              type="button"
+                              className="kmt-icon-btn"
+                              aria-label="Duplicate"
+                              onClick={() => {
+                                const copy = { ...f, id: uid(), options: (f.options || []).map(o => ({ ...o, id: uid() })) }
+                                setForm(prev => ({
+                                  ...prev,
+                                  tabs: prev.tabs.map(tab =>
+                                    tab.id !== activeTabId
+                                      ? tab
+                                      : {
+                                          ...tab,
+                                          groups: tab.groups.map(gr =>
+                                            gr.id === g.id
+                                              ? { ...gr, fields: [...gr.fields.slice(0, idx + 1), copy, ...gr.fields.slice(idx + 1)] }
+                                              : gr,
+                                          ),
+                                        },
+                                  ),
+                                }))
+                              }}
+                            >
+                              ⧉
+                            </button>
+                            <button
+                              type="button"
+                              className="kmt-icon-btn"
+                              aria-label="Delete"
+                              onClick={() =>
+                                setForm(prev => ({
+                                  ...prev,
+                                  tabs: prev.tabs.map(tab =>
+                                    tab.id !== activeTabId
+                                      ? tab
+                                      : {
+                                          ...tab,
+                                          groups: tab.groups.map(gr =>
+                                            gr.id === g.id ? { ...gr, fields: gr.fields.filter(x => x.id !== f.id) } : gr,
+                                          ),
+                                        },
+                                  ),
+                                }))
+                              }
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+                        <div className="kmt-fb__field-body">
+                          <label className="kmt-fb__preview-label">
+                            {f.label}
+                            {f.mandatory && <span className="kmt-fb__req"> *</span>}
+                          </label>
+                          {f.type === 'date' && <input className="kmt-input" type="date" readOnly />}
+                          {f.type === 'button' && (
+                            <button
+                              type="button"
+                              className={`btn ${f.buttonStyle === 'secondary' ? 'btn-outline' : f.buttonStyle === 'tertiary' ? 'btn-outline' : 'btn-primary'}`}
+                            >
+                              {f.label}
+                            </button>
+                          )}
+                          {f.type === 'notes' && (
+                            <textarea className="kmt-input" readOnly rows={3} placeholder={f.placeholder || '…'} defaultValue={f.defaultValue || ''} />
+                          )}
+                          {!['date', 'button', 'notes'].includes(f.type) && (
+                            <input className="kmt-input" readOnly placeholder={f.placeholder || '…'} defaultValue={f.defaultValue || ''} />
+                          )}
                         </div>
                       </div>
-                      <div className="kmt-fb__field-body">
-                        <label className="kmt-fb__preview-label">
-                          {f.label}
-                          {f.mandatory && <span className="kmt-fb__req"> *</span>}
-                        </label>
-                        {f.type === 'date' && <input className="kmt-input" type="date" readOnly />}
-                        {f.type === 'button' && (
-                          <button type="button" className={`btn ${f.buttonStyle === 'secondary' ? 'btn-outline' : f.buttonStyle === 'tertiary' ? 'btn-outline' : 'btn-primary'}`}>
-                            {f.label}
-                          </button>
-                        )}
-                        {f.type === 'notes' && (
-                          <textarea className="kmt-input" readOnly rows={3} placeholder={f.placeholder || '…'} defaultValue={f.defaultValue || ''} />
-                        )}
-                        {!['date', 'button', 'notes'].includes(f.type) && (
-                          <input className="kmt-input" readOnly placeholder={f.placeholder || '…'} defaultValue={f.defaultValue || ''} />
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  <div className="kmt-fb__drop-hint">Drop fields here to add to this group</div>
+                </section>
+                <div className="kmt-fb__add-group-wrap">
+                  <div className="kmt-fb__add-group-rule">
+                    <span>Add new group below</span>
+                  </div>
+                  <button type="button" className="kmt-fb__add-group-btn" onClick={() => insertGroupAfter(g.id)}>
+                    <span className="kmt-fb__add-group-icon" aria-hidden>
+                      +
+                    </span>
+                    <span>Add new group</span>
+                  </button>
                 </div>
-                <div className="kmt-fb__drop-hint">Drop fields here to add to this group</div>
-              </section>
+              </Fragment>
             ))}
           </main>
         </div>

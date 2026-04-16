@@ -3446,18 +3446,82 @@ select.cell-inp { cursor: pointer; appearance: none; -webkit-appearance: none; }
   background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px 24px;
   box-shadow: var(--shadow); min-height: 480px;
 }
-.kmt-fb__toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .kmt-fb__meta { font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px; }
-.kmt-fb__above-tabs {
-  margin-bottom: 20px; padding: 14px 16px; border-radius: var(--radius-lg);
-  border: 1px dashed #94a3b8; background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+.kmt-fb__add-group-wrap {
+  margin: 0 0 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
 }
-.kmt-fb__above-tabs-bar {
-  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px;
+.kmt-fb__add-group-wrap--solo {
+  padding: 8px 0 4px;
 }
-.kmt-fb__above-tabs-heading { font-size: 15px; font-weight: 800; margin: 0 0 4px; color: #0f172a; }
-.kmt-fb__above-tabs-sub { font-size: 12.5px; color: var(--text-muted); margin: 0; max-width: 520px; line-height: 1.45; }
-.kmt-fb__group--header { border-style: dashed; background: #fff; }
+.kmt-fb__add-group-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.kmt-fb__add-group-rule {
+  position: relative;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.kmt-fb__add-group-rule::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+.kmt-fb__add-group-rule span {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  padding: 0 12px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+.kmt-fb__add-group-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 18px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.kmt-fb__add-group-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.kmt-fb__add-group-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--accent, #2563eb);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+}
 .kmt-fb__tabs-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .kmt-fb__tab-chip {
   display: inline-flex; align-items: center; gap: 4px; padding: 4px 4px 4px 12px; border-radius: 999px;

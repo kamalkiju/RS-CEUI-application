@@ -2,17 +2,17 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import Layout from '../../components/Layout.jsx'
 
 const CEUI_TABS = [
-  { path: 'ceui/review', label: 'Review Queue' },
-  { path: 'ceui/approved', label: 'Approved' },
+  { path: 'ceui/review', label: 'Review queue' },
   { path: 'ceui/rejected', label: 'Rejected' },
-  { path: 'ceui/unclaimed', label: 'Unclaimed Tasks' },
+  { path: 'ceui/approved', label: 'Approved' },
+  { path: 'ceui/expiry', label: 'Expiry queue' },
 ]
 
 const RSAUI_TABS = [
-  { path: 'rsaui/review', label: 'Review Queue' },
-  { path: 'rsaui/approved', label: 'Approved' },
+  { path: 'rsaui/review', label: 'Review queue' },
   { path: 'rsaui/rejected', label: 'Rejected' },
-  { path: 'rsaui/unclaimed', label: 'Unclaimed Tasks' },
+  { path: 'rsaui/approved', label: 'Approved' },
+  { path: 'rsaui/expiry', label: 'Expiry queue' },
 ]
 
 export default function BufmReportsLayout() {

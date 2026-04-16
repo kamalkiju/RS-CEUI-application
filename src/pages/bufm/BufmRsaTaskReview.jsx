@@ -94,7 +94,7 @@ export default function BufmRsaTaskReview() {
     releaseBufmToUnclaimed(sub.id, { releaseNote })
     setReleaseOpen(false)
     window.alert('✓ Task Released Successfully')
-    navigate(`${BUFM_RSA_HOME}/unclaimed`)
+    navigate(`${BUFM_RSA_HOME}/review`)
   }
 
   const slaLabel = slaExceeded

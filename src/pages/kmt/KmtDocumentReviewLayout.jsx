@@ -2,15 +2,15 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import Layout from '../../components/Layout.jsx'
 
 const CEUI_TABS = [
-  { path: 'ceui/review', label: 'Review Queue' },
-  { path: 'ceui/approved', label: 'Approved' },
+  { path: 'ceui/review', label: 'Review queue' },
   { path: 'ceui/rejected', label: 'Rejected' },
+  { path: 'ceui/approved', label: 'Approved' },
 ]
 
 const RSAUI_TABS = [
-  { path: 'rsaui/review', label: 'Review Queue' },
-  { path: 'rsaui/approved', label: 'Approved' },
+  { path: 'rsaui/review', label: 'Review queue' },
   { path: 'rsaui/rejected', label: 'Rejected' },
+  { path: 'rsaui/approved', label: 'Approved' },
 ]
 
 export default function KmtDocumentReviewLayout() {

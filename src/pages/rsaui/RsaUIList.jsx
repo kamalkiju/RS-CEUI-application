@@ -15,11 +15,11 @@ const STATUS_CLASS = {
 
 const FILTERS = [
   { id: 'all', label: 'All' },
-  { id: 'draft', label: 'Draft Tasks' },
   { id: 'awaiting', label: 'Awaiting Approval' },
+  { id: 'draft', label: 'Draft' },
   { id: 'rejected', label: 'Rejected' },
   { id: 'approved', label: 'Approved' },
-  { id: 'expiry', label: 'Expiry Queue' },
+  { id: 'expiry', label: 'Expiry queue' },
 ]
 
 const FILTER_IDS = new Set(FILTERS.map(f => f.id))

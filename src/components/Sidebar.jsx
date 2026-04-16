@@ -64,11 +64,10 @@ const ICON_DELEGATION = (
   </svg>
 )
 
-/** POC: knowledge list, RSAUI documents (service-area requests), settings */
+/** POC: knowledge list, RSAUI documents (service-area requests), Ops Agent */
 const NAV_ITEMS_POC = [
   { label: 'Knowledge Documents', path: '/poc', icon: ICON_DOC },
   { label: 'RSAUI Documents', path: '/poc/document-review', icon: ICON_REPORT },
-  { label: 'Settings', path: '/poc/settings', icon: ICON_SETTINGS },
   { label: 'Ops Agent', path: '/poc/chat', icon: ICON_CHAT },
 ]
 
@@ -76,7 +75,6 @@ const NAV_ITEMS_BUFM = [
   { label: 'Dashboard', path: '/bufm', icon: ICON_OVERVIEW },
   { label: 'Document Review', path: '/bufm/document-review', icon: ICON_REPORT },
   { label: 'Users', path: '/bufm/users', icon: ICON_USERS },
-  { label: 'Settings', path: '/bufm/settings', icon: ICON_SETTINGS },
   { label: 'Ops Agent', path: '/bufm/chat', icon: ICON_CHAT },
 ]
 

@@ -17,11 +17,20 @@ export default function BufmDocumentList({ mode }) {
     if (mode === 'approved') {
       return docs.filter(d => d.status === 'approved')
     }
+    if (mode === 'expiry') {
+      return docs.filter(d => d.status === 'approved')
+    }
     return docs.filter(isRejectedForBufmReports)
   }, [docs, mode])
 
-  const title = mode === 'approved' ? 'Approved documents' : 'Rejected documents'
-  const hint = mode === 'approved' ? 'Fully approved / published path' : 'Rejected by BUFM or KMT'
+  const title =
+    mode === 'approved' ? 'Approved documents' : mode === 'expiry' ? 'Expiry queue' : 'Rejected documents'
+  const hint =
+    mode === 'approved'
+      ? 'Fully approved / published path'
+      : mode === 'expiry'
+        ? 'Knowledge documents with upcoming review or renewal dates (demo)'
+        : 'Rejected by BUFM or KMT'
 
   return (
     <div className="bufm-doc-table-card">
@@ -49,8 +58,10 @@ export default function BufmDocumentList({ mode }) {
               {rows.map(doc => {
                 const disp = getDisplayStatus(doc, 'BUFM')
                 const areaLabel = doc.area || doc.areas?.[0]?.name || '—'
-                const statusLabel = mode === 'approved' ? 'Approved by BUFM' : disp.label
-                const showComment = mode === 'rejected' && (doc.rejection_comment_BUFM || doc.rejection_comment_KMT)
+                const statusLabel =
+                  mode === 'approved' || mode === 'expiry' ? 'Approved by BUFM' : disp.label
+                const showComment =
+                  mode === 'rejected' && (doc.rejection_comment_BUFM || doc.rejection_comment_KMT)
                 return (
                   <tr key={doc.id}>
                     <td><strong>{doc.sub || doc.id}</strong></td>

@@ -18,10 +18,10 @@ const STATUS_ICONS = {
 }
 
 const TABS = [
-  { key: 'rejected-tasks', label: 'Rejected Tasks' },
-  { key: 'draft',    label: 'Draft Documents' },
+  { key: 'all', label: 'All Documents' },
   { key: 'approval', label: 'Awaiting Approval' },
-  { key: 'all',      label: 'All Documents' },
+  { key: 'draft', label: 'Draft Documents' },
+  { key: 'rejected-tasks', label: 'Rejected' },
   { key: 'approved', label: 'Approved' },
 ]
 
@@ -30,7 +30,7 @@ export default function KnowledgeDocuments() {
   const { user } = useAuth()
   const { docs, addDoc, removeDoc } = useDocs()
   const { submissions, removeSubmission } = useRsaUI()
-  const [activeTab, setActiveTab] = useState('rejected-tasks')
+  const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch] = useState('')
 
   const rsaRejectedRows = submissions

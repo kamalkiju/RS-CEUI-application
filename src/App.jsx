@@ -40,11 +40,11 @@ import KmtTemplateWizard from './pages/kmt/KmtTemplateWizard.jsx'
 import DocumentReviewRedirect from './components/DocumentReviewRedirect.jsx'
 import LegacyRsauiRedirect from './components/LegacyRsauiRedirect.jsx'
 import BufmRsaReviewQueue from './pages/bufm/BufmRsaReviewQueue.jsx'
-import BufmRsaUnclaimedQueue from './pages/bufm/BufmRsaUnclaimedQueue.jsx'
 import BufmRsaApprovedList from './pages/bufm/BufmRsaApprovedList.jsx'
 import BufmRsaRejectedList from './pages/bufm/BufmRsaRejectedList.jsx'
 import BufmRsaTaskReview from './pages/bufm/BufmRsaTaskReview.jsx'
 import BufmRsaRejectPage from './pages/bufm/BufmRsaRejectPage.jsx'
+import BufmRsaExpiryQueue from './pages/bufm/BufmRsaExpiryQueue.jsx'
 import RsauiKmtEscalate from './pages/kmt/RsauiKmtEscalate.jsx'
 import RsauiKmtExtend from './pages/kmt/RsauiKmtExtend.jsx'
 import RsauiKmtArchive from './pages/kmt/RsauiKmtArchive.jsx'
@@ -94,13 +94,13 @@ export default function App() {
                       <Route path="document-review" element={<BufmReportsLayout />}>
                         <Route index element={<Navigate to="ceui/review" replace />} />
                         <Route path="ceui/review" element={<BufmReviewQueue />} />
-                        <Route path="ceui/approved" element={<BufmDocumentList mode="approved" />} />
                         <Route path="ceui/rejected" element={<BufmDocumentList mode="rejected" />} />
-                        <Route path="ceui/unclaimed" element={<BufmRsaUnclaimedQueue />} />
+                        <Route path="ceui/approved" element={<BufmDocumentList mode="approved" />} />
+                        <Route path="ceui/expiry" element={<BufmDocumentList mode="expiry" />} />
                         <Route path="rsaui/review" element={<BufmRsaReviewQueue />} />
-                        <Route path="rsaui/approved" element={<BufmRsaApprovedList />} />
                         <Route path="rsaui/rejected" element={<BufmRsaRejectedList />} />
-                        <Route path="rsaui/unclaimed" element={<BufmRsaUnclaimedQueue />} />
+                        <Route path="rsaui/approved" element={<BufmRsaApprovedList />} />
+                        <Route path="rsaui/expiry" element={<BufmRsaExpiryQueue />} />
                       </Route>
                       <Route
                         path="reports/*"
