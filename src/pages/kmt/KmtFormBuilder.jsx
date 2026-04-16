@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect, Fragment } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import Layout from '../../components/Layout.jsx'
 import { FIELD_LIBRARY, uid, emptyField } from './kmtFormBuilderShared.js'
 import { normalizeTemplateForm } from './pocReferenceFormSeed.js'
@@ -289,8 +289,7 @@ export default function KmtFormBuilder({ embedded = false, controlledForm, setCo
               </div>
             )}
             {(activeTab?.groups || []).map(g => (
-              <Fragment key={g.id}>
-                <section className="kmt-fb__group">
+              <section key={g.id} className="kmt-fb__group">
                   <header className="kmt-fb__group-head">
                     <span className="kmt-fb__grip">⋮⋮</span>
                     <h3>{g.title}</h3>
@@ -462,19 +461,28 @@ export default function KmtFormBuilder({ embedded = false, controlledForm, setCo
                   </div>
                   <div className="kmt-fb__drop-hint">Drop fields here to add to this group</div>
                 </section>
-                <div className="kmt-fb__add-group-wrap">
-                  <div className="kmt-fb__add-group-rule">
-                    <span>Add new group below</span>
-                  </div>
-                  <button type="button" className="kmt-fb__add-group-btn" onClick={() => insertGroupAfter(g.id)}>
-                    <span className="kmt-fb__add-group-icon" aria-hidden>
-                      +
-                    </span>
-                    <span>Add new group</span>
-                  </button>
-                </div>
-              </Fragment>
             ))}
+            {activeTab?.groups?.length > 0 && (
+              <div className="kmt-fb__add-group-wrap">
+                <div className="kmt-fb__add-group-rule">
+                  <span>Add new group below</span>
+                </div>
+                <button
+                  type="button"
+                  className="kmt-fb__add-group-btn"
+                  onClick={() => {
+                    const gs = activeTab.groups
+                    const lastId = gs[gs.length - 1]?.id
+                    if (lastId) insertGroupAfter(lastId)
+                  }}
+                >
+                  <span className="kmt-fb__add-group-icon" aria-hidden>
+                    +
+                  </span>
+                  <span>Add new group</span>
+                </button>
+              </div>
+            )}
           </main>
         </div>
 
