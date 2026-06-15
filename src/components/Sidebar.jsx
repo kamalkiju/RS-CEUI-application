@@ -21,15 +21,6 @@ const ICON_REPORT = (
   </svg>
 )
 
-const ICON_USERS = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-)
-
 const ICON_SETTINGS = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
@@ -74,7 +65,6 @@ const NAV_ITEMS_POC = [
 const NAV_ITEMS_BUFM = [
   { label: 'Dashboard', path: '/bufm', icon: ICON_OVERVIEW },
   { label: 'Document Review', path: '/bufm/document-review', icon: ICON_REPORT },
-  { label: 'Users', path: '/bufm/users', icon: ICON_USERS },
   { label: 'Ops Agent', path: '/bufm/chat', icon: ICON_CHAT },
 ]
 
@@ -92,7 +82,6 @@ const NAV_ITEMS_KMT = [
     ),
   },
   { label: 'Document Review', path: '/kmt/document-review', icon: ICON_REPORT },
-  { label: 'Users', path: '/kmt/users', icon: ICON_USERS },
   { label: 'Delegations', path: '/kmt/delegations', icon: ICON_DELEGATION },
   { label: 'Settings', path: '/kmt/settings', icon: ICON_SETTINGS },
   { label: 'Ops Agent', path: '/kmt/chat', icon: ICON_CHAT },
